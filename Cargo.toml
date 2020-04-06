@@ -1,0 +1,26 @@
+[package]
+name = "jellyfin-matrix-bot"
+version = "0.1.0"
+authors = ["sparky8251 <sparky@possumlodge.me>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ruma-client = "0.3"
+ruma-events = "0.15.1" # Must be 0.15.1 to prevent different ruma-events versions from living in the same binary
+ruma-identifiers = "0.14"
+url = "2.1"
+directories = "2.0"
+log = "0.4"
+pretty_env_logger = "0.4"
+futures = "0.3"
+ron = "0.5"
+
+[dependencies.tokio]
+version = "0.2"
+features = ["signal", "macros"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
