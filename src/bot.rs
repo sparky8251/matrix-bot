@@ -10,7 +10,7 @@ use ruma_events::{
 use url::Url;
 
 use crate::error::Result;
-use crate::handler::handle_text_message;
+use crate::handlers::handle_text_message;
 use crate::session::SavedSession;
 
 pub async fn start(homeserver_url: Url, session: &mut SavedSession) {

@@ -1,6 +1,6 @@
 mod bot;
 mod error;
-mod handler;
+mod handlers;
 mod session;
 
 use session::SavedSession;

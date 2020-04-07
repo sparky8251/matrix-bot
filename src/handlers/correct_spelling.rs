@@ -1,3 +1,8 @@
+use super::helpers::do_nothing;
+
+use crate::error::{Error, Result};
+use crate::session::SavedSession;
+
 use ruma_client::{api::r0::message::create_message_event, HttpsClient};
 use ruma_events::{
     room::message::{MessageEventContent, TextMessageEventContent},
@@ -5,27 +10,10 @@ use ruma_events::{
 };
 use ruma_identifiers::{RoomId, UserId};
 
-use crate::error::{Error, Result};
-use crate::session::SavedSession;
-
 static INSENSITIVE_SPELL_CHECK: &'static [&'static str] = &["Jellyfish", "Jelly Fin"];
 static SENSITIVE_SPELL_CHECK: &'static [&'static str] = &["JellyFin", "jellyFin"];
 
-pub async fn handle_text_message(
-    text: &TextMessageEventContent,
-    sender: &UserId,
-    room_id: &RoomId,
-    client: &HttpsClient,
-    session: &mut SavedSession,
-) -> Result<()> {
-    if !text.body.starts_with('!') {
-        correct_spelling_check(text, sender, room_id, client, session).await
-    } else {
-        do_nothing().await
-    }
-}
-
-async fn correct_spelling_check(
+pub(super) async fn correct_spelling_check(
     text: &TextMessageEventContent,
     sender: &UserId,
     room_id: &RoomId,
@@ -85,10 +73,6 @@ async fn correct_spelling_check(
         }
         return Ok(()); // No matches found, so return Ok
     }
-}
-
-async fn do_nothing() -> Result<()> {
-    Ok(())
 }
 
 fn correct_spelling(user: &str, incorrect_spelling: &str) -> String {
