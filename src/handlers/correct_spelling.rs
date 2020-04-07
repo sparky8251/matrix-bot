@@ -27,6 +27,8 @@ pub(super) async fn correct_spelling_check(
     } else {
         if session.correction_time_cooldown() {
             if text.relates_to == None {
+                // FIXME: There has to be some way to merge this for loop and the one below
+                // Likely a custom type with a custom string comparator and iterator
                 for incorrect_spelling in INSENSITIVE_SPELL_CHECK.into_iter() {
                     if text
                         .body
@@ -55,6 +57,8 @@ pub(super) async fn correct_spelling_check(
                         }
                     }
                 }
+                // FIXME: There has to be some way to merge this for loop and the one above
+                // Likely a custom type with a custom string comparator and iterator
                 for incorrect_spelling in SENSITIVE_SPELL_CHECK.into_iter() {
                     if text.body.contains(incorrect_spelling) {
                         let response = client
