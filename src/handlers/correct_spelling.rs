@@ -1,10 +1,10 @@
-use super::helpers::do_nothing;
-
 use crate::error::{Error, Result};
 use crate::session::SavedSession;
 
+use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
+use lazy_static::lazy_static;
 use ruma_client::{api::r0::message::create_message_event, HttpsClient};
 use ruma_events::{
     room::message::{MessageEventContent, TextMessageEventContent},
@@ -12,8 +12,82 @@ use ruma_events::{
 };
 use ruma_identifiers::{RoomId, UserId};
 
-static INSENSITIVE_SPELL_CHECK: &'static [&'static str] = &["Jellyfish", "Jelly Fin"];
-static SENSITIVE_SPELL_CHECK: &'static [&'static str] = &["JellyFin", "jellyFin"];
+#[derive(Clone)]
+enum SpellCheckKind {
+    SpellCheckInsensitive(InsensitiveSpelling),
+    SpellCheckSensitive(SensitiveSpelling),
+}
+
+#[derive(Clone)]
+struct SpellCheck {
+    insensitive: Vec<InsensitiveSpelling>,
+    sensitive: Vec<SensitiveSpelling>,
+}
+#[derive(Clone)]
+struct InsensitiveSpelling {
+    spelling: String,
+}
+
+#[derive(Clone)]
+struct SensitiveSpelling {
+    spelling: String,
+}
+
+impl SpellCheck {
+    fn new() -> Self {
+        SpellCheck {
+            insensitive: vec![
+                InsensitiveSpelling::from("Jellyfish"),
+                InsensitiveSpelling::from("Jelly Fin"),
+            ],
+            sensitive: vec![
+                SensitiveSpelling::from("JellyFin"),
+                SensitiveSpelling::from("jellyFin"),
+            ],
+        }
+    }
+}
+
+impl From<&str> for InsensitiveSpelling {
+    fn from(str: &str) -> Self {
+        InsensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl From<&str> for SensitiveSpelling {
+    fn from(str: &str) -> Self {
+        SensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl Display for InsensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
+    }
+}
+
+impl Display for SensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
+    }
+}
+
+impl Display for SpellCheckKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpellCheckKind::SpellCheckInsensitive(v) => write!(f, "{}", v),
+            SpellCheckKind::SpellCheckSensitive(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+lazy_static! {
+    static ref SPELL_CHECK: SpellCheck = SpellCheck::new();
+}
 
 pub(super) async fn correct_spelling_check(
     text: &TextMessageEventContent,
@@ -23,70 +97,58 @@ pub(super) async fn correct_spelling_check(
     session: &mut SavedSession,
 ) -> Result<()> {
     if sender.localpart() == session.get_username() {
-        do_nothing().await
+        // do nothing
     } else {
-        if session.correction_time_cooldown() {
-            if text.relates_to == None {
-                // FIXME: There has to be some way to merge this for loop and the one below
-                // Likely a custom type with a custom string comparator and iterator
-                for incorrect_spelling in INSENSITIVE_SPELL_CHECK.into_iter() {
-                    if text
+        if session.correction_time_cooldown() && text.relates_to == None {
+            for incorrect_spelling in SPELL_CHECK
+                .insensitive
+                .clone()
+                .into_iter()
+                .map(SpellCheckKind::SpellCheckInsensitive)
+                .chain(
+                    SPELL_CHECK
+                        .sensitive
+                        .clone()
+                        .into_iter()
+                        .map(SpellCheckKind::SpellCheckSensitive),
+                )
+            {
+                let incorrect = match incorrect_spelling.clone() {
+                    SpellCheckKind::SpellCheckInsensitive(v) => text
                         .body
                         .to_lowercase()
-                        .contains(&incorrect_spelling.to_lowercase())
-                    {
-                        let response = client
-                            .request(create_message_event::Request {
-                                room_id: room_id.clone(),
-                                event_type: EventType::RoomMessage,
-                                txn_id: session.next_txn_id(),
-                                data: MessageEventContent::Text(TextMessageEventContent {
-                                    body: correct_spelling(sender.localpart(), incorrect_spelling),
-                                    format: None,
-                                    formatted_body: None,
-                                    relates_to: None,
-                                }),
-                            })
-                            .await;
-                        match response {
-                            Ok(_) => {
-                                session.set_last_correction_time(SystemTime::now());
-                                return Ok(());
-                            }
-                            Err(e) => return Err(Error::RumaClientError(e)),
+                        .contains(&v.to_string().to_lowercase()),
+                    SpellCheckKind::SpellCheckSensitive(v) => text.body.contains(&v.to_string()),
+                };
+                if incorrect {
+                    let response = client
+                        .request(create_message_event::Request {
+                            room_id: room_id.clone(),
+                            event_type: EventType::RoomMessage,
+                            txn_id: session.next_txn_id(),
+                            data: MessageEventContent::Text(TextMessageEventContent {
+                                body: correct_spelling(
+                                    sender.localpart(),
+                                    &incorrect_spelling.to_string(),
+                                ),
+                                format: None,
+                                formatted_body: None,
+                                relates_to: None,
+                            }),
+                        })
+                        .await;
+                    match response {
+                        Ok(_) => {
+                            session.set_last_correction_time(SystemTime::now());
+                            return Ok(());
                         }
-                    }
-                }
-                // FIXME: There has to be some way to merge this for loop and the one above
-                // Likely a custom type with a custom string comparator and iterator
-                for incorrect_spelling in SENSITIVE_SPELL_CHECK.into_iter() {
-                    if text.body.contains(incorrect_spelling) {
-                        let response = client
-                            .request(create_message_event::Request {
-                                room_id: room_id.clone(),
-                                event_type: EventType::RoomMessage,
-                                txn_id: session.next_txn_id(),
-                                data: MessageEventContent::Text(TextMessageEventContent {
-                                    body: correct_spelling(sender.localpart(), incorrect_spelling),
-                                    format: None,
-                                    formatted_body: None,
-                                    relates_to: None,
-                                }),
-                            })
-                            .await;
-                        match response {
-                            Ok(_) => {
-                                session.set_last_correction_time(SystemTime::now());
-                                return Ok(());
-                            }
-                            Err(e) => return Err(Error::RumaClientError(e)),
-                        }
+                        Err(e) => return Err(Error::RumaClientError(e)),
                     }
                 }
             }
         }
-        return Ok(()); // No matches found or cooldown time not met, so return Ok
     }
+    return Ok(()); // No matches found or cooldown time not met, so return Ok
 }
 
 fn correct_spelling(user: &str, incorrect_spelling: &str) -> String {
