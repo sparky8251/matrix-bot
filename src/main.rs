@@ -1,5 +1,4 @@
 mod bot;
-mod error;
 mod handlers;
 mod session;
 

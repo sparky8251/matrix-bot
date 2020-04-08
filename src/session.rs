@@ -1,12 +1,11 @@
 use std::fs::{self, File};
 use std::time::{Duration, SystemTime};
 
+use anyhow::Result;
 use log::trace;
 use ruma_client::Session;
 use ruma_identifiers::RoomId;
 use serde::{Deserialize, Serialize};
-
-use crate::error::Result;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct SavedSession {

@@ -1,5 +1,9 @@
+use crate::handlers::handle_text_message;
+use crate::session::SavedSession;
+
 use std::process;
 
+use anyhow::Result;
 use log::{error, info};
 use ruma_client::{api::r0::sync::sync_events, Client};
 use ruma_events::{
@@ -8,10 +12,6 @@ use ruma_events::{
     EventResult,
 };
 use url::Url;
-
-use crate::error::Result;
-use crate::handlers::handle_text_message;
-use crate::session::SavedSession;
 
 pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
     match bot(homeserver_url, session).await {

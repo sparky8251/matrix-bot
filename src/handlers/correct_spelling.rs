@@ -1,10 +1,10 @@
-use crate::error::Result;
-use crate::session::SavedSession;
-
 use std::fmt::{Display, Formatter};
 use std::process;
 use std::time::SystemTime;
 
+use crate::session::SavedSession;
+
+use anyhow::Result;
 use lazy_static::lazy_static;
 use log::error;
 use ruma_client::{api::r0::message::create_message_event, HttpsClient};

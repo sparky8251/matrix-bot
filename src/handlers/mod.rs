@@ -1,12 +1,11 @@
 mod correct_spelling;
 mod helpers;
 
-use crate::error::Result;
+use self::correct_spelling::correct_spelling_check;
+use self::helpers::do_nothing;
 use crate::session::SavedSession;
 
-use correct_spelling::correct_spelling_check;
-use helpers::do_nothing;
-
+use anyhow::Result;
 use ruma_client::HttpsClient;
 use ruma_events::room::message::TextMessageEventContent;
 use ruma_identifiers::{RoomId, UserId};
