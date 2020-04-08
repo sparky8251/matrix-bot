@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::time::{Duration, SystemTime};
 
-use log::info;
+use log::trace;
 use ruma_client::Session;
 use ruma_identifiers::RoomId;
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ impl SavedSession {
 
     pub fn save_session(&self) -> Result<()> {
         fs::write("session_data.ron", ron::ser::to_string(&self)?)?;
-        info!("Saved!");
+        trace!("Saved!");
         Ok(())
     }
 

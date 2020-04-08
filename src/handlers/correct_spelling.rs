@@ -1,10 +1,12 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::session::SavedSession;
 
 use std::fmt::{Display, Formatter};
+use std::process;
 use std::time::SystemTime;
 
 use lazy_static::lazy_static;
+use log::error;
 use ruma_client::{api::r0::message::create_message_event, HttpsClient};
 use ruma_events::{
     room::message::{MessageEventContent, TextMessageEventContent},
@@ -142,7 +144,10 @@ pub(super) async fn correct_spelling_check(
                             session.set_last_correction_time(SystemTime::now());
                             return Ok(());
                         }
-                        Err(e) => return Err(Error::RumaClientError(e)),
+                        Err(e) => {
+                            error!("{:?}", e);
+                            process::exit(48)
+                        }
                     }
                 }
             }

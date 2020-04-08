@@ -1,6 +1,6 @@
 use std::process;
 
-use log::info;
+use log::{error, info};
 use ruma_client::{api::r0::sync::sync_events, Client};
 use ruma_events::{
     collections::all::RoomEvent,
@@ -14,7 +14,13 @@ use crate::handlers::handle_text_message;
 use crate::session::SavedSession;
 
 pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
-    bot(homeserver_url, session).await.unwrap();
+    match bot(homeserver_url, session).await {
+        Ok(v) => info!("{:?}", v),
+        Err(e) => {
+            error!("{:?}", e);
+            process::exit(32);
+        }
+    }
 }
 
 async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
@@ -24,15 +30,26 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
         info!("No previous session found. Creating new session...");
         if session.get_username().is_empty() || session.get_password().is_empty() {
             info!("No username or password found. Writing sample ron file. Please fill out username and password and try again.");
-            session.save_session().unwrap();
-            process::exit(1);
+            match session.save_session() {
+                Ok(()) => process::exit(12),
+                Err(e) => {
+                    error!("{:?}", e);
+                    process::exit(24)
+                }
+            }
         } else {
             session.set_session(
                 client
                     .log_in(session.get_username(), session.get_password(), None, None)
                     .await?,
             );
-            session.save_session().unwrap();
+            match session.save_session() {
+                Ok(()) => (),
+                Err(e) => {
+                    error!("{:?}", e);
+                    process::exit(24)
+                }
+            };
         }
     }
     info!(
@@ -66,6 +83,12 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
         }
 
         session.set_last_sync(Some(response.next_batch));
-        session.save_session().unwrap();
+        match session.save_session() {
+            Ok(()) => (),
+            Err(e) => {
+                error!("{:?}", e);
+                process::exit(24)
+            }
+        };
     }
 }

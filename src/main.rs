@@ -3,6 +3,9 @@ mod error;
 mod handlers;
 mod session;
 
+use std::process;
+
+use log::error;
 use session::SavedSession;
 
 #[tokio::main]
@@ -24,5 +27,11 @@ async fn main() {
         futures::future::select(bot_fut, ctrlc_fut).await;
     }
 
-    session.save_session().unwrap();
+    match session.save_session() {
+        Ok(()) => (),
+        Err(e) => {
+            error!("{:?}", e);
+            process::exit(24)
+        }
+    };
 }
