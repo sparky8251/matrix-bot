@@ -104,13 +104,13 @@ pub(super) async fn correct_spelling_check(
         if session.correction_time_cooldown() && text.relates_to == None {
             for incorrect_spelling in SPELL_CHECK
                 .insensitive
-                .clone()
+                .clone() //FIXME: There has to be a better way than to clone here
                 .into_iter()
                 .map(SpellCheckKind::SpellCheckInsensitive)
                 .chain(
                     SPELL_CHECK
                         .sensitive
-                        .clone()
+                        .clone() //FIXME: There has to be a better way than to clone here
                         .into_iter()
                         .map(SpellCheckKind::SpellCheckSensitive),
                 )
@@ -125,7 +125,7 @@ pub(super) async fn correct_spelling_check(
                 if incorrect {
                     let response = client
                         .request(create_message_event::Request {
-                            room_id: room_id.clone(),
+                            room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
                             event_type: EventType::RoomMessage,
                             txn_id: session.next_txn_id(),
                             data: MessageEventContent::Text(TextMessageEventContent {

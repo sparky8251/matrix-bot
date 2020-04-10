@@ -1,11 +1,14 @@
 mod correct_spelling;
 mod helpers;
+mod unit_conversion;
 
 use self::correct_spelling::correct_spelling_check;
 use self::helpers::do_nothing;
+use self::unit_conversion::unit_conversion;
 use crate::session::SavedSession;
 
 use anyhow::Result;
+use log::debug;
 use ruma_client::HttpsClient;
 use ruma_events::room::message::TextMessageEventContent;
 use ruma_identifiers::{RoomId, UserId};
@@ -18,8 +21,13 @@ pub async fn handle_text_message(
     session: &mut SavedSession,
 ) -> Result<()> {
     if !text.body.starts_with('!') {
+        debug!("Entering spell check path...");
         correct_spelling_check(text, sender, room_id, client, session).await
+    } else if text.body.to_lowercase().starts_with("!convert ") {
+        debug!("Entering unit conversion path...");
+        unit_conversion(text, room_id, client, session).await
     } else {
+        debug!("Entering do nothing path...");
         do_nothing().await
     }
 }

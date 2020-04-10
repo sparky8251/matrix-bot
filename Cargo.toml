@@ -22,6 +22,8 @@ futures = "0.3"
 ron = "0.5"
 lazy_static = "1.4"
 anyhow = "1.0"
+uom = "0.27"
+nom = "5.1"
 
 [dependencies.tokio]
 version = "0.2"
