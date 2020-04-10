@@ -17,7 +17,7 @@ use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
 use uom::si::mass::{kilogram, pound};
 use uom::si::thermodynamic_temperature::{degree_celsius, degree_fahrenheit};
-use uom::si::velocity::{mile_per_hour, kilometer_per_hour};
+use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
 
 pub(super) async fn unit_conversion(
     text: &TextMessageEventContent,
