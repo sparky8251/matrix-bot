@@ -14,6 +14,7 @@ use ruma_events::{
 };
 use ruma_identifiers::RoomId;
 
+#[allow(dead_code)]
 pub(super) async fn roll(
     text: &TextMessageEventContent,
     room_id: &RoomId,
@@ -86,21 +87,21 @@ pub(super) async fn roll(
             Some(en) => match start {
                 Some(st) => {
                     let roll = rand::thread_rng().gen_range(st, en);
-                    return send_roll(roll, room_id, client, session).await
-                },
+                    return send_roll(roll, room_id, client, session).await;
+                }
                 None => {
                     error!("No start and end value provided!");
-                    return do_nothing().await
+                    return do_nothing().await;
                 }
             },
             None => match start {
                 Some(en) => {
                     let roll = rand::thread_rng().gen_range(1, en);
-                    return send_roll(roll, room_id, client, session).await
+                    return send_roll(roll, room_id, client, session).await;
                 }
                 None => {
                     error!("No end value provided!");
-                    return do_nothing().await
+                    return do_nothing().await;
                 }
             },
         }
@@ -109,6 +110,7 @@ pub(super) async fn roll(
     }
 }
 
+#[allow(dead_code)]
 async fn send_roll(
     roll: i64,
     room_id: &RoomId,

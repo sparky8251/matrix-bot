@@ -222,7 +222,7 @@ pub(super) async fn unit_conversion(
                         _ => {
                             debug!(
                                 "Attempted unknown conversion for unit {}",
-                                unit.trim().to_lowercase()
+                                unit
                             );
                             do_nothing().await
                         }

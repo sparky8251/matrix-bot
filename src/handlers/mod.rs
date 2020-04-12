@@ -5,6 +5,7 @@ mod unit_conversion;
 
 use self::correct_spelling::correct_spelling_check;
 use self::helpers::do_nothing;
+#[allow(unused_imports)]
 use self::roll::roll;
 use self::unit_conversion::unit_conversion;
 use crate::session::SavedSession;
