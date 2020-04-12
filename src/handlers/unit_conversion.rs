@@ -77,152 +77,76 @@ pub(super) async fn unit_conversion(
             }
         };
 
+        macro_rules! match_unit{
+            (   
+                unit = $unit:ident, quantity = $quantity:ident;
+                
+                $(
+                    $unit_ty:ident {
+                        $( ( $from_str:expr, $to_str:expr, $from_ty:ty, $to_ty:ty ) ),*
+                        $(,)?
+                    }
+                )*
+                
+                _ => {
+                    $($default_code:tt)*
+                }
+            )=>{
+                match $unit {
+                    $(
+                        $(
+                            $from_str => {
+                                let unit_value = $unit_ty::new::<$from_ty>($quantity);
+                                send_converted_value(
+                                    unit_value.get::<$to_ty>(),
+                                    $to_str,
+                                    room_id,
+                                    client,
+                                    session,
+                                )
+                                .await
+                            }
+                        )*
+                    )*
+                    _ => {
+                        $($default_code)*
+                    }
+                }
+            }
+        }
+
         match quantity {
             Some(quantity) => match unit {
                 Some(unit) => {
-                    match unit.trim().to_lowercase().as_ref() {
-                        // length
-                        "cm" => {
-                            let length = Length::new::<centimeter>(quantity);
-                            send_converted_value(
-                                length.get::<inch>(),
-                                "in",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
+                    match_unit!{unit = unit, quantity = quantity;
+                        Length{
+                            ("cm", "in", centimeter, inch),
+                            ("m", "ft", meter, foot),
+                            ("km", "mi", kilometer, mile),
+                            ("in", "cm", inch, centimeter),
+                            ("ft", "m", foot, meter),
+                            ("mi", "km", mile, kilometer),
                         }
-                        "m" => {
-                            let length = Length::new::<meter>(quantity);
-                            send_converted_value(
-                                length.get::<foot>(),
-                                "ft",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
+                        ThermodynamicTemperature{
+                            ("c", "f", degree_celsius, degree_fahrenheit),
+                            ("f", "c", degree_fahrenheit, degree_celsius),
                         }
-                        "km" => {
-                            let length = Length::new::<kilometer>(quantity);
-                            send_converted_value(
-                                length.get::<mile>(),
-                                "mi",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
+                        Mass{
+                            ("kg", "lbs", kilogram, pound),
+                            ("lbs", "kg", pound, kilogram),
                         }
-                        "in" => {
-                            let length = Length::new::<inch>(quantity);
-                            send_converted_value(
-                                length.get::<centimeter>(),
-                                "cm",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
+                        Velocity{
+                            ("km/h", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kmh", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kph", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kmph", "mph", kilometer_per_hour, mile_per_hour),
+                            ("mph", "km/h", mile_per_hour, kilometer_per_hour),
                         }
-                        "ft" => {
-                            let length = Length::new::<foot>(quantity);
-                            send_converted_value(
-                                length.get::<meter>(),
-                                "m",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        "mi" => {
-                            let length = Length::new::<mile>(quantity);
-                            send_converted_value(
-                                length.get::<kilometer>(),
-                                "km",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        // temperature
-                        "c" => {
-                            let temperature =
-                                ThermodynamicTemperature::new::<degree_celsius>(quantity);
-                            send_converted_value(
-                                temperature.get::<degree_fahrenheit>(),
-                                "f",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        "f" => {
-                            let temperature =
-                                ThermodynamicTemperature::new::<degree_fahrenheit>(quantity);
-                            send_converted_value(
-                                temperature.get::<degree_celsius>(),
-                                "c",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        // weight
-                        "kg" => {
-                            let mass = Mass::new::<kilogram>(quantity);
-                            send_converted_value(
-                                mass.get::<pound>(),
-                                "lbs",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        "lbs" => {
-                            let mass = Mass::new::<pound>(quantity);
-                            send_converted_value(
-                                mass.get::<kilogram>(),
-                                "kg",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        // velocity
-                        "km/h" | "kmh" | "kph" | "kmph" => {
-                            let velocity = Velocity::new::<kilometer_per_hour>(quantity);
-                            send_converted_value(
-                                velocity.get::<mile_per_hour>(),
-                                "mph",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
-                        "mph" => {
-                            let velocity = Velocity::new::<mile_per_hour>(quantity);
-                            send_converted_value(
-                                velocity.get::<kilometer_per_hour>(),
-                                "km/h",
-                                room_id,
-                                client,
-                                session,
-                            )
-                            .await
-                        }
+                        
                         _ => {
                             debug!(
                                 "Attempted unknown conversion for unit {}",
-                                unit
+                                unit.trim().to_lowercase()
                             );
                             do_nothing().await
                         }
