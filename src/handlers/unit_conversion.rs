@@ -77,21 +77,19 @@ pub(super) async fn unit_conversion(
             }
         };
 
-        macro_rules! match_unit{
-            (   
-                unit = $unit:ident, quantity = $quantity:ident;
-                
+        macro_rules! convert_unit {
+            (
+                $unit:expr, $quantity:expr,
                 $(
                     $unit_ty:ident {
                         $( ( $from_str:expr, $to_str:expr, $from_ty:ty, $to_ty:ty ) ),*
                         $(,)?
                     }
                 )*
-                
                 _ => {
                     $($default_code:tt)*
                 }
-            )=>{
+            ) => {
                 match $unit {
                     $(
                         $(
@@ -118,10 +116,10 @@ pub(super) async fn unit_conversion(
         match quantity {
             Some(quantity) => match unit {
                 Some(unit) => {
-                    let unit=unit.trim().to_lowercase();
-                    let unit=unit.as_str();
-                    match_unit!{unit = unit, quantity = quantity;
-                        Length{
+                    let unit = unit.trim().to_lowercase();
+                    let unit = unit.as_str();
+                    convert_unit!(unit, quantity,
+                        Length {
                             ("cm", "in", centimeter, inch),
                             ("m", "ft", meter, foot),
                             ("km", "mi", kilometer, mile),
@@ -129,22 +127,21 @@ pub(super) async fn unit_conversion(
                             ("ft", "m", foot, meter),
                             ("mi", "km", mile, kilometer),
                         }
-                        ThermodynamicTemperature{
+                        ThermodynamicTemperature {
                             ("c", "f", degree_celsius, degree_fahrenheit),
                             ("f", "c", degree_fahrenheit, degree_celsius),
                         }
-                        Mass{
+                        Mass {
                             ("kg", "lbs", kilogram, pound),
                             ("lbs", "kg", pound, kilogram),
                         }
-                        Velocity{
+                        Velocity {
                             ("km/h", "mph", kilometer_per_hour, mile_per_hour),
                             ("kmh", "mph", kilometer_per_hour, mile_per_hour),
                             ("kph", "mph", kilometer_per_hour, mile_per_hour),
                             ("kmph", "mph", kilometer_per_hour, mile_per_hour),
                             ("mph", "km/h", mile_per_hour, kilometer_per_hour),
                         }
-                        
                         _ => {
                             debug!(
                                 "Attempted unknown conversion for unit {}",
@@ -152,7 +149,7 @@ pub(super) async fn unit_conversion(
                             );
                             do_nothing().await
                         }
-                    }
+                    )
                 }
                 None => do_nothing().await,
             },
