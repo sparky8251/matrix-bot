@@ -118,6 +118,8 @@ pub(super) async fn unit_conversion(
         match quantity {
             Some(quantity) => match unit {
                 Some(unit) => {
+                    let unit=unit.trim().to_lowercase();
+                    let unit=unit.as_str();
                     match_unit!{unit = unit, quantity = quantity;
                         Length{
                             ("cm", "in", centimeter, inch),
