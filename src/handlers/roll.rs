@@ -7,12 +7,15 @@ use anyhow::Result;
 use log::error;
 use nom::{named, tag_no_case, take_until};
 use rand::Rng;
-use ruma_client::{api::r0::message::create_message_event, HttpsClient};
-use ruma_events::{
-    room::message::{MessageEventContent, TextMessageEventContent},
-    EventType,
+use ruma_client::{
+    api::r0::message::create_message_event,
+    events::{
+        room::message::{MessageEventContent, TextMessageEventContent},
+        EventType,
+    },
+    identifiers::RoomId,
+    HttpsClient,
 };
-use ruma_identifiers::RoomId;
 
 #[allow(dead_code)]
 pub(super) async fn roll(

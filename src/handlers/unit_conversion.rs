@@ -7,12 +7,15 @@ use anyhow::Result;
 use log::{debug, error};
 use nom::character::is_alphabetic;
 use nom::{named, tag_no_case, take_till};
-use ruma_client::{api::r0::message::create_message_event, HttpsClient};
-use ruma_events::{
-    room::message::{MessageEventContent, TextMessageEventContent},
-    EventType,
+use ruma_client::{
+    api::r0::message::create_message_event,
+    events::{
+        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
+        EventType,
+    },
+    identifiers::RoomId,
+    HttpsClient,
 };
-use ruma_identifiers::RoomId;
 use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
 use uom::si::mass::{kilogram, pound};
@@ -172,10 +175,8 @@ async fn send_converted_value(
             room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
             event_type: EventType::RoomMessage,
             txn_id: session.next_txn_id(),
-            data: MessageEventContent::Text(TextMessageEventContent {
+            data: MessageEventContent::Notice(NoticeMessageEventContent {
                 body: format!("{:.2}{}", converted_quantity, converted_unit),
-                format: None,
-                formatted_body: None,
                 relates_to: None,
             }),
         })

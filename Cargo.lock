@@ -348,10 +348,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermit-abi"
-version = "0.1.10"
+name = "heck"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "725cf19794cf90aa94e65050cb4191ff5d8fa87a498383774c47b332e3af952e"
+checksum = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "hermit-abi"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
 dependencies = [
  "libc",
 ]
@@ -394,9 +403,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed6081100e960d9d74734659ffc9cc91daf1c0fc7aceb8eaa94ee1a3f5046f2e"
+checksum = "96816e1d921eca64d208a85aab4f7798455a8e34229ee5a88c935bdee1b78b14"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -478,8 +487,6 @@ dependencies = [
  "rand",
  "ron",
  "ruma-client",
- "ruma-events",
- "ruma-identifiers",
  "serde",
  "tokio",
  "uom",
@@ -527,9 +534,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.68"
+version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
+checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
 
 [[package]]
 name = "log"
@@ -690,18 +697,18 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pin-project"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7804a463a8d9572f13453c516a5faea534a2403d7ced2f0c7e100eeff072772c"
+checksum = "6f6a7f5eee6292c559c793430c55c00aea9d3b3d1905e855806ca4d7253426a2"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385322a45f2ecf3410c68d2a549a4a2685e8051d0f278e39743ff4e451cb9b3f"
+checksum = "8988430ce790d8682672117bc06dda364c0be32d3abd738234f19f3240bad99a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -838,9 +845,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.3.6"
+version = "1.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f6946991529684867e47d86474e3a6d0c0ab9b82d5821e314b1ede31fa3a4b3"
+checksum = "a6020f034922e3194c711b82a627453881bc4682166cabb07134a10c26ba7692"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -876,9 +883,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-api"
-version = "0.13.1"
+version = "0.16.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b56cf718a9b575a9ce4fae92399c5c00b9059b2d3fbc6bfb4ff4f00431e50290"
+checksum = "7769e934360383f91d68a2b9132610d02436ef3272cbdd46de239c9025198a36"
 dependencies = [
  "http",
  "percent-encoding",
@@ -887,14 +894,14 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "strum",
 ]
 
 [[package]]
 name = "ruma-api-macros"
-version = "0.10.1"
+version = "0.16.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e2c60086b570af5d8b88c9e2f10b3c4c950436658a104c3e60117eca2b1c466"
+checksum = "0f8dad3311d0bee6d43da684ba03f9a84cddd39f9b3e7e88cab5d726419ec22e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -903,9 +910,8 @@ dependencies = [
 
 [[package]]
 name = "ruma-client"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e333757b70f7c8e289191e9db1e5db21d56495507dd9aaeadcdbedded55418"
+version = "0.4.0-beta.1"
+source = "git+https://github.com/ruma/ruma-client#1b1f8b63413680f51734c15a95280cfff6864f81"
 dependencies = [
  "futures-core",
  "futures-util",
@@ -924,37 +930,41 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.6.0"
+version = "0.8.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa35e24b165401c1066416d804d830313f27d934dcd71f4388396a42f98ba020"
+checksum = "7e01ee282e08580797c4724531ce23dcb2bcc32a7b00a56332ecb19de9dba7b0"
 dependencies = [
+ "http",
  "js_int",
  "ruma-api",
  "ruma-events",
  "ruma-identifiers",
+ "ruma-serde",
  "serde",
  "serde_json",
+ "strum",
  "url",
 ]
 
 [[package]]
 name = "ruma-events"
-version = "0.15.1"
+version = "0.19.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a196cbeaa7bffe3756448ee9cf142645790e2a0ece78dfaf10a311eaf5e2a5e"
+checksum = "238a96cb9d75ece38768b39c5e2b21825722f0dcf7b48aa3e9aa55decd68acf4"
 dependencies = [
  "js_int",
  "ruma-events-macros",
  "ruma-identifiers",
+ "ruma-serde",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "ruma-events-macros"
-version = "0.2.0"
+version = "0.19.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "962d93056619ed61826a9d8872c863560e4892ff6a69b70f593baa5ae8b19dc8"
+checksum = "e17758166db06d95a54b7a148194b26e3665fb258767632fc7cc75efa198cef6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -963,13 +973,22 @@ dependencies = [
 
 [[package]]
 name = "ruma-identifiers"
-version = "0.14.1"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07e442c700a3b33fc4dd4a1c4b463ebdd252d2c2db31b83da6bb3009307039b9"
+checksum = "63db5545f38077ea141fb112df070773e6ab9b7025174d732f56c6b37525ccc0"
 dependencies = [
- "rand",
  "serde",
- "url",
+]
+
+[[package]]
+name = "ruma-serde"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09901d608958f63618546957134dd4242d2ca07a885a28f794ad4574a937c22c"
+dependencies = [
+ "js_int",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1119,6 +1138,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f3eb36b47e512f8f1c9e3d10c2c1965bc992bd9cdb024fa581e2194501c83d3"
 
 [[package]]
+name = "strum"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57bd81eb48f4c437cadc685403cad539345bf703d78e63707418431cecd4522b"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87c85aa3f8ea653bfd3ddf25f7ee357ee4d204731f6aa9ad04002306f6e2774c"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1174,9 +1214,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.17"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39fb9142eb6e9cc37f4f29144e62618440b149a138eee01a7bbe9b9226aaf17c"
+checksum = "34ef16d072d2b6dc8b4a56c70f5c5ced1a37752116f8e7c1e80c659aa7cb6713"
 dependencies = [
  "bytes",
  "fnv",
@@ -1243,9 +1283,9 @@ checksum = "e604eb7b43c06650e854be16a2a03155743d3752dd1c943f6829e26b7a36e382"
 
 [[package]]
 name = "typenum"
-version = "1.11.2"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
+checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 
 [[package]]
 name = "unicode-bidi"
@@ -1264,6 +1304,12 @@ checksum = "5479532badd04e128284890390c1e876ef7a993d0570b3597ae43dfa1d59afa4"
 dependencies = [
  "smallvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 
 [[package]]
 name = "unicode-xid"

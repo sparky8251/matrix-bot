@@ -2,14 +2,18 @@ use crate::handlers::handle_text_message;
 use crate::session::SavedSession;
 
 use std::process;
+use std::time::Duration;
 
 use anyhow::Result;
 use log::{error, info};
-use ruma_client::{api::r0::sync::sync_events, Client};
-use ruma_events::{
-    collections::all::RoomEvent,
-    room::message::{MessageEvent, MessageEventContent},
-    EventResult,
+use ruma_client::{
+    api::r0::sync::sync_events::{self, SetPresence},
+    events::{
+        collections::all::RoomEvent,
+        room::message::{MessageEvent, MessageEventContent},
+        EventResult,
+    },
+    Client,
 };
 use url::Url;
 
@@ -18,7 +22,7 @@ pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
         Ok(v) => info!("{:?}", v),
         Err(e) => {
             error!("{:?}", e);
-            process::exit(32);
+            // process::exit(32);
         }
     }
 }
@@ -63,9 +67,9 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
             .request(sync_events::Request {
                 filter: None,
                 since: session.get_last_sync(),
-                full_state: None,
-                set_presence: None,
-                timeout: Some(1000_u32.into()),
+                full_state: false,
+                set_presence: SetPresence::Unavailable,
+                timeout: Some(Duration::new(1000, 0)),
             })
             .await?;
 

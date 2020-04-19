@@ -12,9 +12,11 @@ use crate::session::SavedSession;
 
 use anyhow::Result;
 use log::debug;
-use ruma_client::HttpsClient;
-use ruma_events::room::message::TextMessageEventContent;
-use ruma_identifiers::{RoomId, UserId};
+use ruma_client::{
+    events::room::message::TextMessageEventContent,
+    identifiers::{RoomId, UserId},
+    HttpsClient,
+};
 
 pub async fn handle_text_message(
     text: &TextMessageEventContent,

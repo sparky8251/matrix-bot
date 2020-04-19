@@ -3,8 +3,7 @@ use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 use log::trace;
-use ruma_client::Session;
-use ruma_identifiers::RoomId;
+use ruma_client::{identifiers::RoomId, Session};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]

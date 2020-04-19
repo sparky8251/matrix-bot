@@ -11,9 +11,7 @@ codegen-units = 1 # better optimizations
 lto = true # better optimizations
 
 [dependencies]
-ruma-client = "0.3"
-ruma-events = "0.15.1" # Must be 0.15.1 to prevent different ruma-events versions from living in the same binary
-ruma-identifiers = "0.14"
+ruma-client = { git = "https://github.com/ruma/ruma-client" }
 url = "2.1"
 directories = "2.0"
 log = "0.4"
