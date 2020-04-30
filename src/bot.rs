@@ -70,8 +70,8 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
             .await?;
 
         for (room_id, joined_room) in &response.rooms.join {
-            for event in &joined_room.timeline.events {
-                let event = event.deserialize();
+            for raw_event in &joined_room.timeline.events {
+                let event = raw_event.deserialize();
                 match event {
                     Ok(r) => match r {
                         RoomEvent::RoomMessage(m) => match m.content {
@@ -83,7 +83,10 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
                         },
                         _ => (),
                     },
-                    Err(e) => error!("{:?}", e),
+                    Err(e) => {
+                        error!("{:?}", e);
+                        error!("Content: {:?}", raw_event.json())
+                    },
                 }
             }
         }
