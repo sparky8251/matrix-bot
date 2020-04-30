@@ -1,5 +1,3 @@
-use std::process;
-
 use super::helpers::do_nothing;
 use crate::session::SavedSession;
 
@@ -11,7 +9,7 @@ use ruma_client::{
     api::r0::message::create_message_event,
     events::{
         room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        EventType,
+        EventJson, EventType,
     },
     identifiers::RoomId,
     HttpsClient,
@@ -27,14 +25,14 @@ pub(super) async fn unit_conversion(
     room_id: &RoomId,
     client: &HttpsClient,
     session: &mut SavedSession,
-) -> Result<()> {
+) -> Result<(), anyhow::Error> {
     if text.relates_to == None && text.formatted_body == None {
         named!(strip_tag, tag_no_case!("!convert "));
         let message = match strip_tag(&text.body.as_bytes()) {
             Ok(v) => v.0,
             Err(e) => {
                 error!("{:?}", e);
-                process::exit(52)
+                return Ok(());
             }
         };
         named!(split_parts, take_till!(is_alphabetic));
@@ -139,10 +137,7 @@ pub(super) async fn unit_conversion(
                             ("lbs", "kg", pound, kilogram),
                         }
                         Velocity {
-                            ("km/h", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kmh", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kph", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kmph", "mph", kilometer_per_hour, mile_per_hour),
+                            ("km/h | kmh | kph | kmph", "mph", kilometer_per_hour, mile_per_hour),
                             ("mph", "km/h", mile_per_hour, kilometer_per_hour),
                         }
                         _ => {
@@ -175,17 +170,17 @@ async fn send_converted_value(
             room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
             event_type: EventType::RoomMessage,
             txn_id: session.next_txn_id(),
-            data: MessageEventContent::Notice(NoticeMessageEventContent {
+            data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
                 body: format!("{:.2}{}", converted_quantity, converted_unit),
                 relates_to: None,
-            }),
+            })),
         })
         .await;
     match response {
         Ok(_) => Ok(()),
         Err(e) => {
             error!("{:?}", e);
-            process::exit(48)
+            Ok(())
         }
     }
 }

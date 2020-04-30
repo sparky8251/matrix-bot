@@ -1,5 +1,3 @@
-use std::process;
-
 use super::helpers::do_nothing;
 use crate::session::SavedSession;
 
@@ -11,7 +9,7 @@ use ruma_client::{
     api::r0::message::create_message_event,
     events::{
         room::message::{MessageEventContent, TextMessageEventContent},
-        EventType,
+        EventJson, EventType,
     },
     identifiers::RoomId,
     HttpsClient,
@@ -30,7 +28,7 @@ pub(super) async fn roll(
             Ok(v) => v.0,
             Err(e) => {
                 error!("{:?}", e);
-                process::exit(52)
+                return Ok(())
             }
         };
 
@@ -125,19 +123,19 @@ async fn send_roll(
             room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
             event_type: EventType::RoomMessage,
             txn_id: session.next_txn_id(),
-            data: MessageEventContent::Text(TextMessageEventContent {
+            data: EventJson::from(MessageEventContent::Text(TextMessageEventContent {
                 body: format!("{}", roll),
                 format: None,
                 formatted_body: None,
                 relates_to: None,
-            }),
+            })),
         })
         .await;
     match response {
         Ok(_) => Ok(()),
         Err(e) => {
             error!("{:?}", e);
-            process::exit(48)
+            Ok(())
         }
     }
 }

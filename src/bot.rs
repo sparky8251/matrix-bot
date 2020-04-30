@@ -8,11 +8,7 @@ use anyhow::Result;
 use log::{error, info};
 use ruma_client::{
     api::r0::sync::sync_events::{self, SetPresence},
-    events::{
-        collections::all::RoomEvent,
-        room::message::{MessageEvent, MessageEventContent},
-        EventResult,
-    },
+    events::{collections::all::RoomEvent, room::message::MessageEventContent},
     Client,
 };
 use url::Url;
@@ -75,13 +71,19 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
 
         for (room_id, joined_room) in &response.rooms.join {
             for event in &joined_room.timeline.events {
-                if let EventResult::Ok(RoomEvent::RoomMessage(MessageEvent {
-                    content: MessageEventContent::Text(text),
-                    sender,
-                    ..
-                })) = event
-                {
-                    handle_text_message(&text, sender, room_id, &client, session).await?;
+                let event = event.deserialize();
+                match event {
+                    Ok(r) => match r {
+                        RoomEvent::RoomMessage(m) => match m.content {
+                            MessageEventContent::Text(t) => {
+                                handle_text_message(&t, &m.sender, room_id, &client, session)
+                                    .await?
+                            }
+                            _ => (),
+                        },
+                        _ => (),
+                    },
+                    Err(e) => error!("{:?}", e),
                 }
             }
         }

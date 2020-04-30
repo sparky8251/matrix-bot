@@ -1,5 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::process;
 use std::time::SystemTime;
 
 use crate::session::SavedSession;
@@ -11,7 +10,7 @@ use ruma_client::{
     api::r0::message::create_message_event,
     events::{
         room::message::{MessageEventContent, TextMessageEventContent},
-        EventType,
+        EventJson, EventType,
     },
     identifiers::{RoomId, UserId},
     HttpsClient,
@@ -131,15 +130,17 @@ pub(super) async fn correct_spelling_check(
                             room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
                             event_type: EventType::RoomMessage,
                             txn_id: session.next_txn_id(),
-                            data: MessageEventContent::Text(TextMessageEventContent {
-                                body: correct_spelling(
-                                    sender.localpart(),
-                                    &incorrect_spelling.to_string(),
-                                ),
-                                format: None,
-                                formatted_body: None,
-                                relates_to: None,
-                            }),
+                            data: EventJson::from(MessageEventContent::Text(
+                                TextMessageEventContent {
+                                    body: correct_spelling(
+                                        sender.localpart(),
+                                        &incorrect_spelling.to_string(),
+                                    ),
+                                    format: None,
+                                    formatted_body: None,
+                                    relates_to: None,
+                                },
+                            )),
                         })
                         .await;
                     match response {
@@ -149,7 +150,7 @@ pub(super) async fn correct_spelling_check(
                         }
                         Err(e) => {
                             error!("{:?}", e);
-                            process::exit(48)
+                            return Ok(());
                         }
                     }
                 }
@@ -160,5 +161,5 @@ pub(super) async fn correct_spelling_check(
 }
 
 fn correct_spelling(user: &str, incorrect_spelling: &str) -> String {
-    format!("I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Linux plus Jellyfin. Jellyfin is not an operating system unto itself, but rather another free component of a fully functioning Linux system made useful by ffmpeg, dwarf fortress, and other vital system components comprising a full OS as defined by Steve Ballmer. Many computer users run a modified version of Jellyfin every day, without realizing it. Through a peculiar turn of events, the version of Jellyfin which is widely used today is often called \"that one media player thingy you have\", and many of its users are not aware that it is basically the Jellyfin system, developed with slave labor. There really is a Jellyfin, and these people are using it, but it is just a part of the system they use. Jellyfin is the answer: the program in the system that allocates the machine's resources until your fans are screaming for the sweet release of death. The media server is an essential part of an operating system, but useless by itself; it can only function in the context of a complete collection of Linux ISOs. Jellyfin is normally used in combination with the Linux operating system: the whole system is basically Linux with Jellyfin added, or Linux/Jellyfin. All the so-called \"Linux\" releases are really distributions of Linux/Jellyfin.", user, incorrect_spelling)
+    format!("I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.", user, incorrect_spelling)
 }
