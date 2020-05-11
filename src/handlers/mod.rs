@@ -1,15 +1,15 @@
-mod correct_spelling;
 mod helpers;
+mod no_command;
 // mod roll;
 mod unit_conversion;
 
-use self::correct_spelling::correct_spelling_check;
 use self::helpers::do_nothing;
+use self::no_command::no_command_check;
 #[allow(unused_imports)]
 // use self::roll::roll;
 use self::unit_conversion::unit_conversion;
+use crate::regex::{NO_BANG, SINGLE_UNIT_CONVERSION};
 use crate::session::SavedSession;
-use crate::regex::{NO_BANG, UNIT_CONVERSION};
 
 use anyhow::Result;
 use log::debug;
@@ -27,9 +27,9 @@ pub async fn handle_text_message(
     session: &mut SavedSession,
 ) -> Result<()> {
     if NO_BANG.is_match(&text.body) {
-        debug!("Entering spell check path...");
-        correct_spelling_check(text, sender, room_id, client, session).await
-    } else if UNIT_CONVERSION.is_match(&text.body.to_lowercase()) {
+        debug!("Entering no command path...");
+        no_command_check(text, sender, room_id, client, session).await
+    } else if SINGLE_UNIT_CONVERSION.is_match(&text.body.to_lowercase()) {
         debug!("Entering unit conversion path...");
         unit_conversion(text, room_id, client, session).await
     // } else if ROLL.is_match(&text.body.to_lowercase()) {

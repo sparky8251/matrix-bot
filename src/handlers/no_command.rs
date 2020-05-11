@@ -1,0 +1,283 @@
+use std::fmt::{Display, Formatter};
+use std::time::SystemTime;
+
+use crate::regex::UNIT_CONVERSION;
+use crate::session::SavedSession;
+
+use anyhow::Result;
+use lazy_static::lazy_static;
+use log::{debug, error, trace};
+use ruma_client::{
+    api::r0::message::create_message_event,
+    events::{
+        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
+        EventJson, EventType,
+    },
+    identifiers::{RoomId, UserId},
+    HttpsClient,
+};
+use uom::si::f64::*;
+use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
+use uom::si::mass::{kilogram, pound};
+use uom::si::thermodynamic_temperature::{degree_celsius, degree_fahrenheit};
+use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
+
+#[derive(Clone)]
+enum SpellCheckKind {
+    SpellCheckInsensitive(InsensitiveSpelling),
+    SpellCheckSensitive(SensitiveSpelling),
+}
+
+#[derive(Clone)]
+struct SpellCheck {
+    insensitive: Vec<InsensitiveSpelling>,
+    sensitive: Vec<SensitiveSpelling>,
+}
+#[derive(Clone)]
+struct InsensitiveSpelling {
+    spelling: String,
+}
+
+#[derive(Clone)]
+struct SensitiveSpelling {
+    spelling: String,
+}
+
+impl SpellCheck {
+    fn new() -> Self {
+        SpellCheck {
+            insensitive: vec![
+                InsensitiveSpelling::from("Jellyfish"),
+                InsensitiveSpelling::from("Jelly Fin"),
+            ],
+            sensitive: vec![
+                SensitiveSpelling::from("JellyFin"),
+                SensitiveSpelling::from("jellyFin"),
+            ],
+        }
+    }
+}
+
+impl From<&str> for InsensitiveSpelling {
+    fn from(str: &str) -> Self {
+        InsensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl From<&str> for SensitiveSpelling {
+    fn from(str: &str) -> Self {
+        SensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl Display for InsensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
+    }
+}
+
+impl Display for SensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
+    }
+}
+
+impl Display for SpellCheckKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpellCheckKind::SpellCheckInsensitive(v) => write!(f, "{}", v),
+            SpellCheckKind::SpellCheckSensitive(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+lazy_static! {
+    static ref SPELL_CHECK: SpellCheck = SpellCheck::new();
+}
+
+pub(super) async fn no_command_check(
+    text: &TextMessageEventContent,
+    sender: &UserId,
+    room_id: &RoomId,
+    client: &HttpsClient,
+    session: &mut SavedSession,
+) -> Result<()> {
+    if sender.localpart() == session.get_username() {
+        // do nothing if message is from self
+        trace!("Message is from self, doing nothing");
+    } else {
+        if session.correction_time_cooldown() && text.relates_to == None {
+            // TODO Fix parsing of formatted bodies to exclude specific formatting tags
+            // of format "org.matrix.custom.html"
+            // <code></code> and <pre><code></code></pre>
+            // are known ignorable format tags
+            if UNIT_CONVERSION.is_match(&text.body) && text.formatted_body == None {
+                debug!("Entering commandless unit conversion check path");
+                let mut conversions = Vec::new();
+                for cap in UNIT_CONVERSION.captures_iter(&text.body.to_ascii_lowercase()) {
+                    conversions.push((cap[1].to_string(), cap[2].to_string()))
+                }
+                let conversions = conversions;
+                let mut result = String::new();
+                for conversion in conversions {
+                    let (quantity, unit) = conversion;
+                    let quantity = match quantity.parse::<f64>() {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error!("Quantity unable to be parsed. Error is {:?}", e);
+                            return Ok(());
+                        }
+                    };
+                    macro_rules! convert_unit {
+                        (
+                            $unit:expr, $quantity:expr,
+                            $(
+                                $unit_ty:ident {
+                                    $( ( $from_str:expr, $to_str:expr, $from_ty:ty, $to_ty:ty ) ),*
+                                    $(,)?
+                                }
+                            )*
+                            _ => {
+                                $($default_code:tt)*
+                            }
+                        ) => {
+                            match $unit {
+                                $(
+                                    $(
+                                        $from_str => {
+                                            let unit_value = $unit_ty::new::<$from_ty>($quantity);
+                                            let converted_quantity = unit_value.get::<$to_ty>();
+                                            let from_string = format!("{:.2}{} => ", $quantity, $from_str);
+                                            let to_string = format!("{:.2}{}\n", converted_quantity, $to_str);
+                                            result.push_str(from_string.as_str());
+                                            result.push_str(to_string.as_str());
+                                        }
+                                    )*
+                                )*
+                                _ => {
+                                    $($default_code)*
+                                }
+                            }
+                        }
+                    }
+                    convert_unit!(unit.as_str(), quantity,
+                        Length {
+                            ("cm", "in", centimeter, inch),
+                            ("m", "ft", meter, foot),
+                            ("km", "mi", kilometer, mile),
+                            ("in", "cm", inch, centimeter),
+                            ("ft", "m", foot, meter),
+                            ("mi", "km", mile, kilometer),
+                        }
+                        ThermodynamicTemperature {
+                            ("c", "f", degree_celsius, degree_fahrenheit),
+                            ("f", "c", degree_fahrenheit, degree_celsius),
+                        }
+                        Mass {
+                            ("kg", "lbs", kilogram, pound),
+                            ("lbs", "kg", pound, kilogram),
+                        }
+                        Velocity {
+                            ("km/h", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kmh", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kph", "mph", kilometer_per_hour, mile_per_hour),
+                            ("kmph", "mph", kilometer_per_hour, mile_per_hour),
+                            ("mph", "km/h", mile_per_hour, kilometer_per_hour),
+                        }
+                        _ => {
+                            debug!(
+                            "Attempted unknown conversion for unit {:?}",
+                            unit.trim().to_lowercase());
+                            return Ok(())
+                        }
+                    )
+                }
+
+                let response = client
+                    .request(create_message_event::Request {
+                        room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
+                        event_type: EventType::RoomMessage,
+                        txn_id: session.next_txn_id(),
+                        data: EventJson::from(MessageEventContent::Notice(
+                            NoticeMessageEventContent {
+                                body: result.trim().to_string(),
+                                relates_to: None,
+                            },
+                        )),
+                    })
+                    .await;
+                match response {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        error!("{:?}", e);
+                        return Ok(())
+                    }
+                }
+            } else {
+                debug!("Entering spell check path");
+                for incorrect_spelling in SPELL_CHECK
+                    .insensitive
+                    .clone() //FIXME: There has to be a better way than to clone here
+                    .into_iter()
+                    .map(SpellCheckKind::SpellCheckInsensitive)
+                    .chain(
+                        SPELL_CHECK
+                            .sensitive
+                            .clone() //FIXME: There has to be a better way than to clone here
+                            .into_iter()
+                            .map(SpellCheckKind::SpellCheckSensitive),
+                    )
+                {
+                    let incorrect = match incorrect_spelling.clone() {
+                        SpellCheckKind::SpellCheckInsensitive(v) => text
+                            .body
+                            .to_lowercase()
+                            .contains(&v.to_string().to_lowercase()),
+                        SpellCheckKind::SpellCheckSensitive(v) => {
+                            text.body.contains(&v.to_string())
+                        }
+                    };
+                    if incorrect {
+                        let response = client
+                            .request(create_message_event::Request {
+                                room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
+                                event_type: EventType::RoomMessage,
+                                txn_id: session.next_txn_id(),
+                                data: EventJson::from(MessageEventContent::Text(
+                                    TextMessageEventContent {
+                                        body: correct_spelling(
+                                            sender.localpart(),
+                                            &incorrect_spelling.to_string(),
+                                        ),
+                                        format: None,
+                                        formatted_body: None,
+                                        relates_to: None,
+                                    },
+                                )),
+                            })
+                            .await;
+                        match response {
+                            Ok(_) => {
+                                session.set_last_correction_time(SystemTime::now());
+                                return Ok(());
+                            }
+                            Err(e) => {
+                                error!("{:?}", e);
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return Ok(()); // No matches found or cooldown time not met, so return Ok
+}
+
+fn correct_spelling(user: &str, incorrect_spelling: &str) -> String {
+    format!("I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.", user, incorrect_spelling)
+}

@@ -1,7 +1,7 @@
 mod bot;
 mod handlers;
-mod session;
 mod regex;
+mod session;
 
 use std::process;
 

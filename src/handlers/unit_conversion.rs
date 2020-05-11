@@ -1,6 +1,6 @@
 use super::helpers::do_nothing;
+use crate::regex::SINGLE_UNIT_CONVERSION;
 use crate::session::SavedSession;
-use crate::regex::UNIT_CONVERSION;
 
 use anyhow::Result;
 use log::{debug, error, trace};
@@ -28,7 +28,7 @@ pub(super) async fn unit_conversion(
     if text.relates_to == None && text.formatted_body == None {
         let mut quantity = "".to_string();
         let mut unit = "".to_string();
-        for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
+        for cap in SINGLE_UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
             quantity = cap[1].to_string();
             unit = cap[2].to_string();
             trace!(
