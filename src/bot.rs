@@ -5,7 +5,7 @@ use std::process;
 use std::time::Duration;
 
 use anyhow::Result;
-use log::{error, info};
+use log::{debug, error, info, trace};
 use ruma_client::{
     api::r0::sync::sync_events::{self, SetPresence},
     events::{collections::all::RoomEvent, room::message::MessageEventContent},
@@ -15,10 +15,9 @@ use url::Url;
 
 pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
     match bot(homeserver_url, session).await {
-        Ok(v) => info!("{:?}", v),
+        Ok(v) => debug!("{:?}", v),
         Err(e) => {
-            error!("{:?}", e);
-            // process::exit(32);
+            debug!("{:?}", e);
         }
     }
 }
@@ -59,7 +58,7 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
     );
 
     loop {
-        let response = client
+        let response = match client
             .request(sync_events::Request {
                 filter: None,
                 since: session.get_last_sync(),
@@ -67,37 +66,64 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
                 set_presence: SetPresence::Unavailable,
                 timeout: Some(Duration::new(1000, 0)),
             })
-            .await?;
-
-        for (room_id, joined_room) in &response.rooms.join {
-            for raw_event in &joined_room.timeline.events {
-                let event = raw_event.deserialize();
-                match event {
-                    Ok(r) => match r {
-                        RoomEvent::RoomMessage(m) => match m.content {
-                            MessageEventContent::Text(t) => {
-                                handle_text_message(&t, &m.sender, room_id, &client, session)
-                                    .await?
-                            }
-                            _ => (),
-                        },
-                        _ => (),
-                    },
-                    Err(e) => {
-                        error!("{:?}", e);
-                        error!("Content: {:?}", raw_event.json())
-                    },
-                }
-            }
-        }
-
-        session.set_last_sync(Some(response.next_batch));
-        match session.save_session() {
-            Ok(()) => (),
+            .await
+        {
+            Ok(v) => Some(v),
             Err(e) => {
-                error!("{:?}", e);
-                process::exit(24)
+                debug!("Line 72: {:?}", e);
+                None
             }
         };
+
+        match response {
+            Some(v) => {
+                for (room_id, joined_room) in &v.rooms.join {
+                    for raw_event in &joined_room.timeline.events {
+                        let event = raw_event.deserialize();
+                        match event {
+                            Ok(r) => match r {
+                                RoomEvent::RoomMessage(m) => match m.content {
+                                    MessageEventContent::Text(t) => {
+                                        match handle_text_message(
+                                            &t, &m.sender, room_id, &client, session,
+                                        )
+                                        .await {
+                                            Ok(_) => {
+                                                trace!("Handled text message");
+                                                ()
+                                            },
+                                            Err(e) => {
+                                                debug!("{:?}", e);
+                                                ()
+                                            }
+                                        }
+                                    }
+                                    _ => (),
+                                },
+                                _ => (),
+                            },
+                            Err(e) => {
+                                debug!("{:?}", e);
+                                trace!("Content: {:?}", raw_event.json());
+                                ()
+                            }
+                        }
+
+                        session.set_last_sync(Some(v.next_batch.clone()));
+                        match session.save_session() {
+                            Ok(()) => (),
+                            Err(e) => {
+                                error!("{:?}", e);
+                                process::exit(24)
+                            }
+                        };
+                    }
+                }
+            }
+            None => {
+                debug!("Response deserialization failed. Doing nothing this loop.");
+                ()
+            }
+        }
     }
 }

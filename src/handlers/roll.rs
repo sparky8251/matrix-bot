@@ -28,7 +28,7 @@ pub(super) async fn roll(
             Ok(v) => v.0,
             Err(e) => {
                 error!("{:?}", e);
-                return Ok(())
+                return Ok(());
             }
         };
 
