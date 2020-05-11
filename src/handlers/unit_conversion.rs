@@ -2,9 +2,9 @@ use super::helpers::do_nothing;
 use crate::session::SavedSession;
 
 use anyhow::Result;
-use log::{debug, error};
-use nom::character::is_alphabetic;
-use nom::{named, tag_no_case, take_till};
+use lazy_static::lazy_static;
+use log::{debug, error, trace};
+use regex::Regex;
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -20,6 +20,19 @@ use uom::si::mass::{kilogram, pound};
 use uom::si::thermodynamic_temperature::{degree_celsius, degree_fahrenheit};
 use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
 
+lazy_static! {
+    static ref UNIT_CONVERSION: Regex = Regex::new(
+        r"(?x)
+        ^!convert               # The tag from line start
+        \s*?                    # Any amount of whitespace
+        ([[:digit:]]+)          # The number to convert (captured)
+        \s*?                    # Any amount of white space
+        ([A-Za-z/]+)            # The unit to convert from including potential / (captured)
+    "
+    )
+    .unwrap();
+}
+
 pub(super) async fn unit_conversion(
     text: &TextMessageEventContent,
     room_id: &RoomId,
@@ -27,56 +40,24 @@ pub(super) async fn unit_conversion(
     session: &mut SavedSession,
 ) -> Result<(), anyhow::Error> {
     if text.relates_to == None && text.formatted_body == None {
-        named!(strip_tag, tag_no_case!("!convert "));
-        let message = match strip_tag(&text.body.as_bytes()) {
-            Ok(v) => v.0,
+        let mut quantity = "".to_string();
+        let mut unit = "".to_string();
+        for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
+            quantity = cap[1].to_string();
+            unit = cap[2].to_string();
+            trace!("Capture: {:?} => Quantity: {:?} => Unit: {:?}", &cap[0], quantity, unit);
+            break; // Should not be possible to match multiple times, but just in case we only want the first match
+        }
+        let quantity = match quantity.parse::<f64>() {
+            Ok(v) => v,
             Err(e) => {
-                error!("{:?}", e);
+                error!("Quantity unable to be parsed. Error is {:?}", e);
                 return Ok(());
             }
         };
-        named!(split_parts, take_till!(is_alphabetic));
-        let (quantity, unit) = match split_parts(message) {
-            Ok(v) => (Some(v.1.to_vec()), Some(v.0.to_vec())),
-            Err(e) => {
-                error!("{:?}", e);
-                (None, None)
-            }
-        };
+        let unit = unit;
 
-        let quantity = match quantity {
-            Some(q) => match String::from_utf8(q) {
-                Ok(v) => match v.trim().parse::<f64>() {
-                    Ok(n) => Some(n),
-                    Err(e) => {
-                        error!("{:?}", e);
-                        None
-                    }
-                },
-                Err(e) => {
-                    error!("{:?}", e);
-                    None
-                }
-            },
-            None => {
-                error!("No quantity provided!");
-                None
-            }
-        };
-
-        let unit = match unit {
-            Some(u) => match String::from_utf8(u) {
-                Ok(t) => Some(t),
-                Err(e) => {
-                    error!("{:?}", e);
-                    None
-                }
-            },
-            None => {
-                error!("No unit provided!");
-                None
-            }
-        };
+        trace!("{:?} => {:?}", quantity, unit);
 
         macro_rules! convert_unit {
             (
@@ -114,48 +95,45 @@ pub(super) async fn unit_conversion(
             }
         }
 
-        match quantity {
-            Some(quantity) => match unit {
-                Some(unit) => {
-                    let unit = unit.trim().to_lowercase();
-                    let unit = unit.as_str();
-                    convert_unit!(unit, quantity,
-                        Length {
-                            ("cm", "in", centimeter, inch),
-                            ("m", "ft", meter, foot),
-                            ("km", "mi", kilometer, mile),
-                            ("in", "cm", inch, centimeter),
-                            ("ft", "m", foot, meter),
-                            ("mi", "km", mile, kilometer),
-                        }
-                        ThermodynamicTemperature {
-                            ("c", "f", degree_celsius, degree_fahrenheit),
-                            ("f", "c", degree_fahrenheit, degree_celsius),
-                        }
-                        Mass {
-                            ("kg", "lbs", kilogram, pound),
-                            ("lbs", "kg", pound, kilogram),
-                        }
-                        Velocity {
-                            ("km/h | kmh | kph | kmph", "mph", kilometer_per_hour, mile_per_hour),
-                            ("mph", "km/h", mile_per_hour, kilometer_per_hour),
-                        }
-                        _ => {
-                            debug!(
-                                "Attempted unknown conversion for unit {}",
-                                unit.trim().to_lowercase()
-                            );
-                            do_nothing().await
-                        }
-                    )
-                }
-                None => do_nothing().await,
-            },
-            None => do_nothing().await,
+        match convert_unit!(unit.as_str(), quantity,
+            Length {
+                ("cm", "in", centimeter, inch),
+                ("m", "ft", meter, foot),
+                ("km", "mi", kilometer, mile),
+                ("in", "cm", inch, centimeter),
+                ("ft", "m", foot, meter),
+                ("mi", "km", mile, kilometer),
+            }
+            ThermodynamicTemperature {
+                ("c", "f", degree_celsius, degree_fahrenheit),
+                ("f", "c", degree_fahrenheit, degree_celsius),
+            }
+            Mass {
+                ("kg", "lbs", kilogram, pound),
+                ("lbs", "kg", pound, kilogram),
+            }
+            Velocity {
+                ("km/h", "mph", kilometer_per_hour, mile_per_hour),
+                ("kmh", "mph", kilometer_per_hour, mile_per_hour),
+                ("kph", "mph", kilometer_per_hour, mile_per_hour),
+                ("kmph", "mph", kilometer_per_hour, mile_per_hour),
+                ("mph", "km/h", mile_per_hour, kilometer_per_hour),
+            }
+            _ => {
+                debug!(
+                    "Attempted unknown conversion for unit {:?}",
+                    unit.trim().to_lowercase()
+                );
+                do_nothing().await
+            }
+        ) {
+            Ok(_) => (),
+            Err(e) => {
+                error!("{:?}", e);
+            }
         }
-    } else {
-        do_nothing().await
     }
+    do_nothing().await
 }
 
 async fn send_converted_value(

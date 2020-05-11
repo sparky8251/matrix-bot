@@ -87,11 +87,12 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
                                         match handle_text_message(
                                             &t, &m.sender, room_id, &client, session,
                                         )
-                                        .await {
+                                        .await
+                                        {
                                             Ok(_) => {
                                                 trace!("Handled text message");
                                                 ()
-                                            },
+                                            }
                                             Err(e) => {
                                                 debug!("{:?}", e);
                                                 ()
