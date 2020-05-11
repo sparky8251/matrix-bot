@@ -27,7 +27,7 @@ lazy_static! {
         \s*?                            # Any amount of whitespace
         ([[:digit:]]+\.[[:digit:]]+)    # The number to convert (captured)
         \s*?                            # Any amount of white space
-        ([A-Za-z/]+)                    # The unit to convert from including potential / (captured)
+        ([[:alpha:]/]+)                 # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
@@ -45,7 +45,12 @@ pub(super) async fn unit_conversion(
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
             quantity = cap[1].to_string();
             unit = cap[2].to_string();
-            trace!("Capture: {:?} => Quantity: {:?} => Unit: {:?}", &cap[0], quantity, unit);
+            trace!(
+                "Capture: {:?} => Quantity: {:?} => Unit: {:?}",
+                &cap[0],
+                quantity,
+                unit
+            );
             break; // Should not be possible to match multiple times, but just in case we only want the first match
         }
         let quantity = match quantity.parse::<f64>() {

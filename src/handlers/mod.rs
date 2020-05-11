@@ -30,7 +30,7 @@ lazy_static! {
         \s*?                            # Any amount of whitespace
         ([[:digit:]]+\.[[:digit:]]+)    # The number to convert (captured)
         \s*?                            # Any amount of white space
-        ([A-Za-z/]+)                    # The unit to convert from including potential / (captured)
+        ([[:alpha:]/]+)                 # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
