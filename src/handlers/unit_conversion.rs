@@ -23,11 +23,11 @@ use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
 lazy_static! {
     static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ^!convert               # The tag from line start
-        \s*?                    # Any amount of whitespace
-        ([[:digit:]]+)          # The number to convert (captured)
-        \s*?                    # Any amount of white space
-        ([A-Za-z/]+)            # The unit to convert from including potential / (captured)
+        ^!convert                       # The tag from line start
+        \s*?                            # Any amount of whitespace
+        ([[:digit:]]+\.[[:digit:]]+)    # The number to convert (captured)
+        \s*?                            # Any amount of white space
+        ([A-Za-z/]+)                    # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
