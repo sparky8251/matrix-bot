@@ -94,6 +94,8 @@ pub(super) async fn unit_conversion(
                 ("in", "cm", inch, centimeter),
                 ("ft", "m", foot, meter),
                 ("mi", "km", mile, kilometer),
+                ("mile", "km", mile, kilometer),
+                ("miles", "km", mile, kilometer),
             }
             ThermodynamicTemperature {
                 ("c", "f", degree_celsius, degree_fahrenheit),

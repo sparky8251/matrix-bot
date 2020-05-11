@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::time::{Duration, SystemTime};
 
@@ -14,7 +15,7 @@ pub struct SavedSession {
     last_sync: Option<String>,
     active_room: Option<RoomId>,
     last_txn_id: u64,
-    last_correction_time: Option<SystemTime>,
+    last_correction_time: HashMap<RoomId, SystemTime>,
 }
 
 impl SavedSession {
@@ -53,8 +54,8 @@ impl SavedSession {
         self.session = Some(session)
     }
 
-    pub fn set_last_correction_time(&mut self, time: SystemTime) {
-        self.last_correction_time = Some(time)
+    pub fn set_last_correction_time(&mut self, room_id: &RoomId, time: SystemTime) {
+        self.last_correction_time.insert(room_id.clone(), time);
     }
 
     // FIXME: This needs to be an idempotent/unique ID per txn to be spec compliant
@@ -63,11 +64,11 @@ impl SavedSession {
         self.last_txn_id.to_string()
     }
 
-    pub fn correction_time_cooldown(&self) -> bool {
-        match self.last_correction_time {
-            Some(v) => match v.elapsed() {
-                Ok(v) => {
-                    if v >= Duration::new(300, 0) {
+    pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
+        match self.last_correction_time.get(room_id) {
+            Some(t) => match t.elapsed() {
+                Ok(d) => {
+                    if d >= Duration::new(300, 0) {
                         true
                     } else {
                         false

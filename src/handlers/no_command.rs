@@ -110,29 +110,28 @@ pub(super) async fn no_command_check(
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
-        if session.correction_time_cooldown() && text.relates_to == None {
-            // TODO Fix parsing of formatted bodies to exclude specific formatting tags
-            // of format "org.matrix.custom.html"
-            // <code></code> and <pre><code></code></pre>
-            // are known ignorable format tags
-            if UNIT_CONVERSION.is_match(&text.body) && text.formatted_body == None {
-                debug!("Entering commandless unit conversion check path");
-                let mut conversions = Vec::new();
-                for cap in UNIT_CONVERSION.captures_iter(&text.body.to_ascii_lowercase()) {
-                    conversions.push((cap[1].to_string(), cap[2].to_string()))
-                }
-                let conversions = conversions;
-                let mut result = String::new();
-                for conversion in conversions {
-                    let (quantity, unit) = conversion;
-                    let quantity = match quantity.parse::<f64>() {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!("Quantity unable to be parsed. Error is {:?}", e);
-                            return Ok(());
-                        }
-                    };
-                    macro_rules! convert_unit {
+        // TODO Fix parsing of formatted bodies to exclude specific formatting tags
+        // of format "org.matrix.custom.html"
+        // <code></code> and <pre><code></code></pre>
+        // are known ignorable format tags
+        if UNIT_CONVERSION.is_match(&text.body) && text.formatted_body == None {
+            debug!("Entering commandless unit conversion check path");
+            let mut conversions = Vec::new();
+            for cap in UNIT_CONVERSION.captures_iter(&text.body.to_ascii_lowercase()) {
+                conversions.push((cap[1].to_string(), cap[2].to_string()))
+            }
+            let conversions = conversions;
+            let mut result = String::new();
+            for conversion in conversions {
+                let (quantity, unit) = conversion;
+                let quantity = match quantity.parse::<f64>() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("Quantity unable to be parsed. Error is {:?}", e);
+                        return Ok(());
+                    }
+                };
+                macro_rules! convert_unit {
                         (
                             $unit:expr, $quantity:expr,
                             $(
@@ -164,60 +163,61 @@ pub(super) async fn no_command_check(
                             }
                         }
                     }
-                    convert_unit!(unit.as_str(), quantity,
-                        Length {
-                            ("cm", "in", centimeter, inch),
-                            ("m", "ft", meter, foot),
-                            ("km", "mi", kilometer, mile),
-                            ("in", "cm", inch, centimeter),
-                            ("ft", "m", foot, meter),
-                            ("mi", "km", mile, kilometer),
-                        }
-                        ThermodynamicTemperature {
-                            ("c", "f", degree_celsius, degree_fahrenheit),
-                            ("f", "c", degree_fahrenheit, degree_celsius),
-                        }
-                        Mass {
-                            ("kg", "lbs", kilogram, pound),
-                            ("lbs", "kg", pound, kilogram),
-                        }
-                        Velocity {
-                            ("km/h", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kmh", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kph", "mph", kilometer_per_hour, mile_per_hour),
-                            ("kmph", "mph", kilometer_per_hour, mile_per_hour),
-                            ("mph", "km/h", mile_per_hour, kilometer_per_hour),
-                        }
-                        _ => {
-                            debug!(
-                            "Attempted unknown conversion for unit {:?}",
-                            unit.trim().to_lowercase());
-                            return Ok(())
-                        }
-                    )
-                }
-
-                let response = client
-                    .request(create_message_event::Request {
-                        room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
-                        event_type: EventType::RoomMessage,
-                        txn_id: session.next_txn_id(),
-                        data: EventJson::from(MessageEventContent::Notice(
-                            NoticeMessageEventContent {
-                                body: result.trim().to_string(),
-                                relates_to: None,
-                            },
-                        )),
-                    })
-                    .await;
-                match response {
-                    Ok(_) => return Ok(()),
-                    Err(e) => {
-                        error!("{:?}", e);
+                convert_unit!(unit.as_str(), quantity,
+                    Length {
+                        ("cm", "in", centimeter, inch),
+                        ("m", "ft", meter, foot),
+                        ("km", "mi", kilometer, mile),
+                        ("in", "cm", inch, centimeter),
+                        ("ft", "m", foot, meter),
+                        ("mi", "km", mile, kilometer),
+                        ("mile", "km", mile, kilometer),
+                        ("miles", "km", mile, kilometer),
+                    }
+                    ThermodynamicTemperature {
+                        ("c", "f", degree_celsius, degree_fahrenheit),
+                        ("f", "c", degree_fahrenheit, degree_celsius),
+                    }
+                    Mass {
+                        ("kg", "lbs", kilogram, pound),
+                        ("lbs", "kg", pound, kilogram),
+                    }
+                    Velocity {
+                        ("km/h", "mph", kilometer_per_hour, mile_per_hour),
+                        ("kmh", "mph", kilometer_per_hour, mile_per_hour),
+                        ("kph", "mph", kilometer_per_hour, mile_per_hour),
+                        ("kmph", "mph", kilometer_per_hour, mile_per_hour),
+                        ("mph", "km/h", mile_per_hour, kilometer_per_hour),
+                    }
+                    _ => {
+                        debug!(
+                        "Attempted unknown conversion for unit {:?}",
+                        unit.trim().to_lowercase());
                         return Ok(())
                     }
+                )
+            }
+
+            let response = client
+                .request(create_message_event::Request {
+                    room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
+                    event_type: EventType::RoomMessage,
+                    txn_id: session.next_txn_id(),
+                    data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
+                        body: result.trim().to_string(),
+                        relates_to: None,
+                    })),
+                })
+                .await;
+            match response {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    error!("{:?}", e);
+                    return Ok(());
                 }
-            } else {
+            }
+        } else {
+            if session.correction_time_cooldown(room_id) && text.relates_to == None {
                 debug!("Entering spell check path");
                 for incorrect_spelling in SPELL_CHECK
                     .insensitive
@@ -262,7 +262,7 @@ pub(super) async fn no_command_check(
                             .await;
                         match response {
                             Ok(_) => {
-                                session.set_last_correction_time(SystemTime::now());
+                                session.set_last_correction_time(room_id, SystemTime::now());
                                 return Ok(());
                             }
                             Err(e) => {
