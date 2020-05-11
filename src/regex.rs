@@ -9,7 +9,7 @@ lazy_static! {
         r"(?x)
         ^!convert                           # The tag from line start
         \s*?                                # Any amount of whitespace
-        ([[:digit:]]+\.{0,1}[[:digit:]]+)   # The number to convert, will only allow 1 period for floating points (captured)
+        ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
         \s*?                                # Any amount of white space
         ([[:alpha:]/]+)                     # The unit to convert from including potential / (captured)
     "
@@ -19,7 +19,7 @@ lazy_static! {
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ([[:digit:]]+\.{0,1}[[:digit:]]+)   # The number to convert, will only allow 1 period for floating points (captured)
+        ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
         \s*?                                # Any amount of white space
         ([[:alpha:]/]+)                     # The unit to convert from including potential / (captured)
     "
