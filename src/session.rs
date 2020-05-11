@@ -13,7 +13,6 @@ pub struct SavedSession {
     password: String,
     session: Option<Session>,
     last_sync: Option<String>,
-    active_room: Option<RoomId>,
     last_txn_id: u64,
     last_correction_time: HashMap<RoomId, SystemTime>,
 }
@@ -76,7 +75,7 @@ impl SavedSession {
                 }
                 Err(_) => false,
             },
-            None => true, // Will only be None if this session has not yet corrected anyone, so return true to allow correction
+            None => true, // Will only be None if this session has not yet corrected anyone in specified room, so return true to allow correction
         }
     }
 }

@@ -11,7 +11,7 @@ lazy_static! {
         [[:space:][:blank:]]*?              # Any amount of whitespace
         ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
         [[:space:][:blank:]]*?              # Any amount of white space
-        ([[:alpha:]/]+)                     # The unit to convert from including potential / (captured)
+        ([[:alpha:]]+/{0,1}[[:alpha:]]+)    # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
@@ -21,7 +21,7 @@ lazy_static! {
         r"(?x)
         ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
         [[:space:][:blank:]]*?              # Any amount of white space
-        ([[:alpha:]/]+)                     # The unit to convert from including potential / (captured)
+        ([[:alpha:]]+/{0,1}[[:alpha:]]+)    # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
