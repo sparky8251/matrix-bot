@@ -138,7 +138,7 @@ async fn send_converted_value(
 ) -> Result<()> {
     let response = client
         .request(create_message_event::Request {
-            room_id: room_id.clone(), // INVESTIGATE: Does this really need to be cloned?
+            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
             event_type: EventType::RoomMessage,
             txn_id: session.next_txn_id(),
             data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {

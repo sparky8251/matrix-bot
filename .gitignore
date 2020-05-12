@@ -2,3 +2,5 @@
 *.ron
 *.bak
 massif*
+/.vscode
+graph.png

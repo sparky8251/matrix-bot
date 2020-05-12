@@ -64,7 +64,7 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
                 since: session.get_last_sync(),
                 full_state: false,
                 set_presence: SetPresence::Unavailable,
-                timeout: Some(Duration::new(1000, 0)),
+                timeout: Some(Duration::new(2000, 0)),
             })
             .await
         {
