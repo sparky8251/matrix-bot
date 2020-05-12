@@ -6,18 +6,20 @@ mod session;
 use std::process;
 
 use log::error;
-use session::SavedSession;
+use session::{AuthorizedUsers, SavedSession};
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
 
     let mut session = SavedSession::load_session().unwrap_or_default();
+    let authorized_users = AuthorizedUsers::load_authorized_users().unwrap_or_default();
 
     {
         let bot_fut = bot::start(
             "https://matrix.possumlodge.me".parse().unwrap(),
             &mut session,
+            &authorized_users,
         );
         futures::pin_mut!(bot_fut);
 

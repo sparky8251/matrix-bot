@@ -1,10 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 use log::trace;
-use ruma_client::{identifiers::RoomId, Session};
+use ruma_client::{
+    identifiers::{RoomId, UserId},
+    Session,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -15,6 +18,19 @@ pub struct SavedSession {
     last_sync: Option<String>,
     last_txn_id: u64,
     last_correction_time: HashMap<RoomId, SystemTime>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct AuthorizedUsers {
+    authorized_users: HashSet<UserId>,
+}
+
+pub fn save_authorized_users() -> Result<()> {
+    fs::write(
+        "authorized_users.ron",
+        ron::ser::to_string(&AuthorizedUsers::default())?,
+    )?;
+    Ok(())
 }
 
 impl SavedSession {
@@ -77,5 +93,15 @@ impl SavedSession {
             },
             None => true, // Will only be None if this session has not yet corrected anyone in specified room, so return true to allow correction
         }
+    }
+}
+
+impl AuthorizedUsers {
+    pub fn get_authorized_users(&self) -> &HashSet<UserId> {
+        &self.authorized_users
+    }
+    pub fn load_authorized_users() -> Result<Self> {
+        let file = File::open("authorized_users.ron")?;
+        Ok(ron::de::from_reader(file)?)
     }
 }

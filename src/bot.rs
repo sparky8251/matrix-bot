@@ -1,5 +1,5 @@
 use crate::handlers::handle_text_message;
-use crate::session::SavedSession;
+use crate::session::{save_authorized_users, AuthorizedUsers, SavedSession};
 
 use std::process;
 use std::time::Duration;
@@ -7,14 +7,24 @@ use std::time::Duration;
 use anyhow::Result;
 use log::{debug, error, info, trace};
 use ruma_client::{
-    api::r0::sync::sync_events::{self, SetPresence},
-    events::{collections::all::RoomEvent, room::message::MessageEventContent},
+    api::r0::{
+        membership::{join_room_by_id, leave_room},
+        sync::sync_events::{self, SetPresence},
+    },
+    events::{
+        collections::all::RoomEvent, room::message::MessageEventContent,
+        stripped::AnyStrippedStateEvent,
+    },
     Client,
 };
 use url::Url;
 
-pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
-    match bot(homeserver_url, session).await {
+pub async fn start(
+    homeserver_url: Url,
+    session: &mut SavedSession,
+    authorized_users: &AuthorizedUsers,
+) {
+    match bot(homeserver_url, session, authorized_users).await {
         Ok(v) => debug!("{:?}", v),
         Err(e) => {
             debug!("{:?}", e);
@@ -22,9 +32,22 @@ pub async fn start(homeserver_url: Url, session: &mut SavedSession) {
     }
 }
 
-async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
+async fn bot(
+    homeserver_url: Url,
+    session: &mut SavedSession,
+    authorized_users: &AuthorizedUsers,
+) -> Result<()> {
     let client = Client::https(homeserver_url.clone(), session.get_session());
-
+    if authorized_users.get_authorized_users().is_empty() {
+        info!("No authorized users found. Must have at least 1 for management functions. Please add at least 1 user in the format of '@sparky:matrix.possumlodge.me' and restart.");
+        match save_authorized_users() {
+            Ok(_) => process::exit(12),
+            Err(e) => {
+                error!("Unable to write file due to error {:?}", e);
+                process::exit(24)
+            }
+        }
+    }
     if session.get_session().is_none() {
         info!("No previous session found. Creating new session...");
         if session.get_username().is_empty() || session.get_password().is_empty() {
@@ -118,6 +141,69 @@ async fn bot(homeserver_url: Url, session: &mut SavedSession) -> Result<()> {
                                 process::exit(24)
                             }
                         };
+                    }
+                }
+                for (room_id, invited_room) in &v.rooms.invite {
+                    trace!("Invited room data: {:?}", invited_room);
+                    for raw_event in &invited_room.invite_state.events {
+                        let event = raw_event.deserialize();
+                        match event {
+                            Ok(v) => match v {
+                                AnyStrippedStateEvent::RoomMember(s) => {
+                                    trace!("Invited by {}", s.sender);
+                                    if authorized_users.get_authorized_users().contains(&s.sender) {
+                                        info!(
+                                            "Authorized user {} invited me to room {}",
+                                            &s.sender, &room_id
+                                        );
+                                        let response = client
+                                            .request(join_room_by_id::Request {
+                                                room_id: room_id.clone(),
+                                                third_party_signed: None,
+                                            })
+                                            .await;
+                                        match response {
+                                            Ok(_) => {
+                                                info!("Successfully joined room {}", &room_id);
+                                                ()
+                                            }
+                                            Err(e) => {
+                                                debug!(
+                                                    "Unable to join room {} because of error {:?}",
+                                                    &room_id, e
+                                                );
+                                                ()
+                                            }
+                                        }
+                                    } else {
+                                        let response = client
+                                            .request(leave_room::Request {
+                                                room_id: room_id.clone(),
+                                            })
+                                            .await;
+                                        match response {
+                                            Ok(_) => {
+                                                info!(
+                                                    "Rejected invite from unathorized user {}",
+                                                    s.sender
+                                                );
+                                                ()
+                                            }
+                                            Err(e) => {
+                                                debug!("Unable to reject invite this loop because of error {:?}", e);
+                                                ()
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => (), //FIXME: Reject invite if there is no known sender
+                            },
+                            Err(e) => {
+                                debug!("{:?}", e);
+                                trace!("Content: {:?}", raw_event.json());
+                                ()
+                            }
+                        }
                     }
                 }
             }
