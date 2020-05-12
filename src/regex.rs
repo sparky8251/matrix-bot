@@ -253,7 +253,10 @@ mod tests {
     }
     #[test]
     fn unit_conversion_test_match_single_forwardslash() {
-        assert_eq!(true, UNIT_CONVERSION.is_match("you are going 22km/h right now"))
+        assert_eq!(
+            true,
+            UNIT_CONVERSION.is_match("you are going 22km/h right now")
+        )
     }
     #[test]
     fn unit_conversion_test_match_single_float() {
@@ -261,7 +264,10 @@ mod tests {
     }
     #[test]
     fn unit_conversion_test_match_single_float_forwardslash() {
-        assert_eq!(true, UNIT_CONVERSION.is_match("you are going 22.km/h right now"))
+        assert_eq!(
+            true,
+            UNIT_CONVERSION.is_match("you are going 22.km/h right now")
+        )
     }
     #[test]
     fn unit_conversion_test_match_single_space() {
