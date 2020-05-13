@@ -114,7 +114,10 @@ pub(super) async fn no_command_check(
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
-        if UNIT_CONVERSION.is_match(&text.body) && text.relates_to == None {
+        if UNIT_CONVERSION.is_match(&text.body)
+            && text.relates_to == None
+            && !GITHUB_SEARCH.is_match(&text.body)
+        {
             match &text.format {
                 Some(v) => {
                     if v != "org.matrix.custom.html" {
@@ -374,7 +377,7 @@ pub(super) async fn no_command_check(
                                                 StatusCode::OK => {
                                                     let result = format!(
                                                         "https://github.com/{}/{}/{}",
-                                                        repo, "pulls", number
+                                                        repo, "issues", number
                                                     );
                                                     let response = client
                                                         .request(create_message_event::Request {
