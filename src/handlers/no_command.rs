@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
-use crate::regex::UNIT_CONVERSION;
+use crate::regex::{CODE_TAG, PRE_TAG, UNIT_CONVERSION};
 use crate::session::SavedSession;
 
 use anyhow::Result;
@@ -110,15 +110,41 @@ pub(super) async fn no_command_check(
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
-        // TODO Fix parsing of formatted bodies to exclude specific formatting tags
-        // of format "org.matrix.custom.html"
-        // <code></code> and <pre><code></code></pre>
-        // are known ignorable format tags
-        if UNIT_CONVERSION.is_match(&text.body) && text.formatted_body == None {
+        if UNIT_CONVERSION.is_match(&text.body) {
+            match &text.format {
+                Some(v) => {
+                    if v != "org.matrix.custom.html" {
+                        debug!("Message parsed properly, but format {} is unsupported so no conversion is taking place.", v);
+                        return Ok(());
+                    }
+                }
+                None => (),
+            };
             debug!("Entering commandless unit conversion check path");
             let mut conversions = Vec::new();
-            for cap in UNIT_CONVERSION.captures_iter(&text.body.to_ascii_lowercase()) {
-                conversions.push((cap[1].to_string(), cap[2].to_string()))
+            match &text.formatted_body {
+                Some(v) => {
+                    let clean_text = CODE_TAG.replace_all(&v, "");
+                    trace!("Cleaned text after code tag is {:?}", clean_text);
+                    let clean_text = PRE_TAG.replace_all(&clean_text, "");
+                    trace!("Cleaned text after pre tag is {:?}", clean_text);
+                    if UNIT_CONVERSION.is_match(&clean_text) {
+                        for cap in UNIT_CONVERSION.captures_iter(&clean_text.to_lowercase()) {
+                            trace!("{:?}", cap);
+                            conversions.push((cap[1].to_string(), cap[2].to_string()))
+                        }
+                    } else {
+                        debug!(
+                            "There are no remaining matches after cleaning tags. Doing nothing."
+                        );
+                        return Ok(());
+                    }
+                }
+                None => {
+                    for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
+                        conversions.push((cap[1].to_string(), cap[2].to_string()))
+                    }
+                }
             }
             let conversions = conversions;
             let mut result = String::new();

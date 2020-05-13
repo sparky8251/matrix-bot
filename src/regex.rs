@@ -9,7 +9,7 @@ lazy_static! {
         r"(?x)
         ^!convert                           # The tag from line start
         [[:space:][:blank:]]*?              # Any amount of whitespace
-        ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
+        ([[:digit:]]+(?:\.[[:digit:]]+)?)   # The number to convert, will only allow 1 period for floating points (captured)
         [[:space:][:blank:]]*?              # Any amount of white space
         ([[:alpha:]]+/{0,1}[[:alpha:]]{0,})    # The unit to convert from including potential / (captured)
     "
@@ -19,12 +19,18 @@ lazy_static! {
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ([[:digit:]]+\.{0,1}[[:digit:]]*)   # The number to convert, will only allow 1 period for floating points (captured)
+        ([[:digit:]]+(?:\.[[:digit:]]+)?)   # The number to convert, will only allow 1 period for floating points (captured)
         [[:space:][:blank:]]*?              # Any amount of white space
         ([[:alpha:]]+/{0,1}[[:alpha:]]{0,})    # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
+}
+lazy_static! {
+    pub static ref CODE_TAG: Regex = Regex::new(r"(?s)(<code>.*</code>)*").unwrap();
+}
+lazy_static! {
+    pub static ref PRE_TAG: Regex = Regex::new(r"(?s)(<pre>.*</pre>)*").unwrap();
 }
 lazy_static! {
     // TODO: fix regex so it will match '!roll 22 90' just as well as '!roll 22' but never '!roll 22 90 120'
@@ -266,7 +272,7 @@ mod tests {
     fn unit_conversion_test_match_single_float_forwardslash() {
         assert_eq!(
             true,
-            UNIT_CONVERSION.is_match("you are going 22.km/h right now")
+            UNIT_CONVERSION.is_match("you are going 22.2km/h right now")
         )
     }
     #[test]
