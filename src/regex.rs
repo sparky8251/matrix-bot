@@ -8,18 +8,27 @@ lazy_static! {
     pub static ref SINGLE_UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
         ^!convert                                   # The tag from line start
-        (?:[[\t\v\f\r ][:blank:]])*?           # Any amount of whitespace but not \n
-        ([[:digit:]]+(?:\.[[:digit:]]+)?)           # The number to convert, will only allow 1 period for floating points (captured)
-        (?:[[\t\v\f\r ][:blank:]])*?           # Any amount of whitespace but not \n
+        (?:[[\t\v\f\r ][:blank:]])*?                # Any amount of whitespace but not \n
+        (-{0,1}[[:digit:]]+(?:\.[[:digit:]]+)?)     # The number to convert, will only allow 1 period for floating points (captured)
+        (?:[[\t\v\f\r ][:blank:]])*?                # Any amount of whitespace but not \n
         (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential ° and / (captured)
     ").unwrap();
 }
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ([[:digit:]]+(?:\.[[:digit:]]+)?)           # The number to convert, will only allow 1 period for floating points (captured)
+        (-{0,1}[[:digit:]]+(?:\.[[:digit:]]+)?)     # The number to convert, will only allow 1 period for floating points (captured)
         (?:[[[\t\v\f\r ]][:blank:]])*?              # Any amount of whitespace but not \n
         (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential ° and / (captured)
+    ").unwrap();
+}
+lazy_static! {
+    pub static ref GITHUB_SEARCH: Regex = Regex::new(
+        r"(?x)
+        ([[:alpha:]-]+)                 # The repo to search against (captured)
+        (?:[[[\t\v\f\r ]][:blank:]])*?  # Any amount of whitespace but not \n
+        (?:\#)                          # Required one # before a number to signify we are searching github
+        ([[:digit:]]+)                  # The number to search issues and pulls for (captured)
     ").unwrap();
 }
 lazy_static! {

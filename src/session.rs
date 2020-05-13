@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 pub struct SavedSession {
     username: String,
     password: String,
+    gh_username: String,
+    gh_password: String,
     session: Option<Session>,
     last_sync: Option<String>,
     last_txn_id: u64,
@@ -25,10 +27,24 @@ pub struct AuthorizedUsers {
     authorized_users: HashSet<UserId>,
 }
 
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct SearchableRepos {
+    /// Format should be HashMap<"Jellyfin", "/jellyfin/jellyfin">
+    searchable_repos: HashMap<String, String>,
+}
+
 pub fn save_authorized_users() -> Result<()> {
     fs::write(
         "authorized_users.ron",
         ron::ser::to_string(&AuthorizedUsers::default())?,
+    )?;
+    Ok(())
+}
+
+pub fn save_searchable_repos() -> Result<()> {
+    fs::write(
+        "searchable_repos.ron",
+        ron::ser::to_string(&SearchableRepos::default())?,
     )?;
     Ok(())
 }
@@ -51,6 +67,14 @@ impl SavedSession {
 
     pub fn get_password(&self) -> String {
         self.password.clone()
+    }
+
+    pub fn get_gh_username(&self) -> String {
+        self.gh_username.clone()
+    }
+
+    pub fn get_gh_password(&self) -> String {
+        self.gh_password.clone()
     }
 
     pub fn get_session(&self) -> Option<Session> {
@@ -102,6 +126,16 @@ impl AuthorizedUsers {
     }
     pub fn load_authorized_users() -> Result<Self> {
         let file = File::open("authorized_users.ron")?;
+        Ok(ron::de::from_reader(file)?)
+    }
+}
+
+impl SearchableRepos {
+    pub fn get_searchable_repos(&self) -> &HashMap<String, String> {
+        &self.searchable_repos
+    }
+    pub fn load_searchable_repos() -> Result<Self> {
+        let file = File::open("searchable_repos.ron")?;
         Ok(ron::de::from_reader(file)?)
     }
 }

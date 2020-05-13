@@ -1,12 +1,14 @@
 use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
-use crate::regex::{CODE_TAG, PRE_TAG, UNIT_CONVERSION};
-use crate::session::SavedSession;
+use crate::regex::{CODE_TAG, GITHUB_SEARCH, PRE_TAG, UNIT_CONVERSION};
+use crate::session::{SavedSession, SearchableRepos};
 
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{debug, error, trace};
+use reqwest::header::{self, HeaderMap, HeaderValue};
+use reqwest::StatusCode;
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -105,12 +107,14 @@ pub(super) async fn no_command_check(
     room_id: &RoomId,
     client: &HttpsClient,
     session: &mut SavedSession,
+    searchable_repos: &SearchableRepos,
+    api_client: &reqwest::Client,
 ) -> Result<()> {
     if sender.localpart() == session.get_username() {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
-        if UNIT_CONVERSION.is_match(&text.body) {
+        if UNIT_CONVERSION.is_match(&text.body) && text.relates_to == None {
             match &text.format {
                 Some(v) => {
                     if v != "org.matrix.custom.html" {
@@ -221,26 +225,240 @@ pub(super) async fn no_command_check(
                         debug!(
                         "Attempted unknown conversion for unit {:?}",
                         unit.trim().to_lowercase());
-                        return Ok(())
                     }
                 )
             }
 
-            let response = client
-                .request(create_message_event::Request {
-                    room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-                    event_type: EventType::RoomMessage,
-                    txn_id: session.next_txn_id(),
-                    data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                        body: result.trim().to_string(),
-                        relates_to: None,
-                    })),
-                })
-                .await;
-            match response {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    error!("{:?}", e);
+            if result.trim().to_string() != "" {
+                let response = client
+                    .request(create_message_event::Request {
+                        room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+                        event_type: EventType::RoomMessage,
+                        txn_id: session.next_txn_id(),
+                        data: EventJson::from(MessageEventContent::Notice(
+                            NoticeMessageEventContent {
+                                body: result.trim().to_string(),
+                                relates_to: None,
+                            },
+                        )),
+                    })
+                    .await;
+                match response {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        error!("{:?}", e);
+                        return Ok(());
+                    }
+                }
+            }
+        } else if GITHUB_SEARCH.is_match(&text.body) && text.relates_to == None {
+            match &text.format {
+                Some(v) => {
+                    if v != "org.matrix.custom.html" {
+                        debug!("Message parsed properly, but format {} is unsupported so no search is taking place.", v);
+                        return Ok(());
+                    }
+                }
+                None => (),
+            };
+            debug!("Entering commandless github search path");
+            let mut searches = Vec::new();
+            match &text.formatted_body {
+                Some(v) => {
+                    let clean_text = CODE_TAG.replace_all(&v, "");
+                    trace!("Cleaned text after code tag is {:?}", clean_text);
+                    let clean_text = PRE_TAG.replace_all(&clean_text, "");
+                    trace!("Cleaned text after pre tag is {:?}", clean_text);
+                    if GITHUB_SEARCH.is_match(&clean_text) {
+                        for cap in GITHUB_SEARCH.captures_iter(&clean_text.to_lowercase()) {
+                            trace!("{:?}", cap);
+                            searches.push((cap[1].to_string(), cap[2].to_string()))
+                        }
+                    } else {
+                        debug!(
+                            "There are no remaining matches after cleaning tags. Doing nothing."
+                        );
+                        return Ok(());
+                    }
+                }
+                None => {
+                    for cap in GITHUB_SEARCH.captures_iter(&text.body.to_lowercase()) {
+                        searches.push((cap[1].to_string(), cap[2].to_string()))
+                    }
+                }
+            }
+            let searches = searches;
+            for (repo, number) in searches {
+                if searchable_repos
+                    .get_searchable_repos()
+                    .contains_key(&repo.to_lowercase())
+                {
+                    let repo = match searchable_repos
+                        .get_searchable_repos()
+                        .get(&repo.to_lowercase())
+                    {
+                        Some(v) => v,
+                        None => {
+                            debug!("Somehow lost repo in between matching and searching.");
+                            return Ok(());
+                        }
+                    };
+                    let url = format!(
+                        "https://api.github.com/repos/{}/{}/{}",
+                        repo, "issues", number
+                    );
+                    let mut headers = HeaderMap::new();
+                    headers.insert(
+                        header::ACCEPT,
+                        HeaderValue::from_static("application/vnd.github.v3+json"),
+                    );
+                    headers.insert(
+                        header::USER_AGENT,
+                        HeaderValue::from_static("jellyfin-matrix-bot/0.1.0"),
+                    );
+                    let headers = headers;
+                    trace!("Issues search url is {}", url);
+                    match api_client
+                        .get(&url)
+                        .basic_auth(session.get_gh_username(), Some(session.get_gh_password()))
+                        .headers(headers.clone())
+                        .send()
+                        .await
+                    {
+                        Ok(v) => {
+                            match v.status() {
+                                StatusCode::OK => {
+                                    let result = format!(
+                                        "https://github.com/{}/{}/{}",
+                                        repo, "issues", number
+                                    );
+                                    let response = client
+                                        .request(create_message_event::Request {
+                                            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+                                            event_type: EventType::RoomMessage,
+                                            txn_id: session.next_txn_id(),
+                                            data: EventJson::from(MessageEventContent::Notice(
+                                                NoticeMessageEventContent {
+                                                    body: result,
+                                                    relates_to: None,
+                                                },
+                                            )),
+                                        })
+                                        .await;
+                                    match response {
+                                        Ok(_) => return Ok(()),
+                                        Err(e) => {
+                                            error!("{:?}", e);
+                                            return Ok(());
+                                        }
+                                    }
+                                }
+                                StatusCode::NOT_FOUND => {
+                                    let url = format!(
+                                        "https://api.github.com/repos/{}/{}/{}",
+                                        repo, "pulls", number
+                                    );
+                                    trace!("Pulls search url is {}", url);
+                                    match api_client
+                                        .get(&url)
+                                        .basic_auth(
+                                            session.get_gh_username(),
+                                            Some(session.get_gh_password()),
+                                        )
+                                        .headers(headers.clone())
+                                        .send()
+                                        .await
+                                    {
+                                        Ok(v) => {
+                                            match v.status() {
+                                                StatusCode::OK => {
+                                                    let result = format!(
+                                                        "https://github.com/{}/{}/{}",
+                                                        repo, "pulls", number
+                                                    );
+                                                    let response = client
+                                                        .request(create_message_event::Request {
+                                                            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+                                                            event_type: EventType::RoomMessage,
+                                                            txn_id: session.next_txn_id(),
+                                                            data: EventJson::from(
+                                                                MessageEventContent::Notice(
+                                                                    NoticeMessageEventContent {
+                                                                        body: result,
+                                                                        relates_to: None,
+                                                                    },
+                                                                ),
+                                                            ),
+                                                        })
+                                                        .await;
+                                                    match response {
+                                                        Ok(_) => return Ok(()),
+                                                        Err(e) => {
+                                                            error!("{:?}", e);
+                                                            return Ok(());
+                                                        }
+                                                    }
+                                                }
+                                                StatusCode::NOT_FOUND => {
+                                                    let result = format!(
+                                                        "Unable to find issue or pull for {}#{}",
+                                                        repo, number
+                                                    );
+                                                    let response = client
+                                                        .request(create_message_event::Request {
+                                                            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+                                                            event_type: EventType::RoomMessage,
+                                                            txn_id: session.next_txn_id(),
+                                                            data: EventJson::from(
+                                                                MessageEventContent::Notice(
+                                                                    NoticeMessageEventContent {
+                                                                        body: result,
+                                                                        relates_to: None,
+                                                                    },
+                                                                ),
+                                                            ),
+                                                        })
+                                                        .await;
+                                                    match response {
+                                                        Ok(_) => return Ok(()),
+                                                        Err(e) => {
+                                                            error!("{:?}", e);
+                                                            return Ok(());
+                                                        }
+                                                    }
+                                                }
+                                                _ => {
+                                                    error!(
+                                                        "Unexpected status code {:?}. {:?}",
+                                                        v.status(),
+                                                        v
+                                                    );
+                                                    return Ok(());
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            error!(
+                                                "Unable to search url {} because of error {:?}",
+                                                url, e
+                                            );
+                                            return Ok(());
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    error!("Unexpected status code {:?}. {:?}", v.status(), v);
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!("Unable to search url {} because of error {:?}", url, e);
+                            return Ok(());
+                        }
+                    }
+                } else {
+                    trace!("Repo not found in searchable repo list.");
                     return Ok(());
                 }
             }
@@ -303,7 +521,7 @@ pub(super) async fn no_command_check(
             }
         }
     }
-    return Ok(()); // No matches found or cooldown time not met, so return Ok
+    return Ok(()); // Nothing to do, skipping response
 }
 
 fn correct_spelling(user: &str, incorrect_spelling: &str) -> String {

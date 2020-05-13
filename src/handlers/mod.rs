@@ -6,7 +6,7 @@ use self::helpers::do_nothing;
 use self::no_command::no_command_check;
 use self::unit_conversion::unit_conversion;
 use crate::regex::{NO_BANG, SINGLE_UNIT_CONVERSION};
-use crate::session::SavedSession;
+use crate::session::{SavedSession, SearchableRepos};
 
 use anyhow::Result;
 use log::debug;
@@ -22,10 +22,21 @@ pub async fn handle_text_message(
     room_id: &RoomId,
     client: &HttpsClient,
     session: &mut SavedSession,
+    searchable_repos: &SearchableRepos,
+    api_client: &reqwest::Client,
 ) -> Result<()> {
     if NO_BANG.is_match(&text.body) {
         debug!("Entering no command path...");
-        no_command_check(text, sender, room_id, client, session).await
+        no_command_check(
+            text,
+            sender,
+            room_id,
+            client,
+            session,
+            searchable_repos,
+            api_client,
+        )
+        .await
     } else if SINGLE_UNIT_CONVERSION.is_match(&text.body.to_lowercase()) {
         debug!("Entering unit conversion path...");
         unit_conversion(text, room_id, client, session).await

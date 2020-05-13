@@ -1,5 +1,7 @@
 use crate::handlers::handle_text_message;
-use crate::session::{save_authorized_users, AuthorizedUsers, SavedSession};
+use crate::session::{
+    save_authorized_users, save_searchable_repos, AuthorizedUsers, SavedSession, SearchableRepos,
+};
 
 use std::process;
 use std::time::Duration;
@@ -23,8 +25,18 @@ pub async fn start(
     homeserver_url: Url,
     session: &mut SavedSession,
     authorized_users: &AuthorizedUsers,
+    searchable_repos: &SearchableRepos,
+    api_client: &reqwest::Client,
 ) {
-    match bot(homeserver_url, session, authorized_users).await {
+    match bot(
+        homeserver_url,
+        session,
+        authorized_users,
+        searchable_repos,
+        api_client,
+    )
+    .await
+    {
         Ok(v) => debug!("{:?}", v),
         Err(e) => {
             debug!("{:?}", e);
@@ -36,6 +48,8 @@ async fn bot(
     homeserver_url: Url,
     session: &mut SavedSession,
     authorized_users: &AuthorizedUsers,
+    searchable_repos: &SearchableRepos,
+    api_client: &reqwest::Client,
 ) -> Result<()> {
     let client = Client::https(homeserver_url.clone(), session.get_session());
     if authorized_users.get_authorized_users().is_empty() {
@@ -48,10 +62,29 @@ async fn bot(
             }
         }
     }
+    if searchable_repos.get_searchable_repos().is_empty() {
+        info!("No searchable repos found. If you want to search github, please add at least 1 repo in the format of {{\"jellyfin\":\"/jellyfin/jellyfin\"}} and restart.");
+        match save_searchable_repos() {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Unable to write file due to error {:?}", e);
+                process::exit(24)
+            }
+        }
+    }
     if session.get_session().is_none() {
         info!("No previous session found. Creating new session...");
         if session.get_username().is_empty() || session.get_password().is_empty() {
             info!("No username or password found. Writing sample ron file. Please fill out username and password and try again.");
+            match session.save_session() {
+                Ok(()) => process::exit(12),
+                Err(e) => {
+                    error!("{:?}", e);
+                    process::exit(24)
+                }
+            }
+        } else if session.get_gh_username().is_empty() || session.get_gh_password().is_empty() {
+            info!("No github username or password found. Writing sample ron file. Please fill out username and password and try again.");
             match session.save_session() {
                 Ok(()) => process::exit(12),
                 Err(e) => {
@@ -108,7 +141,13 @@ async fn bot(
                                 RoomEvent::RoomMessage(m) => match m.content {
                                     MessageEventContent::Text(t) => {
                                         match handle_text_message(
-                                            &t, &m.sender, room_id, &client, session,
+                                            &t,
+                                            &m.sender,
+                                            room_id,
+                                            &client,
+                                            session,
+                                            searchable_repos,
+                                            api_client,
                                         )
                                         .await
                                         {
