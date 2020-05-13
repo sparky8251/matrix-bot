@@ -202,7 +202,9 @@ pub(super) async fn no_command_check(
                     }
                     ThermodynamicTemperature {
                         ("c", "f", degree_celsius, degree_fahrenheit),
+                        ("°c", "°f", degree_celsius, degree_fahrenheit),
                         ("f", "c", degree_fahrenheit, degree_celsius),
+                        ("°f", "°c", degree_fahrenheit, degree_celsius),
                     }
                     Mass {
                         ("kg", "lbs", kilogram, pound),

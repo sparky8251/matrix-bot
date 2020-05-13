@@ -7,11 +7,11 @@ lazy_static! {
 lazy_static! {
     pub static ref SINGLE_UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ^!convert                           # The tag from line start
-        [[:space:][:blank:]]*?              # Any amount of whitespace
-        ([[:digit:]]+(?:\.[[:digit:]]+)?)   # The number to convert, will only allow 1 period for floating points (captured)
-        [[:space:][:blank:]]*?              # Any amount of white space
-        ([[:alpha:]]+/{0,1}[[:alpha:]]{0,})    # The unit to convert from including potential / (captured)
+        ^!convert                                   # The tag from line start
+        (?:[[\t\v\f\r ][:blank:][^\n]])*?           # Any amount of whitespace
+        ([[:digit:]]+(?:\.[[:digit:]]+)?)           # The number to convert, will only allow 1 period for floating points (captured)
+        (?:[[\t\v\f\r ][:blank:][^\n]])*?           # Any amount of white space
+        (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
@@ -19,9 +19,9 @@ lazy_static! {
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        ([[:digit:]]+(?:\.[[:digit:]]+)?)   # The number to convert, will only allow 1 period for floating points (captured)
-        [[:space:][:blank:]]*?              # Any amount of white space
-        ([[:alpha:]]+/{0,1}[[:alpha:]]{0,})    # The unit to convert from including potential / (captured)
+        ([[:digit:]]+(?:\.[[:digit:]]+)?)           # The number to convert, will only allow 1 period for floating points (captured)
+        (?:[[[\t\v\f\r ]][:blank:]])*?              # Any amount of white space
+        (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential / (captured)
     "
     )
     .unwrap();
