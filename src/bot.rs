@@ -1,7 +1,5 @@
+use crate::config::{BotConfig, Storage};
 use crate::handlers::handle_text_message;
-use crate::session::{
-    save_authorized_users, save_searchable_repos, AuthorizedUsers, SavedSession, SearchableRepos,
-};
 
 use std::process;
 use std::time::Duration;
@@ -19,24 +17,9 @@ use ruma_client::{
     },
     Client,
 };
-use url::Url;
 
-pub async fn start(
-    homeserver_url: Url,
-    session: &mut SavedSession,
-    authorized_users: &AuthorizedUsers,
-    searchable_repos: &SearchableRepos,
-    api_client: &reqwest::Client,
-) {
-    match bot(
-        homeserver_url,
-        session,
-        authorized_users,
-        searchable_repos,
-        api_client,
-    )
-    .await
-    {
+pub async fn start(storage: &mut Storage, config: &BotConfig, api_client: &reqwest::Client) {
+    match bot(storage, config, api_client).await {
         Ok(v) => debug!("{:?}", v),
         Err(e) => {
             debug!("{:?}", e);
@@ -45,79 +28,40 @@ pub async fn start(
 }
 
 async fn bot(
-    homeserver_url: Url,
-    session: &mut SavedSession,
-    authorized_users: &AuthorizedUsers,
-    searchable_repos: &SearchableRepos,
+    storage: &mut Storage,
+    config: &BotConfig,
     api_client: &reqwest::Client,
 ) -> Result<()> {
-    let client = Client::https(homeserver_url.clone(), session.get_session());
-    if authorized_users.get_authorized_users().is_empty() {
-        info!("No authorized users found. Must have at least 1 for management functions. Please add at least 1 user in the format of '@sparky:matrix.possumlodge.me' and restart.");
-        match save_authorized_users() {
-            Ok(_) => process::exit(12),
-            Err(e) => {
-                error!("Unable to write file due to error {:?}", e);
-                process::exit(24)
-            }
-        }
-    }
-    if searchable_repos.get_searchable_repos().is_empty() {
-        info!("No searchable repos found. If you want to search github, please add at least 1 repo in the format of {{\"jellyfin\":\"/jellyfin/jellyfin\"}} and restart.");
-        match save_searchable_repos() {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Unable to write file due to error {:?}", e);
-                process::exit(24)
-            }
-        }
-    }
-    if session.get_session().is_none() {
-        info!("No previous session found. Creating new session...");
-        if session.get_username().is_empty() || session.get_password().is_empty() {
-            info!("No username or password found. Writing sample ron file. Please fill out username and password and try again.");
-            match session.save_session() {
-                Ok(()) => process::exit(12),
-                Err(e) => {
-                    error!("{:?}", e);
-                    process::exit(24)
-                }
-            }
-        } else if session.get_gh_username().is_empty() || session.get_gh_password().is_empty() {
-            info!("No github username or password found. Writing sample ron file. Please fill out username and password and try again.");
-            match session.save_session() {
-                Ok(()) => process::exit(12),
-                Err(e) => {
-                    error!("{:?}", e);
-                    process::exit(24)
-                }
-            }
-        } else {
-            session.set_session(
-                client
-                    .log_in(session.get_username(), session.get_password(), None, None)
-                    .await?,
+    let client = Client::https(config.mx_url.clone(), storage.session.clone());
+    storage.session = match client
+        .log_in(
+            config.mx_uname.localpart().to_string(),
+            config.mx_pass.clone(),
+            None,
+            None,
+        )
+        .await
+    {
+        Ok(v) => Some(v),
+        Err(e) => {
+            error!(
+                "Unable to login as {} on {} due to error {:?}",
+                config.mx_uname.localpart(),
+                config.mx_url,
+                e
             );
-            match session.save_session() {
-                Ok(()) => (),
-                Err(e) => {
-                    error!("{:?}", e);
-                    process::exit(24)
-                }
-            };
+            process::exit(8)
         }
-    }
-    info!(
-        "Successfully logged in as {} on {}",
-        session.get_username(),
-        homeserver_url
-    );
+    };
+    trace!("Session retrived, saving storage data...");
+    storage.save_storage();
+    info!("Successfully logged in as {}", config.mx_uname);
 
     loop {
         let response = match client
             .request(sync_events::Request {
                 filter: None,
-                since: session.get_last_sync(),
+                since: storage.last_sync.clone(),
                 full_state: false,
                 set_presence: SetPresence::Unavailable,
                 timeout: Some(Duration::new(2000, 0)),
@@ -126,7 +70,7 @@ async fn bot(
         {
             Ok(v) => Some(v),
             Err(e) => {
-                debug!("Line 72: {:?}", e);
+                debug!("Line 73: {:?}", e);
                 None
             }
         };
@@ -141,12 +85,7 @@ async fn bot(
                                 RoomEvent::RoomMessage(m) => match m.content {
                                     MessageEventContent::Text(t) => {
                                         match handle_text_message(
-                                            &t,
-                                            &m.sender,
-                                            room_id,
-                                            &client,
-                                            session,
-                                            searchable_repos,
+                                            &t, &m.sender, room_id, &client, storage, config,
                                             api_client,
                                         )
                                         .await
@@ -171,15 +110,7 @@ async fn bot(
                                 ()
                             }
                         }
-
-                        session.set_last_sync(Some(v.next_batch.clone()));
-                        match session.save_session() {
-                            Ok(()) => (),
-                            Err(e) => {
-                                error!("{:?}", e);
-                                process::exit(24)
-                            }
-                        };
+                        storage.last_sync = Some(v.next_batch.clone());
                     }
                 }
                 for (room_id, invited_room) in &v.rooms.invite {
@@ -190,7 +121,7 @@ async fn bot(
                             Ok(v) => match v {
                                 AnyStrippedStateEvent::RoomMember(s) => {
                                     trace!("Invited by {}", s.sender);
-                                    if authorized_users.get_authorized_users().contains(&s.sender) {
+                                    if config.admins.contains(&s.sender) {
                                         info!(
                                             "Authorized user {} invited me to room {}",
                                             &s.sender, &room_id

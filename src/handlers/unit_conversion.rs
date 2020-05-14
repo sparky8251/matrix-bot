@@ -1,6 +1,6 @@
 use super::helpers::do_nothing;
 use crate::regex::SINGLE_UNIT_CONVERSION;
-use crate::session::SavedSession;
+use crate::Storage;
 
 use anyhow::Result;
 use log::{debug, error, trace};
@@ -23,7 +23,7 @@ pub(super) async fn unit_conversion(
     text: &TextMessageEventContent,
     room_id: &RoomId,
     client: &HttpsClient,
-    session: &mut SavedSession,
+    storage: &mut Storage,
 ) -> Result<(), anyhow::Error> {
     if text.relates_to == None && text.formatted_body == None {
         let mut quantity = "".to_string();
@@ -73,7 +73,7 @@ pub(super) async fn unit_conversion(
                                     $to_str,
                                     room_id,
                                     client,
-                                    session,
+                                    storage,
                                 )
                                 .await
                             }
@@ -134,13 +134,13 @@ async fn send_converted_value(
     converted_unit: &str,
     room_id: &RoomId,
     client: &HttpsClient,
-    session: &mut SavedSession,
+    storage: &mut Storage,
 ) -> Result<()> {
     let response = client
         .request(create_message_event::Request {
             room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
             event_type: EventType::RoomMessage,
-            txn_id: session.next_txn_id(),
+            txn_id: storage.next_txn_id(),
             data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
                 body: format!("{:.2}{}", converted_quantity, converted_unit),
                 relates_to: None,

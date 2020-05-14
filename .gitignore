@@ -4,3 +4,5 @@
 massif*
 /.vscode
 graph.png
+config.toml
+storage.toml

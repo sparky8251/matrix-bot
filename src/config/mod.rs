@@ -1,25 +1,34 @@
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
-use std::fs;
-use std::time::SystemTime;
+use std::fs::{File, OpenOptions};
+use std::io::{ErrorKind, Read, Write};
+use std::process;
+use std::time::{Duration, SystemTime};
 
+use log::{error, info, trace};
 use ruma_client::{
     identifiers::{RoomId, UserId},
     Session,
 };
 use serde::{Deserialize, Serialize};
+use url::Url;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct BotConfig {
-    mx_uname: UserId,
-    mx_pass: String,
-    gh_uname: String,
-    gh_pass: String,
-    admins: HashSet<UserId>,
-    repos: HashMap<String, String>,
+    pub mx_url: Url,
+    pub mx_uname: UserId,
+    pub mx_pass: String,
+    pub gh_uname: String,
+    pub gh_pass: String,
+    pub enable_corrections: bool,
+    pub enable_unit_conversions: bool,
+    pub insensitive_corrections: Vec<String>,
+    pub sensitive_corrections: Vec<String>,
+    pub correction_text: String,
+    pub admins: HashSet<UserId>,
+    pub repos: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawBotConfig {
     general: RawGeneral,
     matrix_authentication: RawMatrixAuthentication,
@@ -27,8 +36,8 @@ pub struct RawBotConfig {
     searchable_repos: Option<HashMap<String, String>>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RawGeneral {
+#[derive(Debug, Deserialize)]
+struct RawGeneral {
     authorized_users: Option<HashSet<UserId>>,
     enable_corrections: bool,
     enable_unit_conversions: bool,
@@ -37,54 +46,233 @@ pub struct RawGeneral {
     correction_text: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RawMatrixAuthentication {
-    username: Option<UserId>,
-    password: Option<String>,
+#[derive(Debug, Deserialize)]
+struct RawMatrixAuthentication {
+    url: Url,
+    username: UserId,
+    password: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RawGithubAuthentication {
-    username: Option<String>,
-    password: Option<String>,
+#[derive(Debug, Deserialize)]
+struct RawGithubAuthentication {
+    username: String,
+    password: String,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
-pub struct SessionStorage {
-    session: Option<Session>,
-    last_sync: Option<String>,
-    last_txn_id: u64,
-    last_correction_time: HashMap<RoomId, SystemTime>,
+pub struct Storage {
+    pub last_sync: Option<String>,
+    pub last_txn_id: u64,
+    pub session: Option<Session>,
+    pub last_correction_time: HashMap<RoomId, SystemTime>,
 }
 
-pub fn demo_toml() {
-    let mut authorized_users = HashSet::new();
-    authorized_users.insert(UserId::try_from("@demouser1:matrix.homeserver.com").unwrap());
-    authorized_users.insert(UserId::try_from("@demouser2:matrix.homeserver.com").unwrap());
-    let mut searchable_repos = HashMap::new();
-    searchable_repos.insert("jf".to_string(), "jellyfin/jellyfin".to_string());
-    searchable_repos.insert("jf-web".to_string(), "jellyfin/jellyfin-web".to_string());
-    let conf = RawBotConfig {
-        general: RawGeneral {
-            authorized_users: Some(authorized_users),
-            enable_corrections: true,
-            enable_unit_conversions: true,
-            insensitive_corrections: Some(vec!["Jellyfish".to_string(),"Jelly Fin".to_string()]),
-            sensitive_corrections: Some(vec!["JellyFin".to_string(),"jellyFin".to_string()]),
-            correction_text: Some("I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.".to_string())
-        },
-        matrix_authentication: RawMatrixAuthentication {
-            username: Some(UserId::try_from("@botuser:matrix.homeserver.com").unwrap()),
-            password: Some("supersecretpassword".to_string()),
-        },
-        github_authentication: Some(RawGithubAuthentication {
-            username: Some("demouser@homeserver.com".to_string()),
-            password: Some("supersecretpassword".to_string()),
-        }),
-        searchable_repos: Some(searchable_repos)
-    };
+impl BotConfig {
+    // TODO: Change return type to Result<_, _>
+    // Implement tests with sample configs based on the returned result
+    pub fn load_bot_config() -> Self {
+        // File Load Section
+        let mut file = match File::open("config.toml") {
+            Ok(v) => v,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    error!("Unable to find file config.toml");
+                    process::exit(1);
+                }
+                ErrorKind::PermissionDenied => {
+                    error!("Permission denied when opening file config.toml");
+                    process::exit(1);
+                }
+                _ => {
+                    error!("Unable to open file due to unexpected error {:?}", e);
+                    process::exit(1);
+                }
+            },
+        };
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_) => (), // If read is successful, do nothing
+            Err(e) => {
+                error!("Unable to read file contents due to error {:?}", e);
+                process::exit(2)
+            }
+        }
+        let toml: RawBotConfig = match toml::from_str(&contents) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Invalid toml. Error is {:?}", e);
+                process::exit(3)
+            }
+        };
 
-    let toml = toml::to_string_pretty(&conf).unwrap();
+        // Set variables and exit/error if set improperly
+        let (repos, gh_uname, gh_pass) = match toml.searchable_repos {
+            Some(r) => match toml.github_authentication {
+                Some(g) => (r, g.username, g.password),
+                None => {
+                    error!("Searchable repos configured, but not github credentials found. Unable to continue...");
+                    process::exit(4)
+                }
+            },
+            None => {
+                info!("No searchable repos found. Disabling feature...");
+                (HashMap::new(), String::new(), String::new())
+            }
+        };
+        let (insensitive_corrections, sensitive_corrections, correction_text) = match toml
+            .general
+            .enable_corrections
+        {
+            true => match toml.general.insensitive_corrections {
+                Some(i) => match toml.general.sensitive_corrections {
+                    Some(s) => match toml.general.correction_text {
+                        Some(c) => (i, s, c),
+                        None => {
+                            error!("No correction text provided even though corrections have been enabled");
+                            process::exit(5)
+                        }
+                    },
+                    None => {
+                        error!("No case sensitive corrections provided even though corrections have been enabled");
+                        process::exit(5)
+                    }
+                },
+                None => {
+                    error!("No case insensitive corrections provided even though corrections have been enabled");
+                    process::exit(5)
+                }
+            },
+            false => {
+                info!("Disabling corrections feature");
+                (Vec::new(), Vec::new(), String::new())
+            }
+        };
+        let admins = match toml.general.authorized_users {
+            Some(v) => v,
+            None => {
+                error!("You must provide at least 1 authorized user");
+                process::exit(6)
+            }
+        };
+        let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
+            toml.matrix_authentication.url,
+            toml.matrix_authentication.username,
+            toml.matrix_authentication.password,
+            toml.general.enable_corrections,
+            toml.general.enable_unit_conversions,
+        );
 
-    fs::write("test_config.toml", toml).unwrap();
+        // Return value
+        BotConfig {
+            mx_url,
+            mx_uname,
+            mx_pass,
+            gh_uname,
+            gh_pass,
+            enable_corrections,
+            enable_unit_conversions,
+            insensitive_corrections,
+            sensitive_corrections,
+            correction_text,
+            admins,
+            repos,
+        }
+    }
+}
+
+impl Storage {
+    // TODO: Change return type to Result<_, _>
+    // Implement tests with sample storage files based on the returned result
+    pub fn load_storage() -> Self {
+        let mut file = match File::open("storage.toml") {
+            Ok(v) => v,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    let toml = Self::default();
+                    trace!("The next save is a default save");
+                    Self::save_storage(&toml);
+                    return toml;
+                }
+                ErrorKind::PermissionDenied => {
+                    error!("Permission denied when opening file storage.toml");
+                    process::exit(1);
+                }
+                _ => {
+                    error!("Unable to open file due to unexpected error {:?}", e);
+                    process::exit(1);
+                }
+            },
+        };
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_) => (), // If read is successful, do nothing
+            Err(e) => {
+                error!("Unable to read file contents due to error {:?}", e);
+                process::exit(2)
+            }
+        }
+        let toml: Self = match toml::from_str(&contents) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Invalid toml. Error is {:?}", e);
+                process::exit(3)
+            }
+        };
+        return toml;
+    }
+
+    pub fn save_storage(&self) {
+        let toml = match toml::to_string_pretty(self) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    "Unable to format storage as toml, this should never occur. Error is {:?}",
+                    e
+                );
+                process::exit(7)
+            }
+        };
+        let mut file = match OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open("storage.toml")
+        {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Unable to open storage.toml due to error {:?}", e);
+                process::exit(9)
+            }
+        };
+        match file.write_all(toml.as_bytes()) {
+            Ok(_) => {
+                trace!("Saved Session!");
+            }
+            Err(e) => {
+                error!("Unable to write storage data to disk due to error {:?}", e);
+                process::exit(10)
+            }
+        }
+    }
+
+    // FIXME: This needs to be an idempotent/unique ID per txn to be spec compliant
+    pub fn next_txn_id(&mut self) -> String {
+        self.last_txn_id += 1;
+        self.last_txn_id.to_string()
+    }
+
+    pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
+        match self.last_correction_time.get(room_id) {
+            Some(t) => match t.elapsed() {
+                Ok(d) => {
+                    if d >= Duration::new(300, 0) {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                Err(_) => false,
+            },
+            None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
+        }
+    }
 }

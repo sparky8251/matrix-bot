@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
 use crate::regex::{CODE_TAG, GITHUB_SEARCH, PRE_TAG, UNIT_CONVERSION};
-use crate::session::{SavedSession, SearchableRepos};
+use crate::{BotConfig, Storage};
 
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -106,11 +106,11 @@ pub(super) async fn no_command_check(
     sender: &UserId,
     room_id: &RoomId,
     client: &HttpsClient,
-    session: &mut SavedSession,
-    searchable_repos: &SearchableRepos,
+    storage: &mut Storage,
+    config: &BotConfig,
     api_client: &reqwest::Client,
 ) -> Result<()> {
-    if sender.localpart() == session.get_username() {
+    if sender == &config.mx_uname {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
@@ -237,7 +237,7 @@ pub(super) async fn no_command_check(
                     .request(create_message_event::Request {
                         room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
                         event_type: EventType::RoomMessage,
-                        txn_id: session.next_txn_id(),
+                        txn_id: storage.next_txn_id(),
                         data: EventJson::from(MessageEventContent::Notice(
                             NoticeMessageEventContent {
                                 body: result.trim().to_string(),
@@ -292,14 +292,8 @@ pub(super) async fn no_command_check(
             }
             let searches = searches;
             for (repo, number) in searches {
-                if searchable_repos
-                    .get_searchable_repos()
-                    .contains_key(&repo.to_lowercase())
-                {
-                    let repo = match searchable_repos
-                        .get_searchable_repos()
-                        .get(&repo.to_lowercase())
-                    {
+                if config.repos.contains_key(&repo.to_lowercase()) {
+                    let repo = match config.repos.get(&repo.to_lowercase()) {
                         Some(v) => v,
                         None => {
                             debug!("Somehow lost repo in between matching and searching.");
@@ -323,7 +317,7 @@ pub(super) async fn no_command_check(
                     trace!("Issues search url is {}", url);
                     match api_client
                         .get(&url)
-                        .basic_auth(session.get_gh_username(), Some(session.get_gh_password()))
+                        .basic_auth(config.gh_uname.clone(), Some(config.gh_pass.clone()))
                         .headers(headers.clone())
                         .send()
                         .await
@@ -339,7 +333,7 @@ pub(super) async fn no_command_check(
                                         .request(create_message_event::Request {
                                             room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
                                             event_type: EventType::RoomMessage,
-                                            txn_id: session.next_txn_id(),
+                                            txn_id: storage.next_txn_id(),
                                             data: EventJson::from(MessageEventContent::Notice(
                                                 NoticeMessageEventContent {
                                                     body: result,
@@ -365,8 +359,8 @@ pub(super) async fn no_command_check(
                                     match api_client
                                         .get(&url)
                                         .basic_auth(
-                                            session.get_gh_username(),
-                                            Some(session.get_gh_password()),
+                                            config.gh_uname.clone(),
+                                            Some(config.gh_pass.clone()),
                                         )
                                         .headers(headers.clone())
                                         .send()
@@ -383,7 +377,7 @@ pub(super) async fn no_command_check(
                                                         .request(create_message_event::Request {
                                                             room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
                                                             event_type: EventType::RoomMessage,
-                                                            txn_id: session.next_txn_id(),
+                                                            txn_id: storage.next_txn_id(),
                                                             data: EventJson::from(
                                                                 MessageEventContent::Notice(
                                                                     NoticeMessageEventContent {
@@ -411,7 +405,7 @@ pub(super) async fn no_command_check(
                                                         .request(create_message_event::Request {
                                                             room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
                                                             event_type: EventType::RoomMessage,
-                                                            txn_id: session.next_txn_id(),
+                                                            txn_id: storage.next_txn_id(),
                                                             data: EventJson::from(
                                                                 MessageEventContent::Notice(
                                                                     NoticeMessageEventContent {
@@ -466,7 +460,7 @@ pub(super) async fn no_command_check(
                 }
             }
         } else {
-            if session.correction_time_cooldown(room_id)
+            if storage.correction_time_cooldown(room_id)
                 && text.relates_to == None
                 && room_id != "!YjAUNWwLVbCthyFrkz:bonifacelabs.ca"
             {
@@ -498,7 +492,7 @@ pub(super) async fn no_command_check(
                             .request(create_message_event::Request {
                                 room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
                                 event_type: EventType::RoomMessage,
-                                txn_id: session.next_txn_id(),
+                                txn_id: storage.next_txn_id(),
                                 data: EventJson::from(MessageEventContent::Text(
                                     TextMessageEventContent {
                                         body: correct_spelling(
@@ -514,7 +508,9 @@ pub(super) async fn no_command_check(
                             .await;
                         match response {
                             Ok(_) => {
-                                session.set_last_correction_time(room_id, SystemTime::now());
+                                storage
+                                    .last_correction_time
+                                    .insert(room_id.clone(), SystemTime::now());
                                 return Ok(());
                             }
                             Err(e) => {
