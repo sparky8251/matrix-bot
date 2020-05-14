@@ -466,7 +466,10 @@ pub(super) async fn no_command_check(
                 }
             }
         } else {
-            if session.correction_time_cooldown(room_id) && text.relates_to == None {
+            if session.correction_time_cooldown(room_id)
+                && text.relates_to == None
+                && room_id != "!YjAUNWwLVbCthyFrkz:bonifacelabs.ca"
+            {
                 debug!("Entering spell check path");
                 for incorrect_spelling in SPELL_CHECK
                     .insensitive

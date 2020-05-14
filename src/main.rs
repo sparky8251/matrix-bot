@@ -3,6 +3,8 @@ mod handlers;
 mod regex;
 mod session;
 
+mod config;
+
 use std::process;
 
 use log::error;

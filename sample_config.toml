@@ -1,0 +1,60 @@
+[general]
+# These users are allowed to access admin features like
+# Inviting the bot to rooms
+# Requires at least 1
+authorized_users = [
+    '@demouser1:matrix.homeserver.com',
+    '@demouser2:matrix.homeserver.com',
+]
+
+# Enable bot feature to correct users if they misspell project name
+# Required
+enable_corrections = false
+
+# Enable bot feature to perform common imperial <--> metric conversions
+# Required
+enable_unit_conversions = true
+
+# Only required if enable_corrections = true
+insensitive_corrections = [
+    'Jellyfish',
+    'Jelly Fin',
+]
+
+# Only required if enable_corrections = true
+sensitive_corrections = [
+    'JellyFin',
+    'jellyFin',
+]
+
+# Must have 2 replacements
+# The first replacement is replaced with the user that triggered the correction
+# The second replacement is replaced with the exact spelling of the configured
+# correction that was triggered. This means that if "jellfish" triggers,
+# it will be replaced with "Jellyfish"
+#
+# NOTE: If your bot is in rooms with IRC, make sure the message below
+# does not exceed 512 chars once replacements have taken place.
+# If you do not do this, IRC users will be given a link to a long message upon triggering
+# Only required if enable_corrections = true
+correction_text = '''I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.'''
+
+# User account and password bot will log in with
+# Required
+[matrix_authentication]
+username = '@botuser:matrix.homeserver.com'
+password = 'supersecretpassword'
+
+# User account and password bot will use to bypass API ratelimiting
+# Required if you have searchable repos
+[github_authentication]
+username = 'demouser@homeserver.com'
+password = 'supersecretpassword'
+
+# Searchable github repos.
+# Messages containing "jf#1234" or "jf #1234" will search
+# repo "jellyfin/jellyfin" for issues and pulls, then link if found
+# Optional
+[searchable_repos]
+jf = 'jellyfin/jellyfin'
+jf-web = 'jellyfin/jellyfin-web'

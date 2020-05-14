@@ -2,11 +2,14 @@
 name = "jellyfin-matrix-bot"
 version = "0.1.0"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/sparky8251/jellyfin-matrix-bot/"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+toml = "0.5"
 ruma-client = "0.4.0-beta.4"
 url = "2.1"
 directories = "2.0"
