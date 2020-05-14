@@ -39,9 +39,10 @@ sensitive_corrections = [
 # Only required if enable_corrections = true
 correction_text = '''I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.'''
 
-# User account and password bot will log in with
+# User url, account, password bot will log in with
 # Required
 [matrix_authentication]
+url = 'https://matrix.possumlodge.me'
 username = '@botuser:matrix.homeserver.com'
 password = 'supersecretpassword'
 
