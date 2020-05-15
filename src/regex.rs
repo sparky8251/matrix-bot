@@ -9,17 +9,18 @@ lazy_static! {
         r"(?x)
         ^!convert                                   # The tag from line start
         (?:[[\t\v\f\r ][:blank:]])*?                # Any amount of whitespace but not \n
-        (-{0,1}[[:digit:]]+(?:\.[[:digit:]]+)?)     # The number to convert, will only allow 1 period for floating points (captured)
+        ([+-]?[0-9]+(?:.[0-9]+)?)                   # The number to convert, will only allow 1 period for floating points (captured)
         (?:[[\t\v\f\r ][:blank:]])*?                # Any amount of whitespace but not \n
-        (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential ° and / (captured)
+        ([^\s]?[[:alpha:]]+(?:[/\.][[:alpha:]]+)?)  # The unit to convert from including potential ° and / (captured)
     ").unwrap();
 }
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(
         r"(?x)
-        (-{0,1}[[:digit:]]+(?:\.[[:digit:]]+)?)     # The number to convert, will only allow 1 period for floating points (captured)
-        (?:[[[\t\v\f\r ]][:blank:]])*?              # Any amount of whitespace but not \n
-        (°{0,1}[[:alpha:]]+/{0,1}[[:alpha:]]{0,})   # The unit to convert from including potential ° and / (captured)
+        (?:^|\s+)
+        ([+-]?[0-9]+(?:.[0-9]+)?)                   # The number to convert, will only allow 1 period for floating points (captured)
+        (?:[[\t\v\f\r ][:blank:]])*?                # Any amount of whitespace but not \n
+        ([^\s]?[[:alpha:]]+(?:[/\.][[:alpha:]]+)?)  # The unit to convert from including potential ° and / (captured)
     ").unwrap();
 }
 lazy_static! {
