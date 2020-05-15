@@ -4,17 +4,19 @@ mod handlers;
 mod regex;
 
 use config::{BotConfig, Storage};
+use bot::Bot;
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
 
-    let mut session = Storage::load_storage();
+    let storage = Storage::load_storage();
     let config = BotConfig::load_bot_config();
     let api_client = reqwest::Client::new();
+    let mut bot = Bot::new(storage, config, api_client);
 
     {
-        let bot_fut = bot::start(&mut session, &config, &api_client);
+        let bot_fut = bot.start();
         futures::pin_mut!(bot_fut);
 
         let ctrlc_fut = tokio::signal::ctrl_c();
@@ -23,5 +25,5 @@ async fn main() {
         futures::future::select(bot_fut, ctrlc_fut).await;
     }
 
-    session.save_storage();
+    bot.storage.save_storage();
 }
