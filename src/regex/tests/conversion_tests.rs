@@ -2,76 +2,76 @@ mod no_capture {
     use crate::regex::*;
 
     #[test]
-    fn match_single() {
+    fn single() {
         assert_eq!(true, UNIT_CONVERSION.is_match("you are 22km from me"))
     }
     #[test]
-    fn match_single_forwardslash() {
+    fn single_forwardslash() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("you are going 22km/h right now")
         )
     }
     #[test]
-    fn match_single_float() {
+    fn single_float() {
         assert_eq!(true, UNIT_CONVERSION.is_match("you are 22.2km from me"))
     }
     #[test]
-    fn match_single_float_forwardslash() {
+    fn single_float_forwardslash() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("you are going 22.2km/h right now")
         )
     }
     #[test]
-    fn match_single_space() {
+    fn single_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("you are 22 km from me"))
     }
     #[test]
-    fn match_single_float_space() {
+    fn single_float_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("you are 22.2 km from me"))
     }
     #[test]
-    fn match_single_at_end() {
+    fn single_at_end() {
         assert_eq!(true, UNIT_CONVERSION.is_match("its 22km"))
     }
     #[test]
-    fn match_single_at_end_float() {
+    fn single_at_end_float() {
         assert_eq!(true, UNIT_CONVERSION.is_match("its 22.2km"))
     }
     #[test]
-    fn match_single_at_end_space() {
+    fn single_at_end_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("its 22 km"))
     }
     #[test]
-    fn match_single_at_end_float_space() {
+    fn single_at_end_float_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("its 22.2 km"))
     }
     #[test]
-    fn match_single_at_beginning() {
+    fn single_at_beginning() {
         assert_eq!(true, UNIT_CONVERSION.is_match("22km away from me"))
     }
     #[test]
-    fn match_single_at_beginning_float() {
+    fn single_at_beginning_float() {
         assert_eq!(true, UNIT_CONVERSION.is_match("22.2km away from me"))
     }
     #[test]
-    fn match_single_at_beginning_space() {
+    fn single_at_beginning_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("22 km away from me"))
     }
     #[test]
-    fn match_single_at_beginning_float_space() {
+    fn single_at_beginning_float_space() {
         assert_eq!(true, UNIT_CONVERSION.is_match("22.2 km away from me"))
     }
     #[test]
-    fn match_multiple() {
+    fn multiple() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("you are 22km from me. at 22kmph itll be 1 hour to get here")
         )
     }
     #[test]
-    fn match_multiple_float() {
+    fn multiple_float() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -79,7 +79,7 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_float_mixed() {
+    fn multiple_float_mixed() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -87,7 +87,7 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_space() {
+    fn multiple_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -95,7 +95,7 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_float_multiple_space() {
+    fn multiple_float_multiple_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -103,7 +103,7 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_float_mixed_space() {
+    fn multiple_float_mixed_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -111,7 +111,7 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_mixed_float_mixed_space() {
+    fn multiple_mixed_float_mixed_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION
@@ -119,28 +119,28 @@ mod no_capture {
         )
     }
     #[test]
-    fn match_multiple_mixed_space() {
+    fn multiple_mixed_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("you are 22km from me. at 22 kmph itll be 1 hour to get here")
         )
     }
     #[test]
-    fn match_multiple_at_both_ends() {
+    fn multiple_at_both_ends() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("22km away from me. itll take 1 hour at 22kmph")
         )
     }
     #[test]
-    fn match_multiple_at_both_ends_multiple_space() {
+    fn multiple_at_both_ends_multiple_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("22 km away from me. itll take 1 hour at 22 kmph")
         )
     }
     #[test]
-    fn match_multiple_at_both_ends_mixed_space() {
+    fn multiple_at_both_ends_mixed_space() {
         assert_eq!(
             true,
             UNIT_CONVERSION.is_match("22 km away from me. itll take 1 hour at 22kmph")
