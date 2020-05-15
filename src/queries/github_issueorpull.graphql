@@ -1,0 +1,16 @@
+query IssueOrPull($name: String!, $owner: String!, $number: Int!) {
+  repository(name: $name, owner: $owner) {
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        title
+        resourcePath
+      }
+      __typename
+      ... on PullRequest {
+        title
+        resourcePath
+      }
+    }
+  }
+}

@@ -22,7 +22,11 @@ lazy_static = "1.4"
 anyhow = "1.0"
 uom = "0.27"
 rand = "0.7"
-reqwest = "0.10"
+graphql_client = "0.9"
+
+[dependencies.reqwest]
+version = "0.10"
+features = ["json"]
 
 [dependencies.tokio]
 version = "0.2"

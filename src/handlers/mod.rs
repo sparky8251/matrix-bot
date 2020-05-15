@@ -6,7 +6,7 @@ use self::helpers::do_nothing;
 use self::no_command::no_command_check;
 use self::unit_conversion::unit_conversion;
 use crate::regex::{NO_BANG, SINGLE_UNIT_CONVERSION};
-use crate::{BotConfig, Storage};
+use crate::{Config, Storage};
 
 use anyhow::Result;
 use log::debug;
@@ -22,7 +22,7 @@ pub async fn handle_text_message(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
-    config: &BotConfig,
+    config: &Config,
     api_client: &reqwest::Client,
 ) -> Result<()> {
     if NO_BANG.is_match(&text.body) {

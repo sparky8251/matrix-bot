@@ -6,3 +6,4 @@ massif*
 graph.png
 config.toml
 storage.toml
+.access_token

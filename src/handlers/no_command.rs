@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::time::SystemTime;
 
 use crate::regex::{CODE_TAG, GITHUB_SEARCH, PRE_TAG, UNIT_CONVERSION};
-use crate::{BotConfig, Storage};
+use crate::{Config, Storage};
 
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -107,7 +107,7 @@ pub(super) async fn no_command_check(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
-    config: &BotConfig,
+    config: &Config,
     api_client: &reqwest::Client,
 ) -> Result<()> {
     if sender == &config.mx_uname {

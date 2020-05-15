@@ -1,4 +1,4 @@
-use crate::config::{BotConfig, Storage};
+use crate::config::{Config, Storage};
 use crate::handlers::handle_text_message;
 
 use std::process;
@@ -19,12 +19,12 @@ use ruma_client::{
 
 pub struct Bot {
     pub storage: Storage,
-    pub config: BotConfig,
+    pub config: Config,
     pub api_client: reqwest::Client,
 }
 
 impl Bot {
-    pub fn new(storage: Storage, config: BotConfig, api_client: reqwest::Client) -> Self {
+    pub fn new(storage: Storage, config: Config, api_client: reqwest::Client) -> Self {
         Self {
             storage,
             config,
@@ -86,7 +86,12 @@ impl Bot {
                                     RoomEvent::RoomMessage(m) => match m.content {
                                         MessageEventContent::Text(t) => {
                                             match handle_text_message(
-                                                &t, &m.sender, room_id, &client, &mut self.storage, &self.config,
+                                                &t,
+                                                &m.sender,
+                                                room_id,
+                                                &client,
+                                                &mut self.storage,
+                                                &self.config,
                                                 &self.api_client,
                                             )
                                             .await

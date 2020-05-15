@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[derive(Debug, Deserialize)]
-pub struct BotConfig {
+pub struct Config {
     pub mx_url: Url,
     pub mx_uname: UserId,
     pub mx_pass: String,
@@ -29,7 +29,7 @@ pub struct BotConfig {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RawBotConfig {
+pub struct RawConfig {
     general: RawGeneral,
     matrix_authentication: RawMatrixAuthentication,
     github_authentication: Option<RawGithubAuthentication>,
@@ -67,7 +67,7 @@ pub struct Storage {
     pub last_correction_time: HashMap<RoomId, SystemTime>,
 }
 
-impl BotConfig {
+impl Config {
     // TODO: Change return type to Result<_, _>
     // Implement tests with sample configs based on the returned result
     pub fn load_bot_config() -> Self {
@@ -97,7 +97,7 @@ impl BotConfig {
                 process::exit(2)
             }
         }
-        let toml: RawBotConfig = match toml::from_str(&contents) {
+        let toml: RawConfig = match toml::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
                 error!("Invalid toml. Error is {:?}", e);
@@ -163,7 +163,7 @@ impl BotConfig {
         );
 
         // Return value
-        BotConfig {
+        Config {
             mx_url,
             mx_uname,
             mx_pass,
