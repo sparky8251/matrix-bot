@@ -1,15 +1,12 @@
 use crate::config::{Config, Storage};
-use crate::handlers::handle_text_message;
+use crate::handlers::{handle_invite_event, handle_text_event};
 
 use std::process;
 use std::time::Duration;
 
 use log::{debug, error, info, trace};
 use ruma_client::{
-    api::r0::{
-        membership::{join_room_by_id, leave_room},
-        sync::sync_events::{self, SetPresence},
-    },
+    api::r0::sync::sync_events::{self, SetPresence},
     events::{
         collections::all::RoomEvent, room::message::MessageEventContent,
         stripped::AnyStrippedStateEvent,
@@ -85,7 +82,7 @@ impl Bot {
                                 Ok(r) => match r {
                                     RoomEvent::RoomMessage(m) => match m.content {
                                         MessageEventContent::Text(t) => {
-                                            match handle_text_message(
+                                            match handle_text_event(
                                                 &t,
                                                 &m.sender,
                                                 room_id,
@@ -97,7 +94,7 @@ impl Bot {
                                             .await
                                             {
                                                 Ok(_) => {
-                                                    trace!("Handled text message");
+                                                    trace!("Handled text event");
                                                     ()
                                                 }
                                                 Err(e) => {
@@ -127,50 +124,14 @@ impl Bot {
                                 Ok(v) => match v {
                                     AnyStrippedStateEvent::RoomMember(s) => {
                                         trace!("Invited by {}", s.sender);
-                                        if self.config.admins.contains(&s.sender) {
-                                            info!(
-                                                "Authorized user {} invited me to room {}",
-                                                &s.sender, &room_id
-                                            );
-                                            let response = client
-                                                .request(join_room_by_id::Request {
-                                                    room_id: room_id.clone(),
-                                                    third_party_signed: None,
-                                                })
-                                                .await;
-                                            match response {
-                                                Ok(_) => {
-                                                    info!("Successfully joined room {}", &room_id);
-                                                    ()
-                                                }
-                                                Err(e) => {
-                                                    debug!(
-                                                    "Unable to join room {} because of error {:?}",
-                                                    &room_id, e
-                                                );
-                                                    ()
-                                                }
-                                            }
-                                        } else {
-                                            let response = client
-                                                .request(leave_room::Request {
-                                                    room_id: room_id.clone(),
-                                                })
-                                                .await;
-                                            match response {
-                                                Ok(_) => {
-                                                    info!(
-                                                        "Rejected invite from unathorized user {}",
-                                                        s.sender
-                                                    );
-                                                    ()
-                                                }
-                                                Err(e) => {
-                                                    debug!("Unable to reject invite this loop because of error {:?}", e);
-                                                    ()
-                                                }
-                                            }
-                                        }
+                                        handle_invite_event(
+                                            &s.sender,
+                                            &room_id,
+                                            &client,
+                                            &self.config,
+                                        )
+                                        .await;
+                                        trace!("Handled invite event");
                                     }
                                     _ => (), //FIXME: Reject invite if there is no known sender
                                 },
