@@ -114,6 +114,7 @@ impl Bot {
                                 }
                             }
                             self.storage.last_sync = Some(v.next_batch.clone());
+                            self.storage.save_storage();
                         }
                     }
                     for (room_id, invited_room) in &v.rooms.invite {
