@@ -1,4 +1,4 @@
-use crate::{Config, Storage};
+use crate::config::{Config, SpellCheckKind, Storage};
 
 use std::time::SystemTime;
 
@@ -14,42 +14,57 @@ use ruma_client::{
 };
 
 pub async fn spellcheck(
+    text: &TextMessageEventContent,
     sender: &UserId,
     room_id: &RoomId,
     client: &HttpsClient,
     config: &Config,
     storage: &mut Storage,
 ) {
-    for incorrect_spelling in config
-        .insensitive_corrections
-        .iter()
-        .chain(config.sensitive_corrections.iter())
-    {
-        let body = config
-            .correction_text
-            .replacen("{}", sender.localpart(), 1)
-            .replacen("{}", &incorrect_spelling.to_string(), 1);
-        let response = client
-            .request(create_message_event::Request {
-                room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-                event_type: EventType::RoomMessage,
-                txn_id: storage.next_txn_id(),
-                data: EventJson::from(MessageEventContent::Text(TextMessageEventContent {
-                    body,
-                    format: None,
-                    formatted_body: None,
-                    relates_to: None,
-                })),
-            })
-            .await;
-        match response {
-            Ok(_) => {
-                storage
-                    .last_correction_time
-                    .insert(room_id.clone(), SystemTime::now());
+    for i in config.incorrect_spellings.iter() {
+        let mut body = String::new();
+        match i {
+            SpellCheckKind::SpellCheckInsensitive(v) => {
+                if text.body.contains(&v.to_string().to_lowercase()) {
+                    body = config
+                        .correction_text
+                        .replacen("{}", sender.localpart(), 1)
+                        .replacen("{}", &v.to_string(), 1);
+                }
             }
-            Err(e) => {
-                error!("{:?}", e);
+            SpellCheckKind::SpellCheckSensitive(v) => {
+                if text.body.contains(&v.to_string()) {
+                    body = config
+                        .correction_text
+                        .replacen("{}", sender.localpart(), 1)
+                        .replacen("{}", &v.to_string(), 1);
+                }
+            }
+        }
+        if body != "" {
+            let response = client
+                .request(create_message_event::Request {
+                    room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+                    event_type: EventType::RoomMessage,
+                    txn_id: storage.next_txn_id(),
+                    data: EventJson::from(MessageEventContent::Text(TextMessageEventContent {
+                        body,
+                        format: None,
+                        formatted_body: None,
+                        relates_to: None,
+                    })),
+                })
+                .await;
+            match response {
+                Ok(_) => {
+                    storage
+                        .last_correction_time
+                        .insert(room_id.clone(), SystemTime::now());
+                    break; // only allow 1 match per event
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                }
             }
         }
     }

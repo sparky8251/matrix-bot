@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
 use std::process;
@@ -12,7 +13,7 @@ use ruma_client::{
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct Config {
     pub mx_url: Url,
     pub mx_uname: UserId,
@@ -21,8 +22,7 @@ pub struct Config {
     pub gh_pass: String,
     pub enable_corrections: bool,
     pub enable_unit_conversions: bool,
-    pub insensitive_corrections: Vec<String>,
-    pub sensitive_corrections: Vec<String>,
+    pub incorrect_spellings: Vec<SpellCheckKind>,
     pub correction_text: String,
     pub admins: HashSet<UserId>,
     pub repos: HashMap<String, String>,
@@ -65,6 +65,21 @@ pub struct Storage {
     pub last_txn_id: u64,
     pub session: Option<Session>,
     pub last_correction_time: HashMap<RoomId, SystemTime>,
+}
+
+#[derive(Clone, Debug)]
+pub enum SpellCheckKind {
+    SpellCheckInsensitive(InsensitiveSpelling),
+    SpellCheckSensitive(SensitiveSpelling),
+}
+#[derive(Clone, Debug)]
+pub struct InsensitiveSpelling {
+    spelling: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct SensitiveSpelling {
+    spelling: String,
 }
 
 impl Config {
@@ -119,14 +134,24 @@ impl Config {
                 (HashMap::new(), String::new(), String::new())
             }
         };
-        let (insensitive_corrections, sensitive_corrections, correction_text) = match toml
-            .general
-            .enable_corrections
-        {
+        let (incorrect_spellings, correction_text) = match toml.general.enable_corrections {
             true => match toml.general.insensitive_corrections {
                 Some(i) => match toml.general.sensitive_corrections {
                     Some(s) => match toml.general.correction_text {
-                        Some(c) => (i, s, c),
+                        Some(c) => {
+                            let mut spk = Vec::new();
+                            for spelling in i {
+                                spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                    InsensitiveSpelling { spelling },
+                                ));
+                            }
+                            for spelling in s {
+                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
+                                    spelling,
+                                }));
+                            }
+                            (spk, c)
+                        }
                         None => {
                             error!("No correction text provided even though corrections have been enabled");
                             process::exit(5)
@@ -144,7 +169,7 @@ impl Config {
             },
             false => {
                 info!("Disabling corrections feature");
-                (Vec::new(), Vec::new(), String::new())
+                (Vec::new(), String::new())
             }
         };
         let admins = match toml.general.authorized_users {
@@ -171,8 +196,7 @@ impl Config {
             gh_pass,
             enable_corrections,
             enable_unit_conversions,
-            insensitive_corrections,
-            sensitive_corrections,
+            incorrect_spellings,
             correction_text,
             admins,
             repos,
@@ -274,5 +298,42 @@ impl Storage {
             },
             None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
         }
+    }
+}
+
+impl From<&str> for InsensitiveSpelling {
+    fn from(str: &str) -> Self {
+        InsensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl From<&str> for SensitiveSpelling {
+    fn from(str: &str) -> Self {
+        SensitiveSpelling {
+            spelling: str.to_string(),
+        }
+    }
+}
+
+impl Display for SpellCheckKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpellCheckKind::SpellCheckInsensitive(v) => write!(f, "{}", v),
+            SpellCheckKind::SpellCheckSensitive(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+impl Display for InsensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
+    }
+}
+
+impl Display for SensitiveSpelling {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.spelling)
     }
 }

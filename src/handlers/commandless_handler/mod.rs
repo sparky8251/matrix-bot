@@ -64,7 +64,7 @@ pub(super) async fn commandless_handler(
                 && room_id != "!YjAUNWwLVbCthyFrkz:bonifacelabs.ca"
             {
                 debug!("Entering spell check path");
-                spellcheck(&sender, &room_id, &client, &config, &mut storage).await;
+                spellcheck(&text, &sender, &room_id, &client, &config, &mut storage).await;
             }
         }
         return Ok(()); // Nothing to do, skipping response
