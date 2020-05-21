@@ -1,7 +1,7 @@
 mod bot;
 mod config;
 mod handlers;
-mod macros;
+mod helpers;
 mod queries;
 mod regex;
 

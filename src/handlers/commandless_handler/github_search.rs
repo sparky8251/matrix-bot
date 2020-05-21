@@ -1,4 +1,5 @@
-use crate::regex::{CODE_TAG, GITHUB_SEARCH, PRE_TAG};
+use crate::helpers::clean_text;
+use crate::regex::GITHUB_SEARCH;
 use crate::{Config, Storage};
 
 use anyhow::Result;
@@ -26,10 +27,7 @@ pub async fn github_search(
     let mut searches = Vec::new();
     match &text.formatted_body {
         Some(v) => {
-            let clean_text = CODE_TAG.replace_all(&v, "");
-            trace!("Cleaned text after code tag is {:?}", clean_text);
-            let clean_text = PRE_TAG.replace_all(&clean_text, "");
-            trace!("Cleaned text after pre tag is {:?}", clean_text);
+            let clean_text = clean_text(v);
             if GITHUB_SEARCH.is_match(&clean_text) {
                 for cap in GITHUB_SEARCH.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);

@@ -11,7 +11,9 @@ lazy_static! {
     pub static ref UNIT_CONVERSION_COMMAND: Regex = Regex::new(
         r"(?x)
         ^!convert                                   # The tag from line start
-    ").unwrap();
+    "
+    )
+    .unwrap();
 }
 lazy_static! {
     pub static ref UNIT_CONVERSION: Regex = Regex::new(

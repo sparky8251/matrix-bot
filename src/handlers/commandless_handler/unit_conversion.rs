@@ -1,5 +1,5 @@
-use crate::macros::convert_unit;
-use crate::regex::{CODE_TAG, PRE_TAG, UNIT_CONVERSION};
+use crate::helpers::{clean_text, convert_unit};
+use crate::regex::UNIT_CONVERSION;
 use crate::Storage;
 
 use anyhow::Result;
@@ -23,10 +23,7 @@ pub async fn unit_conversion(
     let mut conversions = Vec::new();
     match &text.formatted_body {
         Some(v) => {
-            let clean_text = CODE_TAG.replace_all(&v, "");
-            trace!("Cleaned text after code tag is {:?}", clean_text);
-            let clean_text = PRE_TAG.replace_all(&clean_text, "");
-            trace!("Cleaned text after pre tag is {:?}", clean_text);
+            let clean_text = clean_text(v);
             if UNIT_CONVERSION.is_match(&clean_text) {
                 for cap in UNIT_CONVERSION.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
