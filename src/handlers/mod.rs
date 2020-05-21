@@ -1,12 +1,10 @@
 mod commandless_handler;
-mod helpers;
 mod invite_handler;
 mod unit_conversion_handler;
 
 use self::commandless_handler::commandless_handler;
-use self::helpers::do_nothing;
 use self::unit_conversion_handler::unit_conversion_handler;
-use crate::regex::{NO_BANG, SINGLE_UNIT_CONVERSION};
+use crate::regex::{NO_BANG, UNIT_CONVERSION_COMMAND};
 use crate::{Config, Storage};
 
 use invite_handler::{accept_invite, reject_invite};
@@ -31,12 +29,12 @@ pub async fn handle_text_event(
     if NO_BANG.is_match(&text.body) {
         debug!("Entering no command path...");
         commandless_handler(text, sender, room_id, client, storage, config, api_client).await
-    } else if SINGLE_UNIT_CONVERSION.is_match(&text.body.to_lowercase()) {
+    } else if UNIT_CONVERSION_COMMAND.is_match(&text.body.to_lowercase()) {
         debug!("Entering unit conversion path...");
         unit_conversion_handler(text, room_id, client, storage).await
     } else {
         debug!("Entering do nothing path...");
-        do_nothing().await
+        Ok(())
     }
 }
 

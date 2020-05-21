@@ -1,3 +1,4 @@
+use crate::macros::convert_unit;
 use crate::regex::{CODE_TAG, PRE_TAG, UNIT_CONVERSION};
 use crate::Storage;
 
@@ -12,11 +13,6 @@ use ruma_client::{
     identifiers::RoomId,
     HttpsClient,
 };
-use uom::si::f64::*;
-use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
-use uom::si::mass::{kilogram, pound};
-use uom::si::thermodynamic_temperature::{degree_celsius, degree_fahrenheit};
-use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
 
 pub async fn unit_conversion(
     text: &TextMessageEventContent,
@@ -48,105 +44,37 @@ pub async fn unit_conversion(
         }
     }
     let conversions = conversions;
-    let mut result = String::new();
-    for conversion in conversions {
-        let (quantity, unit) = conversion;
-        let quantity = match quantity.parse::<f64>() {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Quantity unable to be parsed. Error is {:?}", e);
-                return Ok(());
+    let result = match convert_unit(conversions) {
+        Some(v) => {
+            let mut result = String::new();
+            for converted in v {
+                result.push_str(&converted.to_string());
+                result.push_str("\n");
             }
-        };
-        macro_rules! convert_unit {
-                (
-                    $unit:expr, $quantity:expr,
-                    $(
-                        $unit_ty:ident {
-                            $( ( $from_str:expr, $to_str:expr, $from_ty:ty, $to_ty:ty ) ),*
-                            $(,)?
-                        }
-                    )*
-                    _ => {
-                        $($default_code:tt)*
-                    }
-                ) => {
-                    match $unit {
-                        $(
-                            $(
-                                $from_str => {
-                                    let unit_value = $unit_ty::new::<$from_ty>($quantity);
-                                    let converted_quantity = unit_value.get::<$to_ty>();
-                                    let from_string = format!("{:.2}{} => ", $quantity, $from_str);
-                                    let to_string = format!("{:.2}{}\n", converted_quantity, $to_str);
-                                    result.push_str(from_string.as_str());
-                                    result.push_str(to_string.as_str());
-                                }
-                            )*
-                        )*
-                        _ => {
-                            $($default_code)*
-                        }
-                    }
-                }
-            }
-        convert_unit!(unit.as_str(), quantity,
-            Length {
-                ("cm", "in", centimeter, inch),
-                ("m", "ft", meter, foot),
-                ("km", "mi", kilometer, mile),
-                ("in", "cm", inch, centimeter),
-                ("ft", "m", foot, meter),
-                ("mi", "km", mile, kilometer),
-                ("mile", "km", mile, kilometer),
-                ("miles", "km", mile, kilometer),
-            }
-            ThermodynamicTemperature {
-                ("c", "f", degree_celsius, degree_fahrenheit),
-                ("°c", "°f", degree_celsius, degree_fahrenheit),
-                ("f", "c", degree_fahrenheit, degree_celsius),
-                ("°f", "°c", degree_fahrenheit, degree_celsius),
-            }
-            Mass {
-                ("kg", "lbs", kilogram, pound),
-                ("lbs", "kg", pound, kilogram),
-            }
-            Velocity {
-                ("km/h", "mph", kilometer_per_hour, mile_per_hour),
-                ("kmh", "mph", kilometer_per_hour, mile_per_hour),
-                ("kph", "mph", kilometer_per_hour, mile_per_hour),
-                ("kmph", "mph", kilometer_per_hour, mile_per_hour),
-                ("mph", "km/h", mile_per_hour, kilometer_per_hour),
-            }
-            _ => {
-                debug!(
-                "Attempted unknown conversion for unit {:?}",
-                unit.trim().to_lowercase());
-            }
-        )
-    }
-
-    if result.trim().to_string() != "" {
-        let response = client
-            .request(create_message_event::Request {
-                room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-                event_type: EventType::RoomMessage,
-                txn_id: storage.next_txn_id(),
-                data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                    body: result.trim().to_string(),
-                    relates_to: None,
-                })),
-            })
-            .await;
-        match response {
-            Ok(_) => return Ok(()),
-            Err(e) => {
-                error!("{:?}", e);
-                return Ok(());
-            }
+            result.trim().to_string()
         }
-    } else {
-        trace!("Nothing left after trimming result, doing nothing");
-        return Ok(());
+        None => {
+            debug!("No convertable units found. No reply will be constructed.");
+            return Ok(());
+        }
+    };
+
+    match client
+        .request(create_message_event::Request {
+            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+            event_type: EventType::RoomMessage,
+            txn_id: storage.next_txn_id(),
+            data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
+                body: result,
+                relates_to: None,
+            })),
+        })
+        .await
+    {
+        Ok(_) => return Ok(()),
+        Err(e) => {
+            error!("{:?}", e);
+            return Ok(());
+        }
     }
 }
