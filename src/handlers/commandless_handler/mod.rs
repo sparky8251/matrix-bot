@@ -34,6 +34,7 @@ pub(super) async fn commandless_handler(
         if UNIT_CONVERSION.is_match(&text.body)
             && text.relates_to == None
             && !GITHUB_SEARCH.is_match(&text.body)
+            && config.enable_unit_conversions
         {
             match &text.format {
                 Some(v) => {
@@ -46,7 +47,7 @@ pub(super) async fn commandless_handler(
             };
             debug!("Entering commandless unit conversion path");
             unit_conversion(&text, &room_id, &client, storage).await?;
-        } else if GITHUB_SEARCH.is_match(&text.body) && text.relates_to == None {
+        } else if GITHUB_SEARCH.is_match(&text.body) && text.relates_to == None  && config.repos.len() > 0 {
             match &text.format {
                 Some(v) => {
                     if v != "org.matrix.custom.html" {
@@ -59,7 +60,7 @@ pub(super) async fn commandless_handler(
             debug!("Entering commandless github search path");
             github_search(&text, &room_id, &client, storage, &config, &api_client).await?;
         } else {
-            if storage.correction_time_cooldown(room_id)
+            if storage.correction_time_cooldown(room_id) && config.enable_corrections
                 && text.relates_to == None
                 && room_id != "!YjAUNWwLVbCthyFrkz:bonifacelabs.ca"
             {
