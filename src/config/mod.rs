@@ -6,12 +6,16 @@ use std::process;
 use std::time::{Duration, SystemTime};
 
 use log::{error, info, trace};
+use reqwest::header::HeaderValue;
 use ruma_client::{
     identifiers::{RoomId, UserId},
     Session,
 };
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+pub const NAME: &'static str = env!("CARGO_PKG_NAME");
+pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 pub struct Config {
@@ -25,6 +29,7 @@ pub struct Config {
     pub correction_text: String,
     pub admins: HashSet<UserId>,
     pub repos: HashMap<String, String>,
+    pub user_agent: HeaderValue,
 }
 
 #[derive(Debug, Deserialize)]
@@ -185,6 +190,15 @@ impl Config {
             toml.general.enable_unit_conversions,
         );
 
+        let user_agent: HeaderValue =
+            match HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION)) {
+                Ok(v) => v,
+                Err(e) => panic!(
+                    "Unable to create valid user agent from {} and {}. Error is {:?}",
+                    NAME, VERSION, e
+                ),
+            };
+
         // Return value
         Config {
             mx_url,
@@ -197,6 +211,7 @@ impl Config {
             correction_text,
             admins,
             repos,
+            user_agent,
         }
     }
 }

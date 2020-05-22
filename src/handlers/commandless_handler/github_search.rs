@@ -1,13 +1,13 @@
+use crate::config::{Config, Storage};
 use crate::helpers::clean_text;
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
-use crate::{Config, Storage};
 
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
 use log::{debug, error, trace};
-use reqwest::header::{self, HeaderValue};
+use reqwest::header;
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -92,10 +92,7 @@ pub async fn github_search(
         let response_body = match api_client
             .post("https://api.github.com/graphql")
             .bearer_auth(config.gh_access_token.clone())
-            .header(
-                header::USER_AGENT,
-                HeaderValue::from_static("jellyfin-matrix-bot/0.1.0"),
-            )
+            .header(header::USER_AGENT, config.user_agent.clone())
             .json(&query)
             .send()
             .await
