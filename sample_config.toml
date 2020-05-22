@@ -46,11 +46,10 @@ url = 'https://matrix.possumlodge.me'
 username = '@botuser:matrix.homeserver.com'
 password = 'supersecretpassword'
 
-# User account and password bot will use to bypass API ratelimiting
+# Access token used to perform graphql queries.
 # Required if you have searchable repos
 [github_authentication]
-username = 'demouser@homeserver.com'
-password = 'supersecretpassword'
+access_token = 'supersecretaccesstoken'
 
 # Searchable github repos.
 # Messages containing "jf#1234" or "jf #1234" will search

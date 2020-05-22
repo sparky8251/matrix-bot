@@ -18,8 +18,7 @@ pub struct Config {
     pub mx_url: Url,
     pub mx_uname: UserId,
     pub mx_pass: String,
-    pub gh_uname: String,
-    pub gh_pass: String,
+    pub gh_access_token: String,
     pub enable_corrections: bool,
     pub enable_unit_conversions: bool,
     pub incorrect_spellings: Vec<SpellCheckKind>,
@@ -55,8 +54,7 @@ struct RawMatrixAuthentication {
 
 #[derive(Debug, Deserialize)]
 struct RawGithubAuthentication {
-    username: String,
-    password: String,
+    access_token: String,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -121,17 +119,17 @@ impl Config {
         };
 
         // Set variables and exit/error if set improperly
-        let (repos, gh_uname, gh_pass) = match toml.searchable_repos {
+        let (repos, gh_access_token) = match toml.searchable_repos {
             Some(r) => match toml.github_authentication {
-                Some(g) => (r, g.username, g.password),
+                Some(g) => (r, g.access_token),
                 None => {
-                    error!("Searchable repos configured, but not github credentials found. Unable to continue...");
+                    error!("Searchable repos configured, but no github access token found. Unable to continue...");
                     process::exit(4)
                 }
             },
             None => {
                 info!("No searchable repos found. Disabling feature...");
-                (HashMap::new(), String::new(), String::new())
+                (HashMap::new(), String::new())
             }
         };
         let (incorrect_spellings, correction_text) = match toml.general.enable_corrections {
@@ -192,8 +190,7 @@ impl Config {
             mx_url,
             mx_uname,
             mx_pass,
-            gh_uname,
-            gh_pass,
+            gh_access_token,
             enable_corrections,
             enable_unit_conversions,
             incorrect_spellings,
