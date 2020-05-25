@@ -27,8 +27,10 @@ pub struct Config {
     pub enable_unit_conversions: bool,
     pub incorrect_spellings: Vec<SpellCheckKind>,
     pub correction_text: String,
+    pub linkers: HashSet<String>,
     pub admins: HashSet<UserId>,
     pub repos: HashMap<String, String>,
+    pub docs: HashMap<String, String>,
     pub user_agent: HeaderValue,
 }
 
@@ -38,6 +40,7 @@ pub struct RawConfig {
     matrix_authentication: RawMatrixAuthentication,
     github_authentication: Option<RawGithubAuthentication>,
     searchable_repos: Option<HashMap<String, String>>,
+    linkable_docs: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,6 +51,7 @@ struct RawGeneral {
     insensitive_corrections: Option<Vec<String>>,
     sensitive_corrections: Option<Vec<String>>,
     correction_text: Option<String>,
+    link_matchers: Option<HashSet<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -137,6 +141,26 @@ impl Config {
                 (HashMap::new(), String::new())
             }
         };
+        let (linkers, docs) = match toml.linkable_docs {
+            Some(d) => match toml.general.link_matchers {
+                Some(m) => {
+                    if d.len() != 0 {
+                        (m, d)
+                    } else {
+                        error!("Link matchers exists but none are set. Exiting...");
+                        process::exit(1)
+                    }
+                }
+                None => {
+                    info!("No link matchers found. Disabling feature...");
+                    (HashSet::new(), HashMap::new())
+                }
+            },
+            None => {
+                info!("No linkable docs found. Disabling feature...");
+                (HashSet::new(), HashMap::new())
+            }
+        };
         let (incorrect_spellings, correction_text) = match toml.general.enable_corrections {
             true => match toml.general.insensitive_corrections {
                 Some(i) => match toml.general.sensitive_corrections {
@@ -209,8 +233,10 @@ impl Config {
             enable_unit_conversions,
             incorrect_spellings,
             correction_text,
+            linkers,
             admins,
             repos,
+            docs,
             user_agent,
         }
     }

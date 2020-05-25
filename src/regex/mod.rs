@@ -29,9 +29,20 @@ lazy_static! {
         r"(?x)
         ([[:alpha:]-]+)                 # The repo to search against (captured)
         (?:[[[\t\v\f\r ]][:blank:]])*?  # Any amount of whitespace but not \n
-        (?:\#)                          # Required one # before a number to signify we are searching github
+        (?:\#)                          # Require one # before a number to signify we are searching github
         ([[:digit:]]+)                  # The number to search issues and pulls for (captured)
     ").unwrap();
+}
+lazy_static! {
+    pub static ref DOCS_LINK: Regex = Regex::new(
+        r"(?x)
+        ([[:alpha:]]+)                  # The repo to search against (captured)
+        (?:[[[\t\v\f\r ]][:blank:]])*?  # Any amount of whitespace but not \n
+        (?:@)                           # Require one @ before the article to link
+        ([[:alpha:]]+)           # The number to search issues and pulls for (captured)
+    "
+    )
+    .unwrap();
 }
 lazy_static! {
     pub static ref CODE_TAG: Regex = Regex::new(r"(?s)(<code>.*</code>)*").unwrap();

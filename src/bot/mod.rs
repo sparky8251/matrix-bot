@@ -93,14 +93,8 @@ impl Bot {
                                             )
                                             .await
                                             {
-                                                Ok(_) => {
-                                                    trace!("Handled text event");
-                                                    ()
-                                                }
-                                                Err(e) => {
-                                                    debug!("{:?}", e);
-                                                    ()
-                                                }
+                                                Ok(_) => trace!("Handled text event"),
+                                                Err(e) => debug!("{:?}", e),
                                             }
                                         }
                                         _ => (),
@@ -109,8 +103,7 @@ impl Bot {
                                 },
                                 Err(e) => {
                                     debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json());
-                                    ()
+                                    trace!("Content: {:?}", raw_event.json())
                                 }
                             }
                             self.storage.last_sync = Some(v.next_batch.clone());
@@ -132,23 +125,19 @@ impl Bot {
                                             &self.config,
                                         )
                                         .await;
-                                        trace!("Handled invite event");
+                                        trace!("Handled invite event")
                                     }
-                                    _ => (), //FIXME: Reject invite if there is no known sender
+                                    _ => error!("No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
                                 },
                                 Err(e) => {
                                     debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json());
-                                    ()
+                                    trace!("Content: {:?}", raw_event.json())
                                 }
                             }
                         }
                     }
                 }
-                None => {
-                    debug!("Response deserialization failed. Doing nothing this loop.");
-                    ()
-                }
+                None => debug!("Response deserialization failed. Doing nothing this loop."),
             }
         }
     }

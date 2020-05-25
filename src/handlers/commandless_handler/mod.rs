@@ -1,12 +1,14 @@
+mod docs_link;
 mod github_search;
 mod spellcheck;
 mod unit_conversion;
 
+use docs_link::docs_link;
 use github_search::github_search;
 use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
 
-use crate::regex::{GITHUB_SEARCH, UNIT_CONVERSION};
+use crate::regex::{DOCS_LINK, GITHUB_SEARCH, UNIT_CONVERSION};
 use crate::{Config, Storage};
 
 use anyhow::Result;
@@ -62,6 +64,22 @@ pub(super) async fn commandless_handler(
             };
             debug!("Entering commandless github search path");
             github_search(&text, &room_id, &client, storage, &config, &api_client).await?;
+        } else if DOCS_LINK.is_match(&text.body)
+            && text.relates_to == None
+            && config.docs.len() > 0
+            && config.linkers.len() > 0
+        {
+            match &text.format {
+                Some(v) => {
+                    if v != "org.matrix.custom.html" {
+                        debug!("Message parsed properly, but format {} is unsupported so no search is taking place.", v);
+                        return Ok(());
+                    }
+                }
+                None => (),
+            };
+            debug!("Entering commandless docs linking path");
+            docs_link(&text, &room_id, &client, storage, &config).await?;
         } else {
             if storage.correction_time_cooldown(room_id)
                 && config.enable_corrections

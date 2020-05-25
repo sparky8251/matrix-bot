@@ -40,6 +40,15 @@ sensitive_corrections = [
 # Only required if enable_corrections = true
 correction_text = '''I'd just like to interject for a moment {}. What you're referring to as {}, is in fact, Jellyfin, or as I've recently taken to calling it, Emby plus Jellyfin. Jellyfin is not a media server unto itself, but a free component of a media server as defined by Luke Pulverenti. Through a peculiar turn of events, the version of Jellyfin which is widely used today is basically developed with slave labor. Please recognize the harm caused to the slaves by misnaming the project.'''
 
+# The keys to match for linking docs
+# If you define "docs" here "docs@link" will link "link"
+# while "wiki@link" will fail
+# Must be lowercase
+# Only required if linkable docs are set below
+link_matchers = [
+    'docs',
+]
+
 # User url, account, and password bot will log in with
 # Required
 [matrix_authentication]
@@ -61,3 +70,11 @@ jf = 'jellyfin/jellyfin'
 jellyfin = 'jellyfin/jellyfin'
 jf-web = 'jellyfin/jellyfin-web'
 jellyfin-web = 'jellyfin/jellyfin-web'
+
+# Linkable docs pages. Can link to anything with a url.
+# messages containing "docs@hwa" or "docs @hwa" will link
+# doc "https://jellyfin.org/docs/general/administration/hardware-acceleration.html"
+# Optional
+[linkable_docs]
+hwa = 'https://jellyfin.org/docs/general/administration/hardware-acceleration.html'
+network = 'https://jellyfin.org/docs/general/networking/index.html'
