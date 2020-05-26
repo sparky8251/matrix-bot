@@ -1,6 +1,6 @@
+use crate::config::Storage;
 use crate::helpers::{clean_text, convert_unit};
 use crate::regex::UNIT_CONVERSION;
-use crate::config::Storage;
 
 use anyhow::Result;
 use log::{debug, error, trace};
@@ -68,10 +68,10 @@ pub async fn unit_conversion(
         })
         .await
     {
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
         Err(e) => {
             error!("{:?}", e);
-            return Ok(());
+            Ok(())
         }
     }
 }

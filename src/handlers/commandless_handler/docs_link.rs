@@ -61,7 +61,7 @@ pub async fn docs_link(
         }
     }
     let mut results = String::new();
-    if links.len() == 0 {
+    if links.is_empty() {
         debug!("No links to build response with after processing");
         return Ok(());
     }
@@ -82,10 +82,10 @@ pub async fn docs_link(
         })
         .await
     {
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
         Err(e) => {
             error!("{:?}", e);
-            return Ok(());
+            Ok(())
         }
     }
 }

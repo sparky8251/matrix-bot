@@ -14,8 +14,8 @@ use ruma_client::{
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-pub const NAME: &'static str = env!("CARGO_PKG_NAME");
-pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const NAME: &str = env!("CARGO_PKG_NAME");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 pub struct Config {
@@ -92,6 +92,7 @@ pub struct SensitiveSpelling {
 impl Config {
     // TODO: Change return type to Result<_, _>
     // Implement tests with sample configs based on the returned result
+    #[allow(clippy::cognitive_complexity)]
     pub fn load_bot_config() -> Self {
         // File Load Section
         let mut file = match File::open("config.toml") {
@@ -144,7 +145,7 @@ impl Config {
         let (linkers, docs) = match toml.linkable_docs {
             Some(d) => match toml.general.link_matchers {
                 Some(m) => {
-                    if d.len() != 0 {
+                    if !d.is_empty() {
                         (m, d)
                     } else {
                         error!("Link matchers exists but none are set. Exiting...");
@@ -161,8 +162,8 @@ impl Config {
                 (HashSet::new(), HashMap::new())
             }
         };
-        let (incorrect_spellings, correction_text) = match toml.general.enable_corrections {
-            true => match toml.general.insensitive_corrections {
+        let (incorrect_spellings, correction_text) = if toml.general.enable_corrections {
+            match toml.general.insensitive_corrections {
                 Some(i) => match toml.general.sensitive_corrections {
                     Some(s) => match toml.general.correction_text {
                         Some(c) => {
@@ -193,11 +194,10 @@ impl Config {
                     error!("No case insensitive corrections provided even though corrections have been enabled");
                     process::exit(5)
                 }
-            },
-            false => {
-                info!("Disabling corrections feature");
-                (Vec::new(), String::new())
             }
+        } else {
+            info!("Disabling corrections feature");
+            (Vec::new(), String::new())
         };
         let admins = match toml.general.authorized_users {
             Some(v) => v,
@@ -280,7 +280,7 @@ impl Storage {
                 process::exit(3)
             }
         };
-        return toml;
+        toml
     }
 
     pub fn save_storage(&self) {
@@ -325,13 +325,7 @@ impl Storage {
     pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
         match self.last_correction_time.get(room_id) {
             Some(t) => match t.elapsed() {
-                Ok(d) => {
-                    if d >= Duration::new(300, 0) {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                Ok(d) => d >= Duration::new(300, 0),
                 Err(_) => false,
             },
             None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction

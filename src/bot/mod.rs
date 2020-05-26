@@ -82,9 +82,9 @@ impl Bot {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(r) => match r {
-                                    RoomEvent::RoomMessage(m) => match m.content {
-                                        MessageEventContent::Text(t) => {
+                                Ok(r) => {
+                                    if let RoomEvent::RoomMessage(m) = r {
+                                        if let MessageEventContent::Text(t) = m.content {
                                             match handle_text_event(
                                                 &t,
                                                 &m.sender,
@@ -100,10 +100,8 @@ impl Bot {
                                                 Err(e) => debug!("{:?}", e),
                                             }
                                         }
-                                        _ => (),
-                                    },
-                                    _ => (),
-                                },
+                                    }
+                                }
                                 Err(e) => {
                                     debug!("{:?}", e);
                                     trace!("Content: {:?}", raw_event.json())

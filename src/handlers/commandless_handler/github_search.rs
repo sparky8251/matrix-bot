@@ -78,7 +78,7 @@ pub async fn github_search(
     }
     let searches = searches;
     debug!("Queued searches: {:?}", searches);
-    if searches.len() == 0 {
+    if searches.is_empty() {
         debug!("No searches found after parsing numbers. No response will be built.");
         return Ok(());
     }
@@ -148,7 +148,7 @@ pub async fn github_search(
             }
         }
     }
-    if results.len() == 0 {
+    if results.is_empty() {
         error!("No results returned");
         return Ok(());
     }
@@ -164,10 +164,10 @@ pub async fn github_search(
         })
         .await
     {
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
         Err(e) => {
             error!("{:?}", e);
-            return Ok(());
+            Ok(())
         }
     }
 }

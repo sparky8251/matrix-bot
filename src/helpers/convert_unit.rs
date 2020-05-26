@@ -36,7 +36,7 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
         }
     }
 
-    if working_data.len() == 0 {
+    if working_data.is_empty() {
         trace!("No units to convert after parsing quanitity to f64");
         return None;
     }
@@ -112,7 +112,7 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
         );
     }
 
-    if result.len() > 0 {
+    if !result.is_empty() {
         Some(result)
     } else {
         trace!("No units converted");

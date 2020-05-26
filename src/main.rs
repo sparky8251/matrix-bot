@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(warnings)]
+
 mod bot;
 mod config;
 mod handlers;
