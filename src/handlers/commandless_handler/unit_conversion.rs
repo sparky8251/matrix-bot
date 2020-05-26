@@ -1,6 +1,6 @@
 use crate::helpers::{clean_text, convert_unit};
 use crate::regex::UNIT_CONVERSION;
-use crate::Storage;
+use crate::config::Storage;
 
 use anyhow::Result;
 use log::{debug, error, trace};

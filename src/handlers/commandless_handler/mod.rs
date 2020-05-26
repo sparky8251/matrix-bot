@@ -9,7 +9,7 @@ use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
 
 use crate::regex::{DOCS_LINK, GITHUB_SEARCH, UNIT_CONVERSION};
-use crate::{Config, Storage};
+use crate::config::{Config, Storage};
 
 use anyhow::Result;
 use log::{debug, trace};

@@ -5,7 +5,7 @@ mod unit_conversion_handler;
 use self::commandless_handler::commandless_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
 use crate::regex::{NO_BANG, UNIT_CONVERSION_COMMAND};
-use crate::{Config, Storage};
+use crate::config::{Config, Storage};
 
 use invite_handler::{accept_invite, reject_invite};
 

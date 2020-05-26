@@ -21,7 +21,10 @@ pub struct Bot {
 }
 
 impl Bot {
-    pub fn new(storage: Storage, config: Config, api_client: reqwest::Client) -> Self {
+    pub fn new() -> Self {
+        let storage = Storage::load_storage();
+        let config = Config::load_bot_config();
+        let api_client = reqwest::Client::new();
         Self {
             storage,
             config,

@@ -6,16 +6,12 @@ mod queries;
 mod regex;
 
 use bot::Bot;
-use config::{Config, Storage};
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
 
-    let storage = Storage::load_storage();
-    let config = Config::load_bot_config();
-    let api_client = reqwest::Client::new();
-    let mut bot = Bot::new(storage, config, api_client);
+    let mut bot = Bot::new();
 
     {
         let bot_fut = bot.start();
