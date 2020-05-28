@@ -14,7 +14,7 @@ use ruma_client::{
     HttpsClient,
 };
 
-pub async fn docs_link(
+pub async fn link_url(
     text: &TextMessageEventContent,
     room_id: &RoomId,
     client: &HttpsClient,
@@ -29,7 +29,7 @@ pub async fn docs_link(
                 for cap in DOCS_LINK.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
                     if config.linkers.contains(&cap[1].to_lowercase()) {
-                        match config.docs.get(&cap[2].to_string()) {
+                        match config.links.get(&cap[2].to_string()) {
                             Some(v) => {
                                 links.push(v.to_string())
                             }
@@ -48,7 +48,7 @@ pub async fn docs_link(
             for cap in DOCS_LINK.captures_iter(&text.body.to_lowercase()) {
                 trace!("{:?}", cap);
                 if config.linkers.contains(&cap[1].to_lowercase()) {
-                    match config.docs.get(&cap[2].to_string()) {
+                    match config.links.get(&cap[2].to_string()) {
                         Some(v) => {
                             links.push(v.to_string())
                         }

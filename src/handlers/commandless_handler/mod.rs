@@ -1,9 +1,9 @@
-mod docs_link;
+mod link_url;
 mod github_search;
 mod spellcheck;
 mod unit_conversion;
 
-use docs_link::docs_link;
+use link_url::link_url;
 use github_search::github_search;
 use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
@@ -61,13 +61,13 @@ pub(super) async fn commandless_handler(
         }
     } else if DOCS_LINK.is_match(&text.body)
         && text.relates_to.is_none()
-        && !config.docs.is_empty()
+        && !config.links.is_empty()
         && !config.linkers.is_empty()
     {
         match check_format(&text.format) {
             Ok(_) => {
-                debug!("Entering commandless docs linking path");
-                docs_link(&text, &room_id, &client, storage, &config).await?
+                debug!("Entering commandless url linking path");
+                link_url(&text, &room_id, &client, storage, &config).await?
             }
             Err(e) => {
                 error!("{:?}", e);

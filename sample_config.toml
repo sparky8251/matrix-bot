@@ -78,10 +78,10 @@ jellyfin = 'jellyfin/jellyfin'
 jf-web = 'jellyfin/jellyfin-web'
 jellyfin-web = 'jellyfin/jellyfin-web'
 
-# Linkable docs pages. Can link to anything with a url.
+# Linkable urls. Can link to anything with a public url (no auth).
 # messages containing "docs@hwa" or "docs @hwa" will link
 # doc "https://jellyfin.org/docs/general/administration/hardware-acceleration.html"
 # Optional
-[linkable_docs]
+[linkable_urls]
 hwa = 'https://jellyfin.org/docs/general/administration/hardware-acceleration.html'
 network = 'https://jellyfin.org/docs/general/networking/index.html'

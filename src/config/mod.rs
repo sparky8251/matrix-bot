@@ -31,7 +31,7 @@ pub struct Config {
     pub linkers: HashSet<String>,
     pub admins: HashSet<UserId>,
     pub repos: HashMap<String, String>,
-    pub docs: HashMap<String, String>,
+    pub links: HashMap<String, Url>,
     pub user_agent: HeaderValue,
 }
 
@@ -41,7 +41,7 @@ pub struct RawConfig {
     matrix_authentication: RawMatrixAuthentication,
     github_authentication: Option<RawGithubAuthentication>,
     searchable_repos: Option<HashMap<String, String>>,
-    linkable_docs: Option<HashMap<String, String>>,
+    linkable_urls: Option<HashMap<String, Url>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -144,7 +144,7 @@ impl Config {
                 (HashMap::new(), String::new())
             }
         };
-        let (linkers, docs) = match toml.linkable_docs {
+        let (linkers, links) = match toml.linkable_urls {
             Some(d) => match toml.general.link_matchers {
                 Some(m) => {
                     if !d.is_empty() {
@@ -160,7 +160,7 @@ impl Config {
                 }
             },
             None => {
-                info!("No linkable docs found. Disabling feature...");
+                info!("No linkable urls found. Disabling feature...");
                 (HashSet::new(), HashMap::new())
             }
         };
@@ -265,7 +265,7 @@ impl Config {
             linkers,
             admins,
             repos,
-            docs,
+            links,
             user_agent,
         }
     }
