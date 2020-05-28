@@ -26,7 +26,7 @@ lazy_static! {
     ").unwrap();
 }
 lazy_static! {
-    pub static ref DOCS_LINK: Regex = Regex::new(
+    pub static ref LINK_URL: Regex = Regex::new(
         r"(?x)
         ([[:alpha:]]+)                  # The repo to search against (captured)
         (?:[[[\t\v\f\r ]][:blank:]])*?  # Any amount of whitespace but not \n

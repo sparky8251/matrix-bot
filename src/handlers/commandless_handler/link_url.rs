@@ -1,6 +1,6 @@
 use crate::config::{Config, Storage};
 use crate::helpers::clean_text;
-use crate::regex::DOCS_LINK;
+use crate::regex::LINK_URL;
 
 use anyhow::Result;
 use log::{debug, error, trace};
@@ -25,8 +25,8 @@ pub async fn link_url(
     match &text.formatted_body {
         Some(v) => {
             let clean_text = clean_text(v);
-            if DOCS_LINK.is_match(&clean_text) {
-                for cap in DOCS_LINK.captures_iter(&clean_text.to_lowercase()) {
+            if LINK_URL.is_match(&clean_text) {
+                for cap in LINK_URL.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
                     if config.linkers.contains(&cap[1].to_lowercase()) {
                         match config.links.get(&cap[2].to_string()) {
@@ -45,7 +45,7 @@ pub async fn link_url(
             }
         }
         None => {
-            for cap in DOCS_LINK.captures_iter(&text.body.to_lowercase()) {
+            for cap in LINK_URL.captures_iter(&text.body.to_lowercase()) {
                 trace!("{:?}", cap);
                 if config.linkers.contains(&cap[1].to_lowercase()) {
                     match config.links.get(&cap[2].to_string()) {
