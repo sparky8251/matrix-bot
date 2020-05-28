@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-#![deny(warnings)]
+// #![deny(warnings)]
 
 mod bot;
 mod config;

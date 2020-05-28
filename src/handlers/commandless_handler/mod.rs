@@ -9,10 +9,11 @@ use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
 
 use crate::config::{Config, Storage};
+use crate::helpers::check_format;
 use crate::regex::{DOCS_LINK, GITHUB_SEARCH, UNIT_CONVERSION};
 
 use anyhow::Result;
-use log::{debug, trace};
+use log::{debug, error, trace};
 use ruma_client::{
     events::room::message::TextMessageEventContent,
     identifiers::{RoomId, UserId},
@@ -31,58 +32,47 @@ pub(super) async fn commandless_handler(
     if sender == &config.mx_uname {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
-        #[allow(clippy::needless_return)]
-        return Ok(());
     } else if UNIT_CONVERSION.is_match(&text.body)
         && text.relates_to == None
         && !GITHUB_SEARCH.is_match(&text.body)
         && config.enable_unit_conversions
     {
-        match &text.format {
-            Some(v) => {
-                if v != "org.matrix.custom.html" {
-                    debug!("Message parsed properly, but format {} is unsupported so no conversion is taking place.", v);
-                    #[allow(clippy::needless_return)]
-                    return Ok(());
-                }
+        match check_format(&text.format) {
+            Ok(_) => {
+                debug!("Entering commandless unit conversion path");
+                unit_conversion(&text, &room_id, &client, storage).await?
             }
-            None => (),
-        };
-        debug!("Entering commandless unit conversion path");
-        unit_conversion(&text, &room_id, &client, storage).await?;
+            Err(e) => {
+                error!("{:?}", e);
+            }
+        }
     } else if GITHUB_SEARCH.is_match(&text.body)
         && text.relates_to == None
         && !config.repos.is_empty()
     {
-        match &text.format {
-            Some(v) => {
-                if v != "org.matrix.custom.html" {
-                    debug!("Message parsed properly, but format {} is unsupported so no search is taking place.", v);
-                    #[allow(clippy::needless_return)]
-                    return Ok(());
-                }
+        match check_format(&text.format) {
+            Ok(_) => {
+                debug!("Entering commandless github search path");
+                github_search(&text, &room_id, &client, storage, &config, &api_client).await?
             }
-            None => (),
-        };
-        debug!("Entering commandless github search path");
-        github_search(&text, &room_id, &client, storage, &config, &api_client).await?;
+            Err(e) => {
+                error!("{:?}", e);
+            }
+        }
     } else if DOCS_LINK.is_match(&text.body)
         && text.relates_to == None
         && !config.docs.is_empty()
         && !config.linkers.is_empty()
     {
-        match &text.format {
-            Some(v) => {
-                if v != "org.matrix.custom.html" {
-                    debug!("Message parsed properly, but format {} is unsupported so no search is taking place.", v);
-                    #[allow(clippy::needless_return)]
-                    return Ok(());
-                }
+        match check_format(&text.format) {
+            Ok(_) => {
+                debug!("Entering commandless docs linking path");
+                docs_link(&text, &room_id, &client, storage, &config).await?
             }
-            None => (),
-        };
-        debug!("Entering commandless docs linking path");
-        docs_link(&text, &room_id, &client, storage, &config).await?;
+            Err(e) => {
+                error!("{:?}", e);
+            }
+        }
     } else if storage.correction_time_cooldown(room_id)
         && config.enable_corrections
         && text.relates_to == None

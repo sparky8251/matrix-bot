@@ -10,6 +10,7 @@ edition = "2018"
 
 [dependencies]
 toml = "0.5"
+thiserror = "1.0"
 ruma-client = "0.4.0-beta.4"
 url = "2.1"
 directories = "2.0"
