@@ -20,7 +20,7 @@ pub(super) async fn unit_conversion_handler(
     client: &HttpsClient,
     storage: &mut Storage,
 ) -> Result<(), anyhow::Error> {
-    if text.relates_to == None && text.formatted_body == None {
+    if text.relates_to.is_none() && text.formatted_body.is_none() {
         let mut conversions = Vec::new();
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
             conversions.push((cap[1].to_string(), cap[2].to_string()));
@@ -48,7 +48,9 @@ pub(super) async fn unit_conversion_handler(
                 data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
                     body: result,
                     relates_to: None,
-                })),
+                    format: None,
+                    formatted_body: None,
+                })).into_json(),
             })
             .await
         {

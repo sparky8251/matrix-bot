@@ -64,7 +64,9 @@ pub async fn unit_conversion(
             data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
                 body: result,
                 relates_to: None,
-            })),
+                format: None,
+                formatted_body: None,
+            })).into_json(),
         })
         .await
     {

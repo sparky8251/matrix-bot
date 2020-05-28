@@ -160,7 +160,9 @@ pub async fn github_search(
             data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
                 body: results,
                 relates_to: None,
-            })),
+                format: None,
+                formatted_body: None,
+            })).into_json(),
         })
         .await
     {

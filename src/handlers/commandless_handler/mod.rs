@@ -33,7 +33,7 @@ pub(super) async fn commandless_handler(
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else if UNIT_CONVERSION.is_match(&text.body)
-        && text.relates_to == None
+        && text.relates_to.is_none()
         && !GITHUB_SEARCH.is_match(&text.body)
         && config.enable_unit_conversions
     {
@@ -47,7 +47,7 @@ pub(super) async fn commandless_handler(
             }
         }
     } else if GITHUB_SEARCH.is_match(&text.body)
-        && text.relates_to == None
+        && text.relates_to.is_none()
         && !config.repos.is_empty()
     {
         match check_format(&text.format) {
@@ -60,7 +60,7 @@ pub(super) async fn commandless_handler(
             }
         }
     } else if DOCS_LINK.is_match(&text.body)
-        && text.relates_to == None
+        && text.relates_to.is_none()
         && !config.docs.is_empty()
         && !config.linkers.is_empty()
     {
@@ -75,7 +75,7 @@ pub(super) async fn commandless_handler(
         }
     } else if storage.correction_time_cooldown(room_id)
         && config.enable_corrections
-        && text.relates_to == None
+        && text.relates_to.is_none()
         && !config.correction_exclusion.contains(room_id)
     {
         debug!("Entering spell check path");

@@ -52,7 +52,7 @@ pub async fn spellcheck(
                         format: None,
                         formatted_body: None,
                         relates_to: None,
-                    })),
+                    })).into_json(),
                 })
                 .await;
             match response {
