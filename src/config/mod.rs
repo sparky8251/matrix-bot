@@ -27,6 +27,7 @@ pub struct Config {
     pub enable_unit_conversions: bool,
     pub incorrect_spellings: Vec<SpellCheckKind>,
     pub correction_text: String,
+    pub correction_exclusion: HashSet<RoomId>,
     pub linkers: HashSet<String>,
     pub admins: HashSet<UserId>,
     pub repos: HashMap<String, String>,
@@ -51,6 +52,7 @@ struct RawGeneral {
     insensitive_corrections: Option<Vec<String>>,
     sensitive_corrections: Option<Vec<String>>,
     correction_text: Option<String>,
+    correction_exclusion: Option<HashSet<RoomId>>,
     link_matchers: Option<HashSet<String>>,
 }
 
@@ -162,24 +164,50 @@ impl Config {
                 (HashSet::new(), HashMap::new())
             }
         };
-        let (incorrect_spellings, correction_text) = if toml.general.enable_corrections {
+        let (incorrect_spellings, correction_text, correction_exclusion) = if toml
+            .general
+            .enable_corrections
+        {
             match toml.general.insensitive_corrections {
                 Some(i) => match toml.general.sensitive_corrections {
                     Some(s) => match toml.general.correction_text {
-                        Some(c) => {
-                            let mut spk = Vec::new();
-                            for spelling in i {
-                                spk.push(SpellCheckKind::SpellCheckInsensitive(
-                                    InsensitiveSpelling { spelling },
-                                ));
+                        Some(c) => match toml.general.correction_exclusion {
+                            Some(e) => {
+                                let e = if !e.is_empty() {
+                                    e
+                                } else {
+                                    info!("Empty list found. No rooms will be excluded from corrections");
+                                    HashSet::new()
+                                };
+                                let mut spk = Vec::new();
+                                for spelling in i {
+                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                        InsensitiveSpelling { spelling },
+                                    ));
+                                }
+                                for spelling in s {
+                                    spk.push(SpellCheckKind::SpellCheckSensitive(
+                                        SensitiveSpelling { spelling },
+                                    ));
+                                }
+                                (spk, c, e)
                             }
-                            for spelling in s {
-                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
-                                    spelling,
-                                }));
+                            None => {
+                                let mut spk = Vec::new();
+                                for spelling in i {
+                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                        InsensitiveSpelling { spelling },
+                                    ));
+                                }
+                                for spelling in s {
+                                    spk.push(SpellCheckKind::SpellCheckSensitive(
+                                        SensitiveSpelling { spelling },
+                                    ));
+                                }
+                                info!("No list found. No rooms will be excluded from corrections");
+                                (spk, c, HashSet::new())
                             }
-                            (spk, c)
-                        }
+                        },
                         None => {
                             error!("No correction text provided even though corrections have been enabled");
                             process::exit(5)
@@ -197,7 +225,7 @@ impl Config {
             }
         } else {
             info!("Disabling corrections feature");
-            (Vec::new(), String::new())
+            (Vec::new(), String::new(), HashSet::new())
         };
         let admins = match toml.general.authorized_users {
             Some(v) => v,
@@ -233,6 +261,7 @@ impl Config {
             enable_unit_conversions,
             incorrect_spellings,
             correction_text,
+            correction_exclusion,
             linkers,
             admins,
             repos,

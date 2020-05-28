@@ -58,8 +58,8 @@ pub(super) async fn commandless_handler(
             Some(v) => {
                 if v != "org.matrix.custom.html" {
                     debug!("Message parsed properly, but format {} is unsupported so no search is taking place.", v);
-                    
-                    #[allow(clippy::needless_return)]return Ok(());
+                    #[allow(clippy::needless_return)]
+                    return Ok(());
                 }
             }
             None => (),
@@ -86,7 +86,7 @@ pub(super) async fn commandless_handler(
     } else if storage.correction_time_cooldown(room_id)
         && config.enable_corrections
         && text.relates_to == None
-        && room_id != "!YjAUNWwLVbCthyFrkz:bonifacelabs.ca"
+        && !config.correction_exclusion.contains(room_id)
     {
         debug!("Entering spell check path");
         spellcheck(&text, &sender, &room_id, &client, &config, &mut storage).await;
