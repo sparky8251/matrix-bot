@@ -50,7 +50,8 @@ pub(super) async fn unit_conversion_handler(
                     relates_to: None,
                     format: None,
                     formatted_body: None,
-                })).into_json(),
+                }))
+                .into_json(),
             })
             .await
         {

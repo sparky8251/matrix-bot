@@ -66,7 +66,8 @@ pub async fn unit_conversion(
                 relates_to: None,
                 format: None,
                 formatted_body: None,
-            })).into_json(),
+            }))
+            .into_json(),
         })
         .await
     {

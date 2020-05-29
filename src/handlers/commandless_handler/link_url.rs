@@ -80,7 +80,8 @@ pub async fn link_url(
                 relates_to: None,
                 format: None,
                 formatted_body: None,
-            })).into_json(),
+            }))
+            .into_json(),
         })
         .await
     {

@@ -81,7 +81,13 @@ async fn pull() {
 
 #[tokio::test]
 async fn not_found() {
-    let access_token = load_access_token();
+    let access_token = match std::env::var("CI_TEST_TOKEN") {
+        Ok(v) => v,
+        Err(_) => {
+            println!("No envvar found. Attempting load from file...");
+            load_access_token()
+        }
+    };
     let client = reqwest::Client::new();
     let query = IssueOrPull::build_query(issue_or_pull::Variables {
         name: "jellyfin".to_string(),

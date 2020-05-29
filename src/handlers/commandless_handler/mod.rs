@@ -1,16 +1,16 @@
-mod link_url;
 mod github_search;
+mod link_url;
 mod spellcheck;
 mod unit_conversion;
 
-use link_url::link_url;
 use github_search::github_search;
+use link_url::link_url;
 use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
 
 use crate::config::{Config, Storage};
 use crate::helpers::check_format;
-use crate::regex::{LINK_URL, GITHUB_SEARCH, UNIT_CONVERSION};
+use crate::regex::{GITHUB_SEARCH, LINK_URL, UNIT_CONVERSION};
 
 use anyhow::Result;
 use log::{debug, error, trace};
