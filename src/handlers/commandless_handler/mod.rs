@@ -40,7 +40,7 @@ pub(super) async fn commandless_handler(
         match check_format(&text.format) {
             Ok(_) => {
                 debug!("Entering commandless unit conversion path");
-                unit_conversion(&text, &room_id, &client, storage).await?
+                unit_conversion(&text, &room_id, &client, storage, &config).await?
             }
             Err(e) => {
                 error!("{:?}", e);

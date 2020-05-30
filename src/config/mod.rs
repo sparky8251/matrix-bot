@@ -23,8 +23,9 @@ pub struct Config {
     pub mx_uname: UserId,
     pub mx_pass: String,
     pub gh_access_token: String,
-    pub enable_corrections: bool,
     pub enable_unit_conversions: bool,
+    pub enable_corrections: bool,
+    pub unit_conversion_exclusion: HashSet<String>,
     pub incorrect_spellings: Vec<SpellCheckKind>,
     pub correction_text: String,
     pub correction_exclusion: HashSet<RoomId>,
@@ -47,8 +48,9 @@ pub struct RawConfig {
 #[derive(Debug, Deserialize)]
 struct RawGeneral {
     authorized_users: Option<HashSet<UserId>>,
-    enable_corrections: bool,
     enable_unit_conversions: bool,
+    enable_corrections: bool,
+    unit_conversion_exclusion: Option<HashSet<String>>,
     insensitive_corrections: Option<Vec<String>>,
     sensitive_corrections: Option<Vec<String>>,
     correction_text: Option<String>,
@@ -164,6 +166,19 @@ impl Config {
                 (HashSet::new(), HashMap::new())
             }
         };
+        let unit_conversion_exclusion = match toml.general.unit_conversion_exclusion {
+            Some(v) => {
+                let mut hash_set = HashSet::new();
+                for set in v {
+                    hash_set.insert(" ".to_owned() + &set);
+                }
+                hash_set
+            }
+            None => {
+                info!("No unit conversion exlclusions found. Disabling feature...");
+                HashSet::new()
+            }
+        };
         let (incorrect_spellings, correction_text, correction_exclusion) = if toml
             .general
             .enable_corrections
@@ -257,8 +272,9 @@ impl Config {
             mx_uname,
             mx_pass,
             gh_access_token,
-            enable_corrections,
             enable_unit_conversions,
+            enable_corrections,
+            unit_conversion_exclusion,
             incorrect_spellings,
             correction_text,
             correction_exclusion,

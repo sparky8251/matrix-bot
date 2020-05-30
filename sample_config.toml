@@ -7,14 +7,23 @@ authorized_users = [
     '@demouser2:matrix.homeserver.com',
 ]
 
-# Enable bot feature to correct users if they misspell project name
-# Required
-enable_corrections = false
-
 # Enable bot feature to perform common imperial <--> metric conversions
 # Only applies to commandless conversions
 # Required
 enable_unit_conversions = true
+
+# Enable bot feature to correct users if they misspell project name
+# Required
+enable_corrections = false
+
+# Used to exclude units from conversion if there is a space between
+# the quanity and unit. Such as in the case of "Im getting a 404 in response"
+# Chances are, you dont want to convert that 404 as if it were inches.
+# DOES NOT disable unit conversion for 404in
+# Optional
+unit_conversion_exclusion = [
+    'in',
+]
 
 # Only required if enable_corrections = true
 insensitive_corrections = [

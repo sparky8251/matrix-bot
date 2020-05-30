@@ -1,4 +1,4 @@
-use crate::config::Storage;
+use crate::config::{Config, Storage};
 use crate::helpers::{clean_text, convert_unit};
 use crate::regex::UNIT_CONVERSION;
 
@@ -19,6 +19,7 @@ pub async fn unit_conversion(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
+    config: &Config,
 ) -> Result<()> {
     let mut conversions = Vec::new();
     match &text.formatted_body {
@@ -26,8 +27,7 @@ pub async fn unit_conversion(
             let clean_text = clean_text(v);
             if UNIT_CONVERSION.is_match(&clean_text) {
                 for cap in UNIT_CONVERSION.captures_iter(&clean_text.to_lowercase()) {
-                    trace!("{:?}", cap);
-                    conversions.push((cap[1].to_string(), cap[2].to_string()))
+                    process_capture(&cap, &config, &mut conversions)
                 }
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
@@ -36,7 +36,7 @@ pub async fn unit_conversion(
         }
         None => {
             for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
-                conversions.push((cap[1].to_string(), cap[2].to_string()))
+                process_capture(&cap, &config, &mut conversions)
             }
         }
     }
@@ -77,4 +77,28 @@ pub async fn unit_conversion(
             Ok(())
         }
     }
+}
+
+fn process_capture(capture: &regex::Captures, config: &Config, conversions: &mut Vec<(String, String)>) {
+    trace!("Capture being processed is {:?}", capture);
+    if !config.unit_conversion_exclusion.is_empty() {
+        if capture_not_excluded(&capture, &config) {
+            conversions.push((capture[1].to_string(), capture[2].to_string()))
+        } else {
+            trace!("Capture excluded due to exclusion rules");
+        }
+    } else {
+        conversions.push((capture[1].to_string(), capture[2].to_string()))
+    }
+}
+
+fn capture_not_excluded(capture: &regex::Captures, config: &Config) -> bool {
+    for exclusion in &config.unit_conversion_exclusion {
+        trace!("Exclusion this loop: {:?}", exclusion);
+
+        if capture[0].contains(exclusion) {
+            return false;
+        }
+    }
+    true
 }

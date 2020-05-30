@@ -15,6 +15,9 @@
     Investigate use of barrel for schema management with code as the Diesel
     cli is an excessive requirement for a small bot.
 
+    Use this more complex backend to enable a queue of unique IDs for messages in case
+    a retry is required
+
 **Look at slog as replacement for log**
     slog_term will be the first pass, but look at possibility of built in syslog shipping
 
@@ -49,3 +52,7 @@
 
     !help should dynamically generate replies for commands such as gh searching and docs linking
     so users can determine what can run and how to use it.
+
+**Work on improving test coverage**
+    Use more extensive unit testing to cover more cases and sure they remain functioning.
+    Look into doc testing to make it much easier to contribute to this bot in the future.

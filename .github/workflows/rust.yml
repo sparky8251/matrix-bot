@@ -21,29 +21,29 @@ jobs:
       env:
         CI_TEST_TOKEN: ${{secrets.CI_TEST_TOKEN}}
 
-  code-coverage:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Install stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-    - name: Run tarpaulin
-      uses: actions-rs/tarpaulin@v0.1
-      env:
-        CI_TEST_TOKEN: ${{secrets.CI_TEST_TOKEN}}
-      with:
-        version: '0.13.0'
-        args: '-- --test-threads 1'
-    - name: Upload tarpaulin results to codecov.io
-      uses: codecov/codecov-action@v1.0.2
-      with:
-        token: ${{secrets.CODECOV_TOKEN}}
-    - name: Archive code coverage results
-      uses: actions/upload-artifact@v1
-      with:
-        name: code-coverage-report
-        path: cobertura.xml
+  # code-coverage:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Checkout repository
+  #     uses: actions/checkout@v2
+  #   - name: Install stable toolchain
+  #     uses: actions-rs/toolchain@v1
+  #     with:
+  #       toolchain: stable
+  #       override: true
+  #   - name: Run tarpaulin
+  #     uses: actions-rs/tarpaulin@v0.1
+  #     env:
+  #       CI_TEST_TOKEN: ${{secrets.CI_TEST_TOKEN}}
+  #     with:
+  #       version: '0.13.0'
+  #       args: '-- --test-threads 1'
+  #   - name: Upload tarpaulin results to codecov.io
+  #     uses: codecov/codecov-action@v1.0.2
+  #     with:
+  #       token: ${{secrets.CODECOV_TOKEN}}
+  #   - name: Archive code coverage results
+  #     uses: actions/upload-artifact@v1
+  #     with:
+  #       name: code-coverage-report
+  #       path: cobertura.xml
