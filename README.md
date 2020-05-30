@@ -6,7 +6,7 @@ Matrix Bot is a simple matrix bot aimed at medium to large projects that span ma
 
 - ### A jokey interjection that can correct pesky users that misspell your project name!
     
-    Can be turned off entirely
+    Off by default
     
     Can prevent from running in specific rooms
     
