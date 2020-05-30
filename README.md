@@ -26,7 +26,7 @@ Matrix Bot is a simple matrix bot aimed at medium to large projects that span ma
 
     Eases idle chitchat between community members
 
-- ### A configurable search and link for issues/pulls any Github repos the supplied Github user can see!
+- ### A configurable search and link for issues/pulls in any Github repos the supplied Github access token can see!
     This can be turned off by not supplying any repos to search
     
     Searches are parsed from message text if they match 'jf#123' or 'jf #123'
