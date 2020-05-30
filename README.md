@@ -43,4 +43,14 @@ Matrix Bot is a simple matrix bot aimed at medium to large projects that span ma
 
 ## Installation and configuration
 
-Currently there is no 
+Currently there is no package or release binary produced. To install first clone the repo and make a release build
+
+Collect the `target/release/matrix-bot` binary and place it where you want to run it from
+
+Copy the `sample_config.toml` to `config.toml` and put it next to the binary
+
+Configure the bot as required with the help of the comments
+
+`./matrix-bot` to run
+
+I hope you enjoy your experience and please report and issues or feature requests you might have!
