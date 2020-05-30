@@ -56,11 +56,11 @@ correction_text = '''I'd just like to interject for a moment {}. What you're ref
 # Optional
 correction_exclusion = ['!randomalpha:homeserver.com']
 
-# The keys to match for linking docs
+# The keys to match for linking urls
 # If you define "docs" here "docs@link" will link "link"
 # while "wiki@link" will fail
 # Must be lowercase
-# Only required if linkable docs are set below
+# Only required if linkable urls are set below
 link_matchers = [
     'docs',
 ]
