@@ -16,7 +16,9 @@ Matrix Bot is a simple matrix bot aimed at medium to large projects that span ma
 
 - ### An imperial <--> metric converter for all messages containing common units!
     
-    This can be disabled entirely and some units can be excluded from spaced matches if they are also a word (eg: 'i got a 500 in response')
+    Can be disabled entirely 
+    
+    Configurable exclution of units from spaced matches if they are also a word (eg: 'i got a 500 in response')
 
     Eases idle chitchat between community members
 
