@@ -4,6 +4,10 @@ Matrix Bot is a simple matrix bot aimed at medium to large projects that span ma
 
 ## Features
 
+- ### Accepts invites to join rooms from authorized users!
+
+    List is configrable but requires at least 1 entry
+
 - ### A jokey interjection that can correct pesky users that misspell your project name!
     
     Off by default
