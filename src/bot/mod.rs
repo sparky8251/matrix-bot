@@ -85,7 +85,7 @@ impl Bot {
                                 Ok(r) => {
                                     if let RoomEvent::RoomMessage(m) = r {
                                         if let MessageEventContent::Text(t) = m.content {
-                                            match handle_text_event(
+                                            handle_text_event(
                                                 &t,
                                                 &m.sender,
                                                 room_id,
@@ -94,11 +94,7 @@ impl Bot {
                                                 &self.config,
                                                 &self.api_client,
                                             )
-                                            .await
-                                            {
-                                                Ok(_) => trace!("Handled text event"),
-                                                Err(e) => debug!("{:?}", e),
-                                            }
+                                            .await;
                                         }
                                     }
                                 }

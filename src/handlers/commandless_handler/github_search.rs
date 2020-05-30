@@ -1,31 +1,21 @@
-use crate::config::{Config, Storage};
-use crate::helpers::clean_text;
+use crate::config::Config;
+use crate::helpers::{clean_text, BotResponse};
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
 
-use anyhow::Result;
 use graphql_client::GraphQLQuery;
 use log::{debug, error, trace};
 use reqwest::header;
-use ruma_client::{
-    api::r0::message::create_message_event,
-    events::{
-        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        EventJson, EventType,
-    },
-    identifiers::RoomId,
-    HttpsClient,
-};
+use ruma_client::events::room::message::TextMessageEventContent;
+use url::Url;
 
 pub async fn github_search(
     text: &TextMessageEventContent,
-    room_id: &RoomId,
-    client: &HttpsClient,
-    storage: &mut Storage,
     config: &Config,
     api_client: &reqwest::Client,
-) -> Result<()> {
+    response: &mut BotResponse,
+) {
     let mut repos_to_search = Vec::new();
     match &text.formatted_body {
         Some(v) => {
@@ -37,7 +27,7 @@ pub async fn github_search(
                 }
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
-                return Ok(());
+                return;
             }
         }
         None => {
@@ -79,10 +69,10 @@ pub async fn github_search(
     let searches = searches;
     debug!("Queued searches: {:?}", searches);
     if searches.is_empty() {
-        debug!("No searches found after parsing numbers. No response will be built.");
-        return Ok(());
+        debug!("No searches found after parsing numbers. No searches will be built.");
+        return;
     }
-    let mut results = String::new();
+    let mut results = Vec::new();
     for (owner, name, number) in searches {
         let query = IssueOrPull::build_query(issue_or_pull::Variables {
             name,
@@ -135,42 +125,51 @@ pub async fn github_search(
 
         match response_data {
             Issue(v) => {
-                let mut result = "https://github.com".to_string();
-                result.push_str(&v.resource_path);
-                result.push('\n');
-                results.push_str(&result);
+                let result = "https://github.com".to_string() + &v.resource_path + "\n";
+                match Url::parse(&result) {
+                    Ok(v) => results.push(v),
+                    Err(e) => error!(
+                        "Unable to parse result {:?} to Url due to error {:?}",
+                        result, e
+                    ),
+                }
             }
             PullRequest(v) => {
-                let mut result = "https://github.com".to_string();
-                result.push_str(&v.resource_path);
-                result.push('\n');
-                results.push_str(&result);
+                let result = "https://github.com".to_string() + &v.resource_path + "\n";
+                match Url::parse(&result) {
+                    Ok(v) => results.push(v),
+                    Err(e) => error!(
+                        "Unable to parse result {:?} to Url due to error {:?}",
+                        result, e
+                    ),
+                }
             }
         }
     }
     if results.is_empty() {
-        error!("No results returned");
-        return Ok(());
+        error!("No search resulted returned. Doing nothing");
+    } else {
+        response.set_gh_results(results)
     }
-    match client
-        .request(create_message_event::Request {
-            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-            event_type: EventType::RoomMessage,
-            txn_id: storage.next_txn_id(),
-            data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                body: results,
-                relates_to: None,
-                format: None,
-                formatted_body: None,
-            }))
-            .into_json(),
-        })
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            error!("{:?}", e);
-            Ok(())
-        }
-    }
+    // match client
+    //     .request(create_message_event::Request {
+    //         room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
+    //         event_type: EventType::RoomMessage,
+    //         txn_id: storage.next_txn_id(),
+    //         data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
+    //             body: results,
+    //             relates_to: None,
+    //             format: None,
+    //             formatted_body: None,
+    //         }))
+    //         .into_json(),
+    //     })
+    //     .await
+    // {
+    //     Ok(_) => Ok(()),
+    //     Err(e) => {
+    //         error!("{:?}", e);
+    //         Ok(())
+    //     }
+    // }
 }

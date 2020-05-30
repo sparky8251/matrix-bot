@@ -2,7 +2,6 @@ use crate::config::Storage;
 use crate::helpers::convert_unit;
 use crate::regex::UNIT_CONVERSION;
 
-use anyhow::Result;
 use log::{debug, error};
 use ruma_client::{
     api::r0::message::create_message_event,
@@ -19,7 +18,7 @@ pub(super) async fn unit_conversion_handler(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
-) -> Result<(), anyhow::Error> {
+) {
     if text.relates_to.is_none() && text.formatted_body.is_none() {
         let mut conversions = Vec::new();
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
@@ -36,7 +35,7 @@ pub(super) async fn unit_conversion_handler(
             }
             None => {
                 debug!("No convertable units found. No reply will be constructed.");
-                return Ok(());
+                return;
             }
         };
 
@@ -55,12 +54,8 @@ pub(super) async fn unit_conversion_handler(
             })
             .await
         {
-            Ok(_) => return Ok(()),
-            Err(e) => {
-                error!("{:?}", e);
-                return Ok(());
-            }
+            Ok(_) => (),
+            Err(e) => error!("{:?}", e),
         }
     }
-    Ok(())
 }

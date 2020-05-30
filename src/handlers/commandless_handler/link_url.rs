@@ -1,26 +1,12 @@
-use crate::config::{Config, Storage};
-use crate::helpers::clean_text;
+use crate::config::Config;
+use crate::helpers::{clean_text, BotResponse};
 use crate::regex::LINK_URL;
 
-use anyhow::Result;
 use log::{debug, error, trace};
-use ruma_client::{
-    api::r0::message::create_message_event,
-    events::{
-        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        EventJson, EventType,
-    },
-    identifiers::RoomId,
-    HttpsClient,
-};
+use ruma_client::events::room::message::TextMessageEventContent;
+use url::Url;
 
-pub async fn link_url(
-    text: &TextMessageEventContent,
-    room_id: &RoomId,
-    client: &HttpsClient,
-    storage: &mut Storage,
-    config: &Config,
-) -> Result<()> {
+pub fn link_url(text: &TextMessageEventContent, config: &Config, response: &mut BotResponse) {
     let mut links: Vec<String> = Vec::new();
     match &text.formatted_body {
         Some(v) => {
@@ -41,7 +27,7 @@ pub async fn link_url(
                 }
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
-                return Ok(());
+                return;
             }
         }
         None => {
@@ -60,35 +46,21 @@ pub async fn link_url(
             }
         }
     }
-    let mut results = String::new();
+
     if links.is_empty() {
         debug!("No links to build response with after processing");
-        return Ok(());
-    }
-    for result in links {
-        results.push_str(&result);
-        results.push('\n');
-    }
-    let results = results;
-    match client
-        .request(create_message_event::Request {
-            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-            event_type: EventType::RoomMessage,
-            txn_id: storage.next_txn_id(),
-            data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                body: results,
-                relates_to: None,
-                format: None,
-                formatted_body: None,
-            }))
-            .into_json(),
-        })
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            error!("{:?}", e);
-            Ok(())
+        return;
+    } else {
+        let mut results = Vec::new();
+        for result in links {
+            match Url::parse(&result) {
+                Ok(v) => results.push(v),
+                Err(e) => error!(
+                    "Unable to parse result {:?} to Url due to error {:?}",
+                    result, e
+                ),
+            }
         }
+        response.set_links(results);
     }
 }

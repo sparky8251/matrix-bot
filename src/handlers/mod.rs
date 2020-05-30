@@ -9,7 +9,6 @@ use crate::regex::NO_BANG;
 
 use invite_handler::{accept_invite, reject_invite};
 
-use anyhow::Result;
 use log::{debug, trace};
 use ruma_client::{
     events::room::message::TextMessageEventContent,
@@ -25,7 +24,7 @@ pub async fn handle_text_event(
     storage: &mut Storage,
     config: &Config,
     api_client: &reqwest::Client,
-) -> Result<()> {
+) {
     if NO_BANG.is_match(&text.body) {
         debug!("Entering no command path...");
         commandless_handler(text, sender, room_id, client, storage, config, api_client).await
@@ -33,8 +32,7 @@ pub async fn handle_text_event(
         debug!("Entering unit conversion path...");
         unit_conversion_handler(text, room_id, client, storage).await
     } else {
-        debug!("Entering do nothing path...");
-        Ok(())
+        debug!("Doing nothing...");
     }
 }
 
