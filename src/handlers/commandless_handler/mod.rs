@@ -81,7 +81,14 @@ pub(super) async fn commandless_handler(
                     send_notice(&notice_response, &room_id, &client, &mut storage).await;
                 }
                 if text_response.is_some() {
-                    send_formatted_text(&text_response, text_response.format_text(), &room_id, &client, &mut storage).await;
+                    send_formatted_text(
+                        &text_response,
+                        text_response.format_text(),
+                        &room_id,
+                        &client,
+                        &mut storage,
+                    )
+                    .await;
                 }
                 if config.enable_corrections
                     && text.relates_to.is_none()

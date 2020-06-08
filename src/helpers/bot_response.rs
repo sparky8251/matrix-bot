@@ -74,8 +74,8 @@ impl BotResponseText {
                     formatted_text.push_str("</a>\n");
                 }
                 Some(formatted_text)
-            },
-            None => None
+            }
+            None => None,
         }
     }
 }
