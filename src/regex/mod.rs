@@ -34,10 +34,19 @@ lazy_static! {
         ([[:alpha:]]+)                  # The repo to search against (captured)
         (?:[[[\t\v\f\r ]][:blank:]])*?  # Any amount of whitespace but not \n
         (?:@)                           # Require one @ before the article to link
-        ([[:alpha:]]+)           # The number to search issues and pulls for (captured)
+        ([[:alpha:]]+)                  # The number to search issues and pulls for (captured)
     "
     )
     .unwrap();
+}
+lazy_static! {
+    pub static ref GROUP_PING: Regex = Regex::new(
+        r"(?x)
+        (?:^|\s+)
+        %
+        (?:[[\t\v\f\r ][:blank:]])*?   # Any amount of whitespace but not \n
+        ([[:alnum:]]+)
+    ").unwrap();
 }
 lazy_static! {
     pub static ref CODE_TAG: Regex = Regex::new(r"(?s)(<code>.*</code>)*").unwrap();

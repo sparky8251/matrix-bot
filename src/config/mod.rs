@@ -56,6 +56,10 @@ pub struct Config {
     pub links: HashMap<String, Url>,
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
+    /// Hashmap containing group ping name as key and list of user IDs as the value.
+    pub group_pings: HashMap<String, Vec<UserId>>,
+    /// Hashset containing list of users that can initiate group pings
+    pub group_ping_users: HashSet<UserId>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -73,6 +77,8 @@ pub struct RawConfig {
     searchable_repos: Option<HashMap<String, String>>,
     /// Hashmap containing searched key and matching URL for linking.
     linkable_urls: Option<HashMap<String, Url>>,
+    /// Hashmap containing group ping name as key and list of user IDs as the value.
+    group_pings: Option<HashMap<String, Vec<UserId>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -331,6 +337,23 @@ impl Config {
                 ),
             };
 
+        let (group_pings, group_ping_users) = match toml.group_pings {
+            Some(v) => {
+                let mut users = HashSet::new();
+                let groups = v.clone();
+                for group in groups {
+                    for user in group.1 {
+                        users.insert(user);
+                    }
+                }
+                (v, users)
+            },
+            None => {
+                info!("No group pings defined. Disabling feature...");
+                (HashMap::new(), HashSet::new())
+            }
+        };
+
         // Return value
         Config {
             mx_url,
@@ -348,6 +371,8 @@ impl Config {
             repos,
             links,
             user_agent,
+            group_pings,
+            group_ping_users,
         }
     }
 }

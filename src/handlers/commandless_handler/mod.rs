@@ -4,15 +4,17 @@ mod github_search;
 mod link_url;
 mod spellcheck;
 mod unit_conversion;
+mod group_ping;
 
 use github_search::github_search;
 use link_url::link_url;
 use spellcheck::spellcheck;
 use unit_conversion::unit_conversion;
+use group_ping::group_ping;
 
 use crate::config::{Config, Storage};
 use crate::helpers::{check_format, BotResponse};
-use crate::regex::{GITHUB_SEARCH, LINK_URL, UNIT_CONVERSION};
+use crate::regex::{GITHUB_SEARCH, LINK_URL, UNIT_CONVERSION, GROUP_PING};
 
 use std::time::SystemTime;
 
@@ -65,6 +67,12 @@ pub(super) async fn commandless_handler(
                 {
                     debug!("Entering commandless url linking path");
                     link_url(&text, &config, &mut response);
+                }
+                if GROUP_PING.is_match(&text.body)
+                    && text.relates_to.is_none()
+                {
+                    debug!("Entering commandless group ping path");
+                    group_ping(&text, &sender, &config, &mut response);
                 }
                 let response = response;
                 if response.is_some() {

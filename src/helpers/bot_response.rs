@@ -4,6 +4,9 @@ use std::fmt;
 
 use super::ConvertedUnit;
 use url::Url;
+use ruma_client::identifiers::UserId;
+
+use std::collections::HashSet;
 
 #[derive(Debug, Default)]
 /// Type representing response data with helper functions
@@ -14,6 +17,8 @@ pub struct BotResponse {
     gh_results: Option<Vec<Url>>,
     /// List of link results for response building
     links: Option<Vec<Url>>,
+    /// List of users that will be pinged for response building
+    users: Option<HashSet<UserId>>,
 }
 
 impl BotResponse {
@@ -35,9 +40,15 @@ impl BotResponse {
     pub fn set_links(&mut self, links: Vec<Url>) {
         self.links = Some(links)
     }
+    /// Sets member users with supplied list of users
+    /// 
+    /// Will overwrite if supplied a second time
+    pub fn set_users(&mut self, users: HashSet<UserId>) {
+        self.users = Some(users)
+    }
     /// Returns `true` if any member field is `Some`
     pub fn is_some(&self) -> bool {
-        self.conversions.is_some() || self.gh_results.is_some() || self.links.is_some()
+        self.conversions.is_some() || self.gh_results.is_some() || self.links.is_some() || self.users.is_some()
     }
 }
 
@@ -69,6 +80,15 @@ impl fmt::Display for BotResponse {
                     response.push('\n')
                 }
             }
+            None => (),
+        }
+        match &self.users {
+            Some(v) => {
+                for user in v {
+                    response.push_str(&user.to_string());
+                    response.push(' ')
+                }
+            },
             None => (),
         }
         let response = response.trim();
