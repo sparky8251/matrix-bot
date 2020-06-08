@@ -61,6 +61,23 @@ impl BotResponseText {
     pub fn is_some(&self) -> bool {
         self.users.is_some()
     }
+    /// Formats users to be in line with the fancy riot style pings
+    pub fn format_text(&self) -> Option<String> {
+        match &self.users {
+            Some(v) => {
+                let mut formatted_text = String::new();
+                for user in v {
+                    formatted_text.push_str("<a href=\"https://matrix.to/#/");
+                    formatted_text.push_str(&user.to_string());
+                    formatted_text.push_str("\">");
+                    formatted_text.push_str(user.localpart());
+                    formatted_text.push_str("</a>\n");
+                }
+                Some(formatted_text)
+            },
+            None => None
+        }
+    }
 }
 
 impl fmt::Display for BotResponseNotice {

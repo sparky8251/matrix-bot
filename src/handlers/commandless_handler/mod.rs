@@ -81,7 +81,7 @@ pub(super) async fn commandless_handler(
                     send_notice(&notice_response, &room_id, &client, &mut storage).await;
                 }
                 if text_response.is_some() {
-                    send_text(&text_response, &room_id, &client, &mut storage).await;
+                    send_formatted_text(&text_response, text_response.format_text(), &room_id, &client, &mut storage).await;
                 }
                 if config.enable_corrections
                     && text.relates_to.is_none()
@@ -131,12 +131,17 @@ async fn send_notice(
 }
 
 /// Sends a text message containing the provided response body
-async fn send_text(
+async fn send_formatted_text(
     text_response: &BotResponseText,
+    formatted_response: Option<String>,
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
 ) {
+    if formatted_response.is_none() {
+        error!("send_formatted_text called without formatted text!");
+        return;
+    }
     let response = text_response.to_string();
     match client
         .request(create_message_event::Request {
@@ -145,8 +150,8 @@ async fn send_text(
             txn_id: storage.next_txn_id(),
             data: EventJson::from(MessageEventContent::Text(TextMessageEventContent {
                 body: response,
-                format: None,
-                formatted_body: None,
+                format: Some("org.matrix.custom.html".to_string()),
+                formatted_body: formatted_response,
                 relates_to: None,
             }))
             .into_json(),
