@@ -1,3 +1,5 @@
+//! Simple function for rejecting invites
+
 use log::{debug, info};
 use ruma_client::{
     api::r0::membership::leave_room,
@@ -5,6 +7,7 @@ use ruma_client::{
     HttpsClient,
 };
 
+/// Will reject an invite and print the user that tried to logs
 pub async fn reject_invite(sender: &UserId, room_id: &RoomId, client: &HttpsClient) {
     let response = client
         .request(leave_room::Request {
@@ -12,11 +15,7 @@ pub async fn reject_invite(sender: &UserId, room_id: &RoomId, client: &HttpsClie
         })
         .await;
     match response {
-        Ok(_) => {
-            info!("Rejected invite from unathorized user {}", &sender);
-        }
-        Err(e) => {
-            debug!("Unable to reject invite this loop because of error {:?}", e);
-        }
+        Ok(_) => info!("Rejected invite from unathorized user {}", &sender),
+        Err(e) => debug!("Unable to reject invite this loop because of error {:?}", e),
     }
 }

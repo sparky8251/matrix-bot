@@ -1,3 +1,5 @@
+//! Performs search of issues and pulls in message text and builds proper response
+
 use crate::config::Config;
 use crate::helpers::{clean_text, BotResponse};
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
@@ -10,6 +12,7 @@ use reqwest::header;
 use ruma_client::events::room::message::TextMessageEventContent;
 use url::Url;
 
+/// Searches and links found issues or pulls requested and builds response text
 pub async fn github_search(
     text: &TextMessageEventContent,
     config: &Config,

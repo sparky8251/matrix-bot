@@ -1,3 +1,5 @@
+//! Performs lookup of URLs in message text and builds proper response
+
 use crate::config::Config;
 use crate::helpers::{clean_text, BotResponse};
 use crate::regex::LINK_URL;
@@ -6,6 +8,7 @@ use log::{debug, error, trace};
 use ruma_client::events::room::message::TextMessageEventContent;
 use url::Url;
 
+/// Finds and links URLs requested and builds response text
 pub fn link_url(text: &TextMessageEventContent, config: &Config, response: &mut BotResponse) {
     let mut links: Vec<String> = Vec::new();
     match &text.formatted_body {
@@ -49,7 +52,6 @@ pub fn link_url(text: &TextMessageEventContent, config: &Config, response: &mut 
 
     if links.is_empty() {
         debug!("No links to build response with after processing");
-        return;
     } else {
         let mut results = Vec::new();
         for result in links {

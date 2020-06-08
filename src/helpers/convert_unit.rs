@@ -1,3 +1,5 @@
+//! Helper function and associated type to enable simple conversion from a list of values to a list of converted values
+
 use std::fmt;
 
 use log::{debug, error, trace};
@@ -8,8 +10,11 @@ use uom::si::thermodynamic_temperature::{degree_celsius, degree_fahrenheit};
 use uom::si::velocity::{kilometer_per_hour, mile_per_hour};
 
 #[derive(Debug)]
+/// Type used to represent a successful unit conversion in the form of "100km => 62.41mi"
 pub struct ConvertedUnit {
+    /// Original value that was to be converted. Looks like "100km"
     from: String,
+    /// Converted "to" value. Looks like "62.41mi"
     to: String,
 }
 
@@ -19,6 +24,9 @@ impl fmt::Display for ConvertedUnit {
     }
 }
 
+/// Converts supplied values into [ConvertedUnits](struct.ConvertedUnit.html).
+///
+/// Returns `None` if nothing was able to be converted after parsing and processing.
 pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedUnit>> {
     let mut result = Vec::new();
     let mut working_data = Vec::new();

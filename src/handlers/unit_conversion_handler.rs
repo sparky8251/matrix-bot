@@ -1,3 +1,5 @@
+//! Handler for the unit conversion command
+
 use crate::config::Storage;
 use crate::helpers::convert_unit;
 use crate::regex::UNIT_CONVERSION;
@@ -13,6 +15,7 @@ use ruma_client::{
     HttpsClient,
 };
 
+/// Command based unit conversion handler that will parse, generate a response body, and send it
 pub(super) async fn unit_conversion_handler(
     text: &TextMessageEventContent,
     room_id: &RoomId,

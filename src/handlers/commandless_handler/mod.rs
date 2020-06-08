@@ -1,3 +1,5 @@
+//! Contains handlers and response functions for text based non-command events
+
 mod github_search;
 mod link_url;
 mod spellcheck;
@@ -25,6 +27,7 @@ use ruma_client::{
     HttpsClient,
 };
 
+/// Handler for all text based non-command events
 pub(super) async fn commandless_handler(
     text: &TextMessageEventContent,
     sender: &UserId,
@@ -71,9 +74,8 @@ pub(super) async fn commandless_handler(
                     && storage.correction_time_cooldown(room_id)
                     && !config.correction_exclusion.contains(room_id)
                 {
-                    match spellcheck(text, sender, config) {
-                        Some(v) => send_correction(v, &room_id, &client, &mut storage).await,
-                        None => (),
+                    if let Some(v) = spellcheck(text, sender, config) {
+                        send_correction(v, &room_id, &client, &mut storage).await
                     }
                 }
             }
@@ -84,6 +86,7 @@ pub(super) async fn commandless_handler(
     }
 }
 
+/// Sends a notice message containing the provided response body
 async fn send_notice(
     response: String,
     room_id: &RoomId,
@@ -110,6 +113,7 @@ async fn send_notice(
     }
 }
 
+/// Sends a text message and updates the last_correction_time on success
 async fn send_correction(
     response: String,
     room_id: &RoomId,

@@ -1,3 +1,6 @@
+//! Structs and functions that represent functional bots and allow for easy loading
+//! plus main loop initialization.
+
 use crate::config::{Config, Storage};
 use crate::handlers::{handle_invite_event, handle_text_event};
 
@@ -14,13 +17,18 @@ use ruma_client::{
     Client,
 };
 
+/// Struct representing all required data for a functioning bot instance.
 pub struct Bot {
+    /// Storage data.
     pub storage: Storage,
+    /// Configuration data.
     pub config: Config,
+    /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
 }
 
 impl Bot {
+    /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new() -> Self {
         let storage = Storage::load_storage();
         let config = Config::load_bot_config();
@@ -32,6 +40,8 @@ impl Bot {
         }
     }
 
+    /// Used to start main program loop for the bot. 
+    /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self) {
         let client = Client::https(self.config.mx_url.clone(), self.storage.session.clone());
         self.storage.session = match client

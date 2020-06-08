@@ -1,3 +1,9 @@
+//! Exposes regexes used in various functions
+//!
+//! Relevant tests are in a test submodule
+//!
+//! Tests cover false positives, false negatives, and correct captures
+
 #[cfg(test)]
 mod tests;
 

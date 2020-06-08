@@ -1,3 +1,5 @@
+//! Re-exports handlers
+
 mod accept_invite;
 mod reject_invite;
 

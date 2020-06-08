@@ -1,3 +1,5 @@
+//! Performs unit conversions and adds them to response data
+
 use crate::config::Config;
 use crate::helpers::{clean_text, convert_unit, BotResponse};
 use crate::regex::UNIT_CONVERSION;
@@ -5,6 +7,7 @@ use crate::regex::UNIT_CONVERSION;
 use log::{debug, trace};
 use ruma_client::events::room::message::TextMessageEventContent;
 
+/// Adds unit conversions to the supplied BotResponse
 pub fn unit_conversion(
     text: &TextMessageEventContent,
     config: &Config,
@@ -36,6 +39,7 @@ pub fn unit_conversion(
     }
 }
 
+/// Processes a unit conversion regex capture into a Vec
 fn process_capture(
     capture: &regex::Captures,
     config: &Config,
@@ -53,6 +57,7 @@ fn process_capture(
     }
 }
 
+/// Verifies if a capture will be excluded from conversion because of a space between the quantity and unit
 fn capture_not_excluded(capture: &regex::Captures, config: &Config) -> bool {
     for exclusion in &config.unit_conversion_exclusion {
         trace!("Exclusion this loop: {:?}", exclusion);

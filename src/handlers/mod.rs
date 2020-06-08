@@ -1,3 +1,8 @@
+//! Handlers for various event types
+//!
+//! Sub modules exist for performing various processes such as unit conversion
+//! and searching github
+
 mod commandless_handler;
 mod invite_handler;
 mod unit_conversion_handler;
@@ -16,6 +21,7 @@ use ruma_client::{
     HttpsClient,
 };
 
+/// Dispatches incoming text events to a number of different handlers depending on various conditions
 pub async fn handle_text_event(
     text: &TextMessageEventContent,
     sender: &UserId,
@@ -36,6 +42,7 @@ pub async fn handle_text_event(
     }
 }
 
+/// Accepts or rejects invites to rooms from matrix users
 pub async fn handle_invite_event(
     sender: &UserId,
     room_id: &RoomId,
