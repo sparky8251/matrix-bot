@@ -46,7 +46,9 @@ lazy_static! {
         %
         (?:[[\t\v\f\r ][:blank:]])*?   # Any amount of whitespace but not \n
         ([[:alnum:]]+)
-    ").unwrap();
+    "
+    )
+    .unwrap();
 }
 lazy_static! {
     pub static ref CODE_TAG: Regex = Regex::new(r"(?s)(<code>.*</code>)*").unwrap();

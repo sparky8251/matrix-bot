@@ -3,25 +3,29 @@
 use std::fmt;
 
 use super::ConvertedUnit;
-use url::Url;
 use ruma_client::identifiers::UserId;
+use url::Url;
 
 use std::collections::HashSet;
 
 #[derive(Debug, Default)]
-/// Type representing response data with helper functions
-pub struct BotResponse {
+/// Type representing response data with helper functions. Used tih notice type replies.
+pub struct BotResponseNotice {
     /// List of converted units for response building
     conversions: Option<Vec<ConvertedUnit>>,
     /// List of gh search results for response building
     gh_results: Option<Vec<Url>>,
     /// List of link results for response building
     links: Option<Vec<Url>>,
+}
+
+#[derive(Debug, Default)]
+pub struct BotResponseText {
     /// List of users that will be pinged for response building
     users: Option<HashSet<UserId>>,
 }
 
-impl BotResponse {
+impl BotResponseNotice {
     /// Sets member conversions with supplied list of ConvertedUnits
     ///
     /// Will overwrite if suppled a second time
@@ -40,19 +44,26 @@ impl BotResponse {
     pub fn set_links(&mut self, links: Vec<Url>) {
         self.links = Some(links)
     }
+    /// Returns `true` if any member field is `Some`
+    pub fn is_some(&self) -> bool {
+        self.conversions.is_some() || self.gh_results.is_some() || self.links.is_some()
+    }
+}
+
+impl BotResponseText {
     /// Sets member users with supplied list of users
-    /// 
+    ///
     /// Will overwrite if supplied a second time
     pub fn set_users(&mut self, users: HashSet<UserId>) {
         self.users = Some(users)
     }
     /// Returns `true` if any member field is `Some`
     pub fn is_some(&self) -> bool {
-        self.conversions.is_some() || self.gh_results.is_some() || self.links.is_some() || self.users.is_some()
+        self.users.is_some()
     }
 }
 
-impl fmt::Display for BotResponse {
+impl fmt::Display for BotResponseNotice {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
         match &self.conversions {
@@ -82,13 +93,21 @@ impl fmt::Display for BotResponse {
             }
             None => (),
         }
+        let response = response.trim();
+        write!(f, "{}", response)
+    }
+}
+
+impl fmt::Display for BotResponseText {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut response = String::new();
         match &self.users {
             Some(v) => {
                 for user in v {
-                    response.push_str(&user.to_string());
+                    response.push_str(&user.localpart());
                     response.push(' ')
                 }
-            },
+            }
             None => (),
         }
         let response = response.trim();

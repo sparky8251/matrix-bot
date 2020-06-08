@@ -40,7 +40,7 @@ impl Bot {
         }
     }
 
-    /// Used to start main program loop for the bot. 
+    /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self) {
         let client = Client::https(self.config.mx_url.clone(), self.storage.session.clone());

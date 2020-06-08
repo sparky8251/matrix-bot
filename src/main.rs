@@ -20,7 +20,7 @@
 //!
 //! - ### An imperial <--> metric converter for all messages containing common units
 //!    
-//!     Can be disabled entirely 
+//!     Can be disabled entirely
 //!    
 //!     Configurable exclution of units from spaced matches if they are also a word (eg: 'i got a 500 in response')
 //!
@@ -59,11 +59,9 @@
 //!
 //! I hope you enjoy your experience and please report and issues or feature requests you might have
 
-
 #[forbid(unsafe_code)]
 #[warn(missing_docs)]
 #[warn(clippy::missing_docs_in_private_items)]
-
 mod bot;
 mod config;
 mod handlers;

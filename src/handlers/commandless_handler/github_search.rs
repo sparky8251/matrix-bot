@@ -1,7 +1,7 @@
 //! Performs search of issues and pulls in message text and builds proper response
 
 use crate::config::Config;
-use crate::helpers::{clean_text, BotResponse};
+use crate::helpers::{clean_text, BotResponseNotice};
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
@@ -17,7 +17,7 @@ pub async fn github_search(
     text: &TextMessageEventContent,
     config: &Config,
     api_client: &reqwest::Client,
-    response: &mut BotResponse,
+    notice_response: &mut BotResponseNotice,
 ) {
     let mut repos_to_search = Vec::new();
     match &text.formatted_body {
@@ -152,27 +152,6 @@ pub async fn github_search(
     if results.is_empty() {
         error!("No search resulted returned. Doing nothing");
     } else {
-        response.set_gh_results(results)
+        notice_response.set_gh_results(results)
     }
-    // match client
-    //     .request(create_message_event::Request {
-    //         room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-    //         event_type: EventType::RoomMessage,
-    //         txn_id: storage.next_txn_id(),
-    //         data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-    //             body: results,
-    //             relates_to: None,
-    //             format: None,
-    //             formatted_body: None,
-    //         }))
-    //         .into_json(),
-    //     })
-    //     .await
-    // {
-    //     Ok(_) => Ok(()),
-    //     Err(e) => {
-    //         error!("{:?}", e);
-    //         Ok(())
-    //     }
-    // }
 }

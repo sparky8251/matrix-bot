@@ -23,7 +23,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 /// Configuration struct used at runtime. Loaded from RawConfig and its constituent parts.
-/// 
+///
 /// Does not have Option<T> fields for ease of use. If its blank it will be a default value or empty.
 pub struct Config {
     /// Matrix bot account homeserver URL.
@@ -64,7 +64,7 @@ pub struct Config {
 
 #[derive(Debug, Deserialize)]
 /// Struct that represents on disk configuration data.
-/// 
+///
 /// Loaded into Config struct at runtime for ease of use.
 pub struct RawConfig {
     /// Contains struct for all general configuration data.
@@ -160,12 +160,12 @@ pub struct SensitiveSpelling {
 impl Config {
     #[allow(clippy::cognitive_complexity)]
     /// Loads bot config from config.toml.
-    /// 
+    ///
     /// Exits program if loading fails.
-    /// 
+    ///
     /// Due to the desired structure of the config.toml, this function loads configuration from
     /// a number intermediate structs into the final config struct type used by the program.
-    /// 
+    ///
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
     pub fn load_bot_config() -> Self {
@@ -347,7 +347,7 @@ impl Config {
                     }
                 }
                 (v, users)
-            },
+            }
             None => {
                 info!("No group pings defined. Disabling feature...");
                 (HashMap::new(), HashSet::new())
@@ -379,9 +379,9 @@ impl Config {
 
 impl Storage {
     /// Load of bot storage. Used only for startup.
-    /// 
+    ///
     /// If the file doesnt exist, creates and writes a default storage file.
-    /// 
+    ///
     /// If file exists, attempts load and will exit program if it fails.
     pub fn load_storage() -> Self {
         let mut file = match File::open("storage.toml") {
@@ -422,7 +422,7 @@ impl Storage {
     }
 
     /// Saves all bot associated storage data.
-    /// 
+    ///
     /// One of the few functions that can terminate the program if it doesnt go well.
     pub fn save_storage(&self) {
         let toml = match toml::to_string_pretty(self) {
@@ -459,7 +459,7 @@ impl Storage {
 
     // FIXME: This needs to be an idempotent/unique ID per txn to be spec compliant
     /// Sets the last_txn_id to a new value then returns it
-    /// 
+    ///
     /// Must be saved after it is used successfully or you can cause homeserver issues
     pub fn next_txn_id(&mut self) -> String {
         self.last_txn_id += 1;
@@ -467,7 +467,7 @@ impl Storage {
     }
 
     /// Checks that the correction time cooldown for a specific room has passed.
-    /// 
+    ///
     /// Returns true if there has never been a correction done in the room before.
     pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
         match self.last_correction_time.get(room_id) {

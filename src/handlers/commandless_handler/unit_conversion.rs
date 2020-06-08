@@ -1,17 +1,17 @@
 //! Performs unit conversions and adds them to response data
 
 use crate::config::Config;
-use crate::helpers::{clean_text, convert_unit, BotResponse};
+use crate::helpers::{clean_text, convert_unit, BotResponseNotice};
 use crate::regex::UNIT_CONVERSION;
 
 use log::{debug, trace};
 use ruma_client::events::room::message::TextMessageEventContent;
 
-/// Adds unit conversions to the supplied BotResponse
+/// Adds unit conversions to the supplied BotResponseNotice
 pub fn unit_conversion(
     text: &TextMessageEventContent,
     config: &Config,
-    response: &mut BotResponse,
+    notice_response: &mut BotResponseNotice,
 ) {
     let mut conversions = Vec::new();
     match &text.formatted_body {
@@ -34,7 +34,7 @@ pub fn unit_conversion(
     }
     let conversions = conversions;
     match convert_unit(conversions) {
-        Some(v) => response.set_unit_conversions(v),
+        Some(v) => notice_response.set_unit_conversions(v),
         None => debug!("No convertable units found. No unit conversions will be performed."),
     }
 }

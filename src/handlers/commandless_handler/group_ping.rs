@@ -1,7 +1,7 @@
 //! Performs group pings based on message text and builds proper response
 
 use crate::config::Config;
-use crate::helpers::{clean_text, BotResponse};
+use crate::helpers::{clean_text, BotResponseText};
 use crate::regex::GROUP_PING;
 
 use std::collections::HashSet;
@@ -10,7 +10,12 @@ use log::{debug, error, trace};
 use ruma_client::{events::room::message::TextMessageEventContent, identifiers::UserId};
 
 /// Finds requested users to ping and builds response text
-pub fn group_ping(text: &TextMessageEventContent, sender: &UserId, config: &Config, response: &mut BotResponse) {
+pub fn group_ping(
+    text: &TextMessageEventContent,
+    sender: &UserId,
+    config: &Config,
+    text_response: &mut BotResponseText,
+) {
     let mut users: HashSet<UserId> = HashSet::new();
     if !config.group_ping_users.contains(sender) {
         debug!("User not authorized for group pings. Ignoring...");
@@ -27,7 +32,7 @@ pub fn group_ping(text: &TextMessageEventContent, sender: &UserId, config: &Conf
                             for user in v {
                                 users.insert(user.clone());
                             }
-                        },
+                        }
                         None => error!("Somehow lost group between regex match and insertion!"),
                     }
                 }
@@ -44,7 +49,7 @@ pub fn group_ping(text: &TextMessageEventContent, sender: &UserId, config: &Conf
                         for user in v {
                             users.insert(user.clone());
                         }
-                    },
+                    }
                     None => error!("Somehow lost group between regex match and insertion!"),
                 }
             }
@@ -53,6 +58,6 @@ pub fn group_ping(text: &TextMessageEventContent, sender: &UserId, config: &Conf
     if users.is_empty() {
         debug!("No users to ping after processing.");
     } else {
-        response.set_users(users);
+        text_response.set_users(users);
     }
 }
