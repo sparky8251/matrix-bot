@@ -49,14 +49,12 @@ pub(super) async fn commandless_handler(
                 let mut text_response = BotResponseText::default();
                 if UNIT_CONVERSION.is_match(&text.body)
                     && config.enable_unit_conversions
-                    && text.relates_to.is_none()
                 {
                     debug!("Entering commandless unit conversion path");
                     unit_conversion(&text, &config, &mut notice_response);
                 }
                 if GITHUB_SEARCH.is_match(&text.body)
                     && !config.repos.is_empty()
-                    && text.relates_to.is_none()
                 {
                     debug!("Entering commandless github search path");
                     github_search(&text, &config, &api_client, &mut notice_response).await;
@@ -64,12 +62,11 @@ pub(super) async fn commandless_handler(
                 if LINK_URL.is_match(&text.body)
                     && !config.links.is_empty()
                     && !config.linkers.is_empty()
-                    && text.relates_to.is_none()
                 {
                     debug!("Entering commandless url linking path");
                     link_url(&text, &config, &mut notice_response);
                 }
-                if GROUP_PING.is_match(&text.body) && text.relates_to.is_none() {
+                if GROUP_PING.is_match(&text.body) {
                     debug!("Entering commandless group ping path");
                     group_ping(&text, &sender, &config, &mut text_response);
                 }

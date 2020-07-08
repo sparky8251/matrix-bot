@@ -56,3 +56,6 @@ lazy_static! {
 lazy_static! {
     pub static ref PRE_TAG: Regex = Regex::new(r"(?s)(<pre>.*</pre>)*").unwrap();
 }
+lazy_static! {
+    pub static ref MX_REPLY: Regex = Regex::new(r"(?s)(<mx-reply>.*</mx-reply>)*").unwrap();
+}
