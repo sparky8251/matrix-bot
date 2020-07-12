@@ -47,15 +47,11 @@ pub(super) async fn commandless_handler(
             Ok(_) => {
                 let mut notice_response = BotResponseNotice::default();
                 let mut text_response = BotResponseText::default();
-                if UNIT_CONVERSION.is_match(&text.body)
-                    && config.enable_unit_conversions
-                {
+                if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
                     debug!("Entering commandless unit conversion path");
                     unit_conversion(&text, &config, &mut notice_response);
                 }
-                if GITHUB_SEARCH.is_match(&text.body)
-                    && !config.repos.is_empty()
-                {
+                if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
                     debug!("Entering commandless github search path");
                     github_search(&text, &config, &api_client, &mut notice_response).await;
                 }

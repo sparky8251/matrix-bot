@@ -97,7 +97,13 @@ network = 'https://jellyfin.org/docs/general/networking/index.html'
 
 # Group pings. Can ping an arbitrary number of users in response to 
 # messages containing "%backend" or "% frontend"
+# Group alises can be made with '%group-name' in the config file. 
+# Aliases will not expand aliases.
 # Optional
 [group_pings]
 backend = ['@user1:matrix.homeserver.com', '@user2:matrix.homeserver.com']
-frontend = ['@user3:matrix.homeserver.com']
+frontend = ['%web', '%tui-client']
+server = ['%backend']
+web = ['@user3:matrix.homeserver.com']
+tui-client = ['@user4:matrix.homeserver.com']
+api = ['%backend', '%web', '@user5:matrix.homeserver.com'] # Will only be "@user5:matrix.homeserver.com"

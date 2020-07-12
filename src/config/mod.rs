@@ -1,6 +1,7 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
@@ -57,7 +58,7 @@ pub struct Config {
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    pub group_pings: HashMap<String, Vec<UserId>>,
+    pub group_pings: HashMap<String, HashSet<UserId>>,
     /// Hashset containing list of users that can initiate group pings
     pub group_ping_users: HashSet<UserId>,
 }
@@ -78,7 +79,7 @@ pub struct RawConfig {
     /// Hashmap containing searched key and matching URL for linking.
     linkable_urls: Option<HashMap<String, Url>>,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    group_pings: Option<HashMap<String, Vec<UserId>>>,
+    group_pings: Option<HashMap<String, Vec<String>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -339,14 +340,56 @@ impl Config {
 
         let (group_pings, group_ping_users) = match toml.group_pings {
             Some(v) => {
-                let mut users = HashSet::new();
+                let mut group_ping_users = HashSet::new();
                 let groups = v.clone();
                 for group in groups {
                     for user in group.1 {
-                        users.insert(user);
+                        if user.starts_with("@") {
+                            let user_id = UserId::try_from(user.clone()).expect(
+                                "Somehow got an alias in a part of code meant to handle UserIds",
+                            );
+                            group_ping_users.insert(user_id);
+                        }
                     }
                 }
-                (v, users)
+
+                let mut expanded_groups: HashMap<String, HashSet<UserId>> = HashMap::new();
+                for (group, users) in &v {
+                    let mut expanded_users: HashSet<UserId> = HashSet::new();
+
+                    for user in users {
+                        if user.starts_with("%") {
+                            // If user is an alias, expand it to list of users and insert them
+                            let alias = user.replace("%", "");
+                            match v.get(&alias) {
+                                // If list of users found, insert them
+                                Some(g) => {
+                                    for u in g {
+                                        if u.starts_with("@") {
+                                            let user_id = UserId::try_from(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
+                                            expanded_users.insert(user_id);
+                                        }
+                                    }
+                                }
+                                // If list of users are not found, print error to console and move on
+                                None => error!(
+                                    "Group alias %{} has no corresponding group. Ignoring...",
+                                    alias
+                                ),
+                            }
+                        } else {
+                            // If user is not alias, just insert it
+                            let user_id = UserId::try_from(user.clone()).expect(
+                                "Somehow got an alias in a part of code meant to handle UserIds",
+                            );
+                            expanded_users.insert(user_id);
+                        }
+                    }
+
+                    expanded_groups.insert(group.to_string(), expanded_users);
+                }
+
+                (expanded_groups, group_ping_users)
             }
             None => {
                 info!("No group pings defined. Disabling feature...");
