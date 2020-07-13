@@ -4,10 +4,12 @@
 //! and searching github
 
 mod commandless_handler;
+mod help_handler;
 mod invite_handler;
 mod unit_conversion_handler;
 
 use self::commandless_handler::commandless_handler;
+use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
 use crate::config::{Config, Storage};
 
@@ -36,6 +38,9 @@ pub async fn handle_text_event(
     } else if text.body.to_lowercase().starts_with("!convert ") {
         debug!("Entering unit conversion path...");
         unit_conversion_handler(text, room_id, client, storage).await
+    } else if text.body.to_lowercase().starts_with("!help") {
+        debug!("Entering help path...");
+        help_handler(text, room_id, client, storage, config).await
     } else {
         debug!("Doing nothing...");
     }

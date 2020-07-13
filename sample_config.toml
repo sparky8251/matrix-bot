@@ -7,6 +7,11 @@ authorized_users = [
     '@demouser2:matrix.homeserver.com',
 ]
 
+# Rooms in which help commands are authorized.
+# If no rooms are specified, all rooms the bot is in are allowed.
+# Optional
+help_rooms = ['!randomalpha:homeserver.com']
+
 # Enable bot feature to perform common imperial <--> metric conversions
 # Only applies to commandless conversions
 # Required

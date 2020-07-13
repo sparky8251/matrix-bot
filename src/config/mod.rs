@@ -51,6 +51,7 @@ pub struct Config {
     pub linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
     pub admins: HashSet<UserId>,
+    pub help_rooms: HashSet<RoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -87,6 +88,7 @@ pub struct RawConfig {
 struct RawGeneral {
     /// List of matrix users that can invite the bot to rooms.
     authorized_users: Option<HashSet<UserId>>,
+    help_rooms: Option<HashSet<RoomId>>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
@@ -321,6 +323,13 @@ impl Config {
                 process::exit(6)
             }
         };
+        let help_rooms = match toml.general.help_rooms {
+            Some(v) => v,
+            None => {
+                info!("No help rooms specified. Allowing all rooms.");
+                HashSet::new()
+            }
+        };
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
             toml.matrix_authentication.url,
             toml.matrix_authentication.username,
@@ -344,7 +353,7 @@ impl Config {
                 let groups = v.clone();
                 for group in groups {
                     for user in group.1 {
-                        if user.starts_with("@") {
+                        if user.starts_with('@') {
                             let user_id = UserId::try_from(user.clone()).expect(
                                 "Somehow got an alias in a part of code meant to handle UserIds",
                             );
@@ -358,14 +367,14 @@ impl Config {
                     let mut expanded_users: HashSet<UserId> = HashSet::new();
 
                     for user in users {
-                        if user.starts_with("%") {
+                        if user.starts_with('%') {
                             // If user is an alias, expand it to list of users and insert them
                             let alias = user.replace("%", "");
                             match v.get(&alias) {
                                 // If list of users found, insert them
                                 Some(g) => {
                                     for u in g {
-                                        if u.starts_with("@") {
+                                        if u.starts_with('@') {
                                             let user_id = UserId::try_from(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
                                             expanded_users.insert(user_id);
                                         }
@@ -411,6 +420,7 @@ impl Config {
             correction_exclusion,
             linkers,
             admins,
+            help_rooms,
             repos,
             links,
             user_agent,
@@ -441,7 +451,7 @@ impl Storage {
                     process::exit(1);
                 }
                 _ => {
-                    error!("Unable to open file due to unexpected error {:?}", e);
+                    error!("Unable to open file: {}", e);
                     process::exit(1);
                 }
             },
@@ -450,14 +460,14 @@ impl Storage {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!("Unable to read file contents due to error {:?}", e);
+                error!("Unable to read file contents: {}", e);
                 process::exit(2)
             }
         }
         let toml: Self = match toml::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!("Invalid toml. Error is {:?}", e);
+                error!("Unable to load storage.toml due to invalid toml: {}", e);
                 process::exit(3)
             }
         };
@@ -472,7 +482,7 @@ impl Storage {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    "Unable to format storage as toml, this should never occur. Error is {:?}",
+                    "Unable to format storage as toml, this should never occur. Error is {}",
                     e
                 );
                 process::exit(7)
@@ -494,7 +504,7 @@ impl Storage {
                 trace!("Saved Session!");
             }
             Err(e) => {
-                error!("Unable to write storage data to disk due to error {:?}", e);
+                error!("Unable to write storage data: {}", e);
                 process::exit(10)
             }
         }

@@ -45,14 +45,6 @@
     I want to handle formatting of numbers with , and . as separators such as `5.000,00` or 
     `5,000.00` gracefully. Currently these fail to convert to float.
 
-**Implement help command**
-    Would prefer help command limited to specific rooms OR to invite to private rooms.
-    If limited to specific room, maybe reply with message that it runs in a specific room only?
-    Invites don't work for IRC so invites to the help room might be a problem.
-
-    !help should dynamically generate replies for commands such as gh searching and docs linking
-    so users can determine what can run and how to use it.
-
 **Work on improving test coverage**
     Use more extensive unit testing to cover more cases and sure they remain functioning.
     Look into doc testing to make it much easier to contribute to this bot in the future.
