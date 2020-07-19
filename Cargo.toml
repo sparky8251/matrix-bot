@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.1"
+version = "2.0.0-beta.2"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -20,11 +20,6 @@ lazy_static = "1.4"
 uom = "0.28"
 graphql_client = "0.9"
 ron = "0.6.0"
-
-[dependencies.config]
-version = "0.10.1"
-default-features = false
-features = ["toml"]
 
 [dependencies.reqwest]
 version = "0.10"

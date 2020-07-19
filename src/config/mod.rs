@@ -7,6 +7,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
 use std::process;
 use std::time::{Duration, SystemTime};
+use std::env;
+use std::path::PathBuf;
 
 use log::{error, info, trace};
 use reqwest::header::HeaderValue;
@@ -171,8 +173,12 @@ impl Config {
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
     pub fn load_bot_config() -> Self {
+        let path = match env::var("MATRIX_BOT_CONFIG_DIR") {
+            Ok(v) => [v, "config.toml".to_string()].iter().collect::<PathBuf>(),
+            Err(_) => ["config.toml"].iter().collect::<PathBuf>()
+        };
         // File Load Section
-        let mut file = match File::open("config.toml") {
+        let mut file = match File::open(path) {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
@@ -262,7 +268,11 @@ impl Storage {
     ///
     /// If file exists, attempts load and will exit program if it fails.
     pub fn load_storage() -> Self {
-        let mut file = match File::open("storage.ron") {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
+            Err(_) => ["storage.ron"].iter().collect::<PathBuf>()
+        };
+        let mut file = match File::open(path) {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
@@ -303,6 +313,10 @@ impl Storage {
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
     pub fn save_storage(&self) {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
+            Err(_) => ["storage.ron"].iter().collect::<PathBuf>()
+        };
         let ron = match ron::to_string(self) {
             Ok(v) => v,
             Err(e) => {
@@ -316,7 +330,7 @@ impl Storage {
         let mut file = match OpenOptions::new()
             .write(true)
             .create(true)
-            .open("storage.ron")
+            .open(path)
         {
             Ok(v) => v,
             Err(e) => {
