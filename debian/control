@@ -1,0 +1,14 @@
+Source: matrix-bot
+Section: misc
+Priority: optional
+Maintainer: sparky8251 <sparky@possumlodge.me>
+Build-Depends: debhelper-compat (= 12)
+Standards-Version: 4.4.1
+Homepage: <insert the upstream URL, if relevant>
+Vcs-Browser: https://github.com/sparky8251/matrix-bot
+Vcs-Git: https://github.com/sparky8251/matrix-bot.git
+
+Package: matrix-bot
+Architecture: any
+#Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Matrix Bot is a simple multipurpose project focused matrix bot

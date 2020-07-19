@@ -89,7 +89,7 @@ USAGE:
 
 ACTION TYPES:
 \tcommand\t\tCommand actions are a message that starts with !
-\tcommandless\t\tCommandless actions are any message that meets the critera to trigger an action and do not start with an !
+\tcommandless\tCommandless actions are any message that meets the critera to trigger an action and do not start with an !
 
 ACTIONS:
 \tping\t\t\tPing a group of people

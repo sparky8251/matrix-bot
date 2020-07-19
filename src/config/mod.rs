@@ -161,7 +161,6 @@ pub struct SensitiveSpelling {
 }
 
 impl Config {
-    #[allow(clippy::cognitive_complexity)]
     /// Loads bot config from config.toml.
     ///
     /// Exits program if loading fails.
@@ -207,135 +206,18 @@ impl Config {
         };
 
         // Set variables and exit/error if set improperly
-        let (repos, gh_access_token) = match toml.searchable_repos {
-            Some(r) => match toml.github_authentication {
-                Some(g) => (r, g.access_token),
-                None => {
-                    error!("Searchable repos configured, but no github access token found. Unable to continue...");
-                    process::exit(4)
-                }
-            },
-            None => {
-                info!("No searchable repos found. Disabling feature...");
-                (HashMap::new(), String::new())
-            }
-        };
-        let (linkers, links) = match toml.linkable_urls {
-            Some(d) => match toml.general.link_matchers {
-                Some(m) => {
-                    if !d.is_empty() {
-                        (m, d)
-                    } else {
-                        error!("Link matchers exists but none are set. Exiting...");
-                        process::exit(1)
-                    }
-                }
-                None => {
-                    info!("No link matchers found. Disabling feature...");
-                    (HashSet::new(), HashMap::new())
-                }
-            },
-            None => {
-                info!("No linkable urls found. Disabling feature...");
-                (HashSet::new(), HashMap::new())
-            }
-        };
-        let unit_conversion_exclusion = match toml.general.unit_conversion_exclusion {
-            Some(v) => {
-                let mut hash_set = HashSet::new();
-                for set in v {
-                    hash_set.insert(" ".to_owned() + &set);
-                }
-                hash_set
-            }
-            None => {
-                info!("No unit conversion exlclusions found. Disabling feature...");
-                HashSet::new()
-            }
-        };
-        let (incorrect_spellings, correction_text, correction_exclusion) = if toml
-            .general
-            .enable_corrections
-        {
-            match toml.general.insensitive_corrections {
-                Some(i) => match toml.general.sensitive_corrections {
-                    Some(s) => match toml.general.correction_text {
-                        Some(c) => match toml.general.correction_exclusion {
-                            Some(e) => {
-                                let e = if !e.is_empty() {
-                                    e
-                                } else {
-                                    info!("Empty list found. No rooms will be excluded from corrections");
-                                    HashSet::new()
-                                };
-                                let mut spk = Vec::new();
-                                for spelling in i {
-                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
-                                        InsensitiveSpelling { spelling },
-                                    ));
-                                }
-                                for spelling in s {
-                                    spk.push(SpellCheckKind::SpellCheckSensitive(
-                                        SensitiveSpelling { spelling },
-                                    ));
-                                }
-                                (spk, c, e)
-                            }
-                            None => {
-                                let mut spk = Vec::new();
-                                for spelling in i {
-                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
-                                        InsensitiveSpelling { spelling },
-                                    ));
-                                }
-                                for spelling in s {
-                                    spk.push(SpellCheckKind::SpellCheckSensitive(
-                                        SensitiveSpelling { spelling },
-                                    ));
-                                }
-                                info!("No list found. No rooms will be excluded from corrections");
-                                (spk, c, HashSet::new())
-                            }
-                        },
-                        None => {
-                            error!("No correction text provided even though corrections have been enabled");
-                            process::exit(5)
-                        }
-                    },
-                    None => {
-                        error!("No case sensitive corrections provided even though corrections have been enabled");
-                        process::exit(5)
-                    }
-                },
-                None => {
-                    error!("No case insensitive corrections provided even though corrections have been enabled");
-                    process::exit(5)
-                }
-            }
-        } else {
-            info!("Disabling corrections feature");
-            (Vec::new(), String::new(), HashSet::new())
-        };
-        let admins = match toml.general.authorized_users {
-            Some(v) => v,
-            None => {
-                error!("You must provide at least 1 authorized user");
-                process::exit(6)
-            }
-        };
-        let help_rooms = match toml.general.help_rooms {
-            Some(v) => v,
-            None => {
-                info!("No help rooms specified. Allowing all rooms.");
-                HashSet::new()
-            }
-        };
+        let (repos, gh_access_token) = load_github_settings(&toml);
+        let (linkers, links) = load_linker_settings(&toml);
+        let unit_conversion_exclusion = load_unit_conversion_settings(&toml);
+        let (incorrect_spellings, correction_text, correction_exclusion) = load_spell_correct_settings(&toml);
+        let admins = load_admin_settings(&toml);
+        let help_rooms = load_help_settings(&toml);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
-            toml.matrix_authentication.url,
-            toml.matrix_authentication.username,
-            toml.matrix_authentication.password,
-            toml.general.enable_corrections,
-            toml.general.enable_unit_conversions,
+            toml.matrix_authentication.url.clone(),
+            toml.matrix_authentication.username.clone(),
+            toml.matrix_authentication.password.clone(),
+            toml.general.enable_corrections.clone(),
+            toml.general.enable_unit_conversions.clone(),
         );
 
         let user_agent: HeaderValue =
@@ -347,64 +229,7 @@ impl Config {
                 ),
             };
 
-        let (group_pings, group_ping_users) = match toml.group_pings {
-            Some(v) => {
-                let mut group_ping_users = HashSet::new();
-                let groups = v.clone();
-                for group in groups {
-                    for user in group.1 {
-                        if user.starts_with('@') {
-                            let user_id = UserId::try_from(user.clone()).expect(
-                                "Somehow got an alias in a part of code meant to handle UserIds",
-                            );
-                            group_ping_users.insert(user_id);
-                        }
-                    }
-                }
-
-                let mut expanded_groups: HashMap<String, HashSet<UserId>> = HashMap::new();
-                for (group, users) in &v {
-                    let mut expanded_users: HashSet<UserId> = HashSet::new();
-
-                    for user in users {
-                        if user.starts_with('%') {
-                            // If user is an alias, expand it to list of users and insert them
-                            let alias = user.replace("%", "");
-                            match v.get(&alias) {
-                                // If list of users found, insert them
-                                Some(g) => {
-                                    for u in g {
-                                        if u.starts_with('@') {
-                                            let user_id = UserId::try_from(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
-                                            expanded_users.insert(user_id);
-                                        }
-                                    }
-                                }
-                                // If list of users are not found, print error to console and move on
-                                None => error!(
-                                    "Group alias %{} has no corresponding group. Ignoring...",
-                                    alias
-                                ),
-                            }
-                        } else {
-                            // If user is not alias, just insert it
-                            let user_id = UserId::try_from(user.clone()).expect(
-                                "Somehow got an alias in a part of code meant to handle UserIds",
-                            );
-                            expanded_users.insert(user_id);
-                        }
-                    }
-
-                    expanded_groups.insert(group.to_string(), expanded_users);
-                }
-
-                (expanded_groups, group_ping_users)
-            }
-            None => {
-                info!("No group pings defined. Disabling feature...");
-                (HashMap::new(), HashSet::new())
-            }
-        };
+        let (group_pings, group_ping_users) = load_group_ping_settings(&toml);
 
         // Return value
         Config {
@@ -437,17 +262,17 @@ impl Storage {
     ///
     /// If file exists, attempts load and will exit program if it fails.
     pub fn load_storage() -> Self {
-        let mut file = match File::open("storage.toml") {
+        let mut file = match File::open("storage.ron") {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
-                    let toml = Self::default();
+                    let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save_storage(&toml);
-                    return toml;
+                    Self::save_storage(&ron);
+                    return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file storage.toml");
+                    error!("Permission denied when opening file storage.ron");
                     process::exit(1);
                 }
                 _ => {
@@ -464,25 +289,25 @@ impl Storage {
                 process::exit(2)
             }
         }
-        let toml: Self = match toml::from_str(&contents) {
+        let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!("Unable to load storage.toml due to invalid toml: {}", e);
+                error!("Unable to load storage.ron due to invalid ron: {}", e);
                 process::exit(3)
             }
         };
-        toml
+        ron
     }
 
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
     pub fn save_storage(&self) {
-        let toml = match toml::to_string_pretty(self) {
+        let ron = match ron::to_string(self) {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    "Unable to format storage as toml, this should never occur. Error is {}",
+                    "Unable to format storage as ron, this should never occur. Error is {}",
                     e
                 );
                 process::exit(7)
@@ -491,15 +316,15 @@ impl Storage {
         let mut file = match OpenOptions::new()
             .write(true)
             .create(true)
-            .open("storage.toml")
+            .open("storage.ron")
         {
             Ok(v) => v,
             Err(e) => {
-                error!("Unable to open storage.toml due to error {:?}", e);
+                error!("Unable to open storage.ron due to error {:?}", e);
                 process::exit(9)
             }
         };
-        match file.write_all(toml.as_bytes()) {
+        match file.write_all(ron.as_bytes()) {
             Ok(_) => {
                 trace!("Saved Session!");
             }
@@ -567,5 +392,206 @@ impl Display for InsensitiveSpelling {
 impl Display for SensitiveSpelling {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.spelling)
+    }
+}
+
+fn load_github_settings(toml: &RawConfig) -> (HashMap<String, String>, String) {
+    match &toml.searchable_repos {
+        Some(r) => match &toml.github_authentication {
+            Some(g) => (r.clone(), g.access_token.clone()),
+            None => {
+                error!("Searchable repos configured, but no github access token found. Unable to continue...");
+                process::exit(4)
+            }
+        },
+        None => {
+            info!("No searchable repos found. Disabling feature...");
+            (HashMap::new(), String::new())
+        }
+    }
+}
+
+fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Url>) {
+    match &toml.linkable_urls {
+        Some(d) => match &toml.general.link_matchers {
+            Some(m) => {
+                if !d.is_empty() {
+                    (m.clone(), d.clone())
+                } else {
+                    error!("Link matchers exists but none are set. Exiting...");
+                    process::exit(1)
+                }
+            }
+            None => {
+                info!("No link matchers found. Disabling feature...");
+                (HashSet::new(), HashMap::new())
+            }
+        },
+        None => {
+            info!("No linkable urls found. Disabling feature...");
+            (HashSet::new(), HashMap::new())
+        }
+    }
+}
+
+fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
+    match &toml.general.unit_conversion_exclusion {
+        Some(v) => {
+            let mut hash_set = HashSet::new();
+            for set in v {
+                hash_set.insert(" ".to_owned() + &set);
+            }
+            hash_set.clone()
+        }
+        None => {
+            info!("No unit conversion exlclusions found. Disabling feature...");
+            HashSet::new()
+        }
+    }
+}
+
+fn load_spell_correct_settings(toml: &RawConfig) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
+    if toml.general.enable_corrections {
+        match &toml.general.insensitive_corrections {
+            Some(i) => {
+                match &toml.general.sensitive_corrections {
+                    Some(s) => match &toml.general.correction_text {
+                        Some(c) => match &toml.general.correction_exclusion {
+                            Some(e) => {
+                                let e = if !e.is_empty() {
+                                    e.clone()
+                                } else {
+                                    info!("Empty list found. No rooms will be excluded from corrections");
+                                    HashSet::new()
+                                };
+                                let mut spk = Vec::new();
+                                for spelling in i {
+                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                        InsensitiveSpelling { spelling: spelling.clone() },
+                                    ));
+                                }
+                                for spelling in s {
+                                    spk.push(SpellCheckKind::SpellCheckSensitive(
+                                        SensitiveSpelling { spelling: spelling.clone() },
+                                    ));
+                                }
+                                (spk, c.to_string(), e)
+                            }
+                            None => {
+                                let mut spk = Vec::new();
+                                for spelling in i {
+                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                        InsensitiveSpelling { spelling: spelling.clone() },
+                                    ));
+                                }
+                                for spelling in s {
+                                    spk.push(SpellCheckKind::SpellCheckSensitive(
+                                        SensitiveSpelling { spelling: spelling.clone() },
+                                    ));
+                                }
+                                info!("No list found. No rooms will be excluded from corrections");
+                                (spk, c.to_string(), HashSet::new())
+                            }
+                        },
+                        None => {
+                            error!("No correction text provided even though corrections have been enabled");
+                            process::exit(5)
+                        }
+                    },
+                    None => {
+                        error!("No case sensitive corrections provided even though corrections have been enabled");
+                        process::exit(5)
+                    }
+                }
+            }
+            None => {
+                error!("No case insensitive corrections provided even though corrections have been enabled");
+                process::exit(5)
+            }
+        }
+    } else {
+        info!("Disabling corrections feature");
+        (Vec::new(), String::new(), HashSet::new())
+    }
+}
+
+fn load_admin_settings(toml: &RawConfig) -> HashSet<UserId> {
+    match &toml.general.authorized_users {
+        Some(v) => v.clone(),
+        None => {
+            error!("You must provide at least 1 authorized user");
+            process::exit(6)
+        }
+    }
+}
+
+fn load_help_settings(toml: &RawConfig) -> HashSet<RoomId> {
+    match &toml.general.help_rooms {
+        Some(v) => v.clone(),
+        None => {
+            info!("No help rooms specified. Allowing all rooms.");
+            HashSet::new()
+        }
+    }
+}
+
+fn load_group_ping_settings(toml: &RawConfig) -> (HashMap<String, HashSet<UserId>>, HashSet<UserId>) {
+    match &toml.group_pings {
+        Some(v) => {
+            let mut group_ping_users = HashSet::new();
+            let groups = v.clone();
+            for group in groups {
+                for user in group.1 {
+                    if user.starts_with('@') {
+                        let user_id = UserId::try_from(user.clone()).expect(
+                            "Somehow got an alias in a part of code meant to handle UserIds",
+                        );
+                        group_ping_users.insert(user_id);
+                    }
+                }
+            }
+
+            let mut expanded_groups: HashMap<String, HashSet<UserId>> = HashMap::new();
+            for (group, users) in v {
+                let mut expanded_users: HashSet<UserId> = HashSet::new();
+
+                for user in users {
+                    if user.starts_with('%') {
+                        // If user is an alias, expand it to list of users and insert them
+                        let alias = user.replace("%", "");
+                        match v.get(&alias) {
+                            // If list of users found, insert them
+                            Some(g) => {
+                                for u in g {
+                                    if u.starts_with('@') {
+                                        let user_id = UserId::try_from(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
+                                        expanded_users.insert(user_id);
+                                    }
+                                }
+                            }
+                            // If list of users are not found, print error to console and move on
+                            None => error!(
+                                "Group alias %{} has no corresponding group. Ignoring...",
+                                alias
+                            ),
+                        }
+                    } else {
+                        // If user is not alias, just insert it
+                        let user_id = UserId::try_from(user.clone()).expect(
+                            "Somehow got an alias in a part of code meant to handle UserIds",
+                        );
+                        expanded_users.insert(user_id);
+                    }
+                }
+
+                expanded_groups.insert(group.to_string(), expanded_users);
+            }
+
+            (expanded_groups, group_ping_users)
+        }
+        None => {
+            info!("No group pings defined. Disabling feature...");
+            (HashMap::new(), HashSet::new())
+        }
     }
 }

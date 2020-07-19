@@ -1,0 +1,2 @@
+# matrix-bot default configuration options
+RUST_LOG=error,warn,info
