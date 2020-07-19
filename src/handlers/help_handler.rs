@@ -2,7 +2,6 @@ use crate::config::{Config, Storage};
 
 use std::convert::From;
 
-use log::{debug, error, trace};
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -12,6 +11,7 @@ use ruma_client::{
     identifiers::RoomId,
     HttpsClient,
 };
+use slog::{debug, error, trace, Logger};
 
 #[derive(Debug)]
 enum Command {
@@ -44,9 +44,10 @@ pub(super) async fn help_handler(
     client: &HttpsClient,
     mut storage: &mut Storage,
     config: &Config,
+    logger: &Logger,
 ) {
     if config.help_rooms.is_empty() || config.help_rooms.contains(room_id) {
-        trace!("Room is allowed, building help message");
+        trace!(logger, "Room is allowed, building help message");
         let mut message = String::new();
         match text.body.split(' ').nth(1).map(|x| Command::from(x)) {
             Some(v) => match v {
@@ -59,17 +60,18 @@ pub(super) async fn help_handler(
                 Command::UnknownCommand => (),
             },
             None => {
-                trace!("Printing help message for program");
+                trace!(logger, "Printing help message for program");
                 message = generic_help_message().await;
             }
         };
         if !message.is_empty() {
-            send_help_message(&room_id, &client, &mut storage, message).await;
+            send_help_message(&room_id, &client, &mut storage, message, &logger).await;
         } else {
-            debug!("Unknown command");
+            debug!(logger, "Unknown command");
         }
     } else {
         trace!(
+            logger,
             "Rooms are limited and room {} is not in the allowed list of help command rooms",
             room_id
         );
@@ -267,6 +269,7 @@ async fn send_help_message(
     client: &HttpsClient,
     storage: &mut Storage,
     message: String,
+    logger: &Logger,
 ) {
     match client
         .request(create_message_event::Request {
@@ -284,6 +287,6 @@ async fn send_help_message(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!("{:?}", e),
+        Err(e) => error!(logger, "{:?}", e),
     }
 }

@@ -18,7 +18,6 @@ use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
 
 use std::time::SystemTime;
 
-use log::{debug, error, trace};
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -28,6 +27,7 @@ use ruma_client::{
     identifiers::{RoomId, UserId},
     HttpsClient,
 };
+use slog::{debug, error, trace, Logger};
 
 /// Handler for all text based non-command events
 pub(super) async fn commandless_handler(
@@ -38,40 +38,41 @@ pub(super) async fn commandless_handler(
     mut storage: &mut Storage,
     config: &Config,
     api_client: &reqwest::Client,
+    logger: &Logger,
 ) {
     if sender == &config.mx_uname {
         // do nothing if message is from self
-        trace!("Message is from self, doing nothing");
+        trace!(logger, "Message is from self, doing nothing");
     } else {
-        match check_format(&text.format) {
+        match check_format(&text.format, &logger) {
             Ok(_) => {
                 let mut notice_response = BotResponseNotice::default();
                 let mut text_response = BotResponseText::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
-                    debug!("Entering commandless unit conversion path");
-                    unit_conversion(&text, &config, &mut notice_response);
+                    debug!(logger, "Entering commandless unit conversion path");
+                    unit_conversion(&text, &config, &mut notice_response, &logger);
                 }
                 if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
-                    debug!("Entering commandless github search path");
-                    github_search(&text, &config, &api_client, &mut notice_response).await;
+                    debug!(logger, "Entering commandless github search path");
+                    github_search(&text, &config, &api_client, &mut notice_response, &logger).await;
                 }
                 if LINK_URL.is_match(&text.body)
                     && !config.links.is_empty()
                     && !config.linkers.is_empty()
                 {
-                    debug!("Entering commandless url linking path");
-                    link_url(&text, &config, &mut notice_response);
+                    debug!(logger, "Entering commandless url linking path");
+                    link_url(&text, &config, &mut notice_response, &logger);
                 }
                 if GROUP_PING.is_match(&text.body) {
-                    debug!("Entering commandless group ping path");
-                    group_ping(&text, &sender, &config, &mut text_response);
+                    debug!(logger, "Entering commandless group ping path");
+                    group_ping(&text, &sender, &config, &mut text_response, &logger);
                 }
 
                 let notice_response = notice_response;
                 let text_response = text_response;
 
                 if notice_response.is_some() {
-                    send_notice(&notice_response, &room_id, &client, &mut storage).await;
+                    send_notice(&notice_response, &room_id, &client, &mut storage, &logger).await;
                 }
                 if text_response.is_some() {
                     send_formatted_text(
@@ -80,6 +81,7 @@ pub(super) async fn commandless_handler(
                         &room_id,
                         &client,
                         &mut storage,
+                        &logger,
                     )
                     .await;
                 }
@@ -91,12 +93,12 @@ pub(super) async fn commandless_handler(
                     && !text_response.is_some()
                 {
                     if let Some(v) = spellcheck(text, sender, config) {
-                        send_correction(v, &room_id, &client, &mut storage).await
+                        send_correction(v, &room_id, &client, &mut storage, &logger).await
                     }
                 }
             }
             Err(e) => {
-                error!("{:?}", e);
+                error!(logger, "{:?}", e);
             }
         }
     }
@@ -108,6 +110,7 @@ async fn send_notice(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
+    logger: &Logger,
 ) {
     let response = notice_response.to_string();
     match client
@@ -126,7 +129,7 @@ async fn send_notice(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!("Unable to send response due to error {:?}", e),
+        Err(e) => error!(logger, "Unable to send response due to error {:?}", e),
     }
 }
 
@@ -137,9 +140,10 @@ async fn send_formatted_text(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
+    logger: &Logger,
 ) {
     if formatted_response.is_none() {
-        error!("send_formatted_text called without formatted text!");
+        error!(logger, "send_formatted_text called without formatted text!");
         return;
     }
     let response = text_response.to_string();
@@ -159,7 +163,7 @@ async fn send_formatted_text(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!("Unable to send response due to error {:?}", e),
+        Err(e) => error!(logger, "Unable to send response due to error {:?}", e),
     }
 }
 
@@ -169,6 +173,7 @@ async fn send_correction(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
+    logger: &Logger,
 ) {
     match client
         .request(create_message_event::Request {
@@ -190,6 +195,6 @@ async fn send_correction(
                 .last_correction_time
                 .insert(room_id.clone(), SystemTime::now());
         }
-        Err(e) => error!("Unable to send response due to error {:?}", e),
+        Err(e) => error!(logger, "Unable to send response due to error {:?}", e),
     }
 }

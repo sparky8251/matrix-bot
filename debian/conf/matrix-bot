@@ -1,2 +1,3 @@
 # matrix-bot default configuration options
-RUST_LOG=error,warn,info
+MATRIX_BOT_CONFIG_DIR=/etc/matrix-bot
+MATRIX_BOT_DATA_DIR=/var/lib/matrix-bot

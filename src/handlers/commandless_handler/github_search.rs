@@ -7,9 +7,9 @@ use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
 
 use graphql_client::GraphQLQuery;
-use log::{debug, error, trace};
 use reqwest::header;
 use ruma_client::events::room::message::TextMessageEventContent;
+use slog::{debug, error, trace, Logger};
 use url::Url;
 
 /// Searches and links found issues or pulls requested and builds response text
@@ -18,18 +18,22 @@ pub async fn github_search(
     config: &Config,
     api_client: &reqwest::Client,
     notice_response: &mut BotResponseNotice,
+    logger: &Logger,
 ) {
     let mut repos_to_search = Vec::new();
     match &text.formatted_body {
         Some(v) => {
-            let clean_text = clean_text(v);
+            let clean_text = clean_text(v, &logger);
             if GITHUB_SEARCH.is_match(&clean_text) {
                 for cap in GITHUB_SEARCH.captures_iter(&clean_text.to_lowercase()) {
-                    trace!("{:?}", cap);
+                    trace!(logger, "{:?}", cap);
                     repos_to_search.push((cap[1].to_string(), cap[2].to_string()))
                 }
             } else {
-                debug!("There are no remaining matches after cleaning tags. Doing nothing.");
+                debug!(
+                    logger,
+                    "There are no remaining matches after cleaning tags. Doing nothing."
+                );
                 return;
             }
         }
@@ -48,7 +52,7 @@ pub async fn github_search(
                     let index = match r.find('/') {
                         Some(v) => v,
                         None => {
-                            debug!("No / was found in repo/owner pair {:?}. Unable to search such a thing.", r);
+                            debug!(logger, "No / was found in repo/owner pair {:?}. Unable to search such a thing.", r);
                             continue;
                         }
                     };
@@ -57,22 +61,27 @@ pub async fn github_search(
                     searches.push((owner.to_string(), repo.to_string(), n))
                 }
                 None => {
-                    debug!("Repo {:?} not found", repo);
+                    debug!(logger, "Repo {:?} not found", repo);
                     continue;
                 }
             },
             Err(e) => {
                 error!(
+                    logger,
                     "Issue or pull number unable to be parsed. Error is {:?}, quantity is {:?}",
-                    e, number
+                    e,
+                    number
                 );
             }
         }
     }
     let searches = searches;
-    debug!("Queued searches: {:?}", searches);
+    debug!(logger, "Queued searches: {:?}", searches);
     if searches.is_empty() {
-        debug!("No searches found after parsing numbers. No searches will be built.");
+        debug!(
+            logger,
+            "No searches found after parsing numbers. No searches will be built."
+        );
         return;
     }
     let mut results = Vec::new();
@@ -95,14 +104,14 @@ pub async fn github_search(
                     match r.json().await {
                         Ok(b) => b,
                         Err(e) => {
-                            error!("No response body found. Error is {:?}", e);
+                            error!(logger, "No response body found. Error is {:?}", e);
                             continue;
                         }
                     };
                 response_body
             }
             Err(e) => {
-                error!("Query failed, Error is {:?}", e);
+                error!(logger, "Query failed, Error is {:?}", e);
                 continue;
             }
         };
@@ -111,17 +120,17 @@ pub async fn github_search(
                 Some(r) => match r.issue_or_pull_request {
                     Some(v) => v,
                     None => {
-                        error!("Missing issue or pull request data");
+                        error!(logger, "Missing issue or pull request data");
                         continue;
                     }
                 },
                 None => {
-                    error!("Missing repository data");
+                    error!(logger, "Missing repository data");
                     continue;
                 }
             },
             None => {
-                error!("Missing response data");
+                error!(logger, "Missing response data");
                 continue;
             }
         };
@@ -132,8 +141,8 @@ pub async fn github_search(
                 match Url::parse(&result) {
                     Ok(v) => results.push(v),
                     Err(e) => error!(
-                        "Unable to parse result {:?} to Url due to error {:?}",
-                        result, e
+                        logger,
+                        "Unable to parse result {:?} to Url due to error {:?}", result, e
                     ),
                 }
             }
@@ -142,15 +151,15 @@ pub async fn github_search(
                 match Url::parse(&result) {
                     Ok(v) => results.push(v),
                     Err(e) => error!(
-                        "Unable to parse result {:?} to Url due to error {:?}",
-                        result, e
+                        logger,
+                        "Unable to parse result {:?} to Url due to error {:?}", result, e
                     ),
                 }
             }
         }
     }
     if results.is_empty() {
-        error!("No search resulted returned. Doing nothing");
+        error!(logger, "No search resulted returned. Doing nothing");
     } else {
         notice_response.set_gh_results(results)
     }

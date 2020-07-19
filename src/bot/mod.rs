@@ -7,7 +7,6 @@ use crate::handlers::{handle_invite_event, handle_text_event};
 use std::process;
 use std::time::Duration;
 
-use log::{debug, error, info, trace};
 use ruma_client::{
     api::r0::sync::sync_events::{self, SetPresence},
     events::{
@@ -16,6 +15,10 @@ use ruma_client::{
     },
     Client,
 };
+use slog::{debug, error, info, trace, Logger};
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
+use sloggers::types::Severity;
+use sloggers::Build;
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct Bot {
@@ -25,18 +28,24 @@ pub struct Bot {
     pub config: Config,
     /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
+    pub logger: Logger,
 }
 
 impl Bot {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new() -> Self {
-        let storage = Storage::load_storage();
-        let config = Config::load_bot_config();
+        let mut logging_builder = TerminalLoggerBuilder::new();
+        logging_builder.level(Severity::Trace);
+        logging_builder.destination(Destination::Stderr);
+        let logger = logging_builder.build().unwrap();
+        let storage = Storage::load_storage(&logger);
+        let config = Config::load_bot_config(&logger);
         let api_client = reqwest::Client::new();
         Self {
             storage,
             config,
             api_client,
+            logger,
         }
     }
 
@@ -56,6 +65,7 @@ impl Bot {
             Ok(v) => Some(v),
             Err(e) => {
                 error!(
+                    self.logger,
                     "Unable to login as {} on {} due to error {:?}",
                     self.config.mx_uname.localpart(),
                     self.config.mx_url,
@@ -64,9 +74,12 @@ impl Bot {
                 process::exit(8)
             }
         };
-        trace!("Session retrived, saving storage data...");
-        self.storage.save_storage();
-        info!("Successfully logged in as {}", self.config.mx_uname);
+        trace!(self.logger, "Session retrived, saving storage data...");
+        self.storage.save_storage(&self.logger);
+        info!(
+            self.logger,
+            "Successfully logged in as {}", self.config.mx_uname
+        );
 
         loop {
             let response = match client
@@ -81,7 +94,7 @@ impl Bot {
             {
                 Ok(v) => Some(v),
                 Err(e) => {
-                    debug!("Line 73: {:?}", e);
+                    debug!(self.logger, "Line 73: {:?}", e);
                     None
                 }
             };
@@ -103,48 +116,53 @@ impl Bot {
                                                 &mut self.storage,
                                                 &self.config,
                                                 &self.api_client,
+                                                &self.logger,
                                             )
                                             .await;
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json())
+                                    debug!(self.logger, "{:?}", e);
+                                    trace!(self.logger, "Content: {:?}", raw_event.json())
                                 }
                             }
                             self.storage.last_sync = Some(v.next_batch.clone());
-                            self.storage.save_storage();
+                            self.storage.save_storage(&self.logger);
                         }
                     }
                     for (room_id, invited_room) in &v.rooms.invite {
-                        trace!("Invited room data: {:?}", invited_room);
+                        trace!(self.logger, "Invited room data: {:?}", invited_room);
                         for raw_event in &invited_room.invite_state.events {
                             let event = raw_event.deserialize();
                             match event {
                                 Ok(v) => match v {
                                     AnyStrippedStateEvent::RoomMember(s) => {
-                                        trace!("Invited by {}", s.sender);
+                                        trace!(self.logger, "Invited by {}", s.sender);
                                         handle_invite_event(
                                             &s.sender,
                                             &room_id,
                                             &client,
                                             &self.config,
+                                            &self.logger,
                                         )
                                         .await;
-                                        trace!("Handled invite event")
+                                        trace!(self.logger, "Handled invite event")
                                     }
-                                    _ => error!("No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
+                                    _ => error!(self.logger, "No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
                                 },
                                 Err(e) => {
-                                    debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json())
+                                    debug!(self.logger, "{:?}", e);
+                                    trace!(self.logger, "Content: {:?}", raw_event.json())
                                 }
                             }
                         }
                     }
                 }
-                None => debug!("Response deserialization failed. Doing nothing this loop."),
+                None => debug!(
+                    self.logger,
+                    "Response deserialization failed. Doing nothing this loop."
+                ),
             }
         }
     }

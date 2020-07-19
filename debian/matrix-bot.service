@@ -5,10 +5,9 @@ After=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/matrix-bot
 EnvironmentFile=/etc/default/matrix-bot
 User = matrix-bot
-ExecStart=/opt/matrix-bot/matrix-bot
+ExecStart=/opt/matrix-bot
 Restart = on-failure
 TimeoutSec = 15
 

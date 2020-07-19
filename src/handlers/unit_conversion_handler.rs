@@ -4,7 +4,6 @@ use crate::config::Storage;
 use crate::helpers::convert_unit;
 use crate::regex::UNIT_CONVERSION;
 
-use log::{debug, error};
 use ruma_client::{
     api::r0::message::create_message_event,
     events::{
@@ -14,6 +13,7 @@ use ruma_client::{
     identifiers::RoomId,
     HttpsClient,
 };
+use slog::{debug, error, Logger};
 
 /// Command based unit conversion handler that will parse, generate a response body, and send it
 pub(super) async fn unit_conversion_handler(
@@ -21,13 +21,14 @@ pub(super) async fn unit_conversion_handler(
     room_id: &RoomId,
     client: &HttpsClient,
     storage: &mut Storage,
+    logger: &Logger,
 ) {
     if text.relates_to.is_none() && text.formatted_body.is_none() {
         let mut conversions = Vec::new();
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
             conversions.push((cap[1].to_string(), cap[2].to_string()));
         }
-        let result = match convert_unit(conversions) {
+        let result = match convert_unit(conversions, &logger) {
             Some(v) => {
                 let mut result = String::new();
                 for converted in v {
@@ -37,7 +38,10 @@ pub(super) async fn unit_conversion_handler(
                 result.trim().to_string()
             }
             None => {
-                debug!("No convertable units found. No reply will be constructed.");
+                debug!(
+                    logger,
+                    "No convertable units found. No reply will be constructed."
+                );
                 return;
             }
         };
@@ -58,7 +62,7 @@ pub(super) async fn unit_conversion_handler(
             .await
         {
             Ok(_) => (),
-            Err(e) => error!("{:?}", e),
+            Err(e) => error!(logger, "{:?}", e),
         }
     }
 }

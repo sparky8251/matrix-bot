@@ -15,12 +15,12 @@ use crate::config::{Config, Storage};
 
 use invite_handler::{accept_invite, reject_invite};
 
-use log::{debug, trace};
 use ruma_client::{
     events::room::message::TextMessageEventContent,
     identifiers::{RoomId, UserId},
     HttpsClient,
 };
+use slog::{debug, trace, Logger};
 
 /// Dispatches incoming text events to a number of different handlers depending on various conditions
 pub async fn handle_text_event(
@@ -31,18 +31,22 @@ pub async fn handle_text_event(
     storage: &mut Storage,
     config: &Config,
     api_client: &reqwest::Client,
+    logger: &Logger,
 ) {
     if !&text.body.starts_with('!') {
-        debug!("Entering no command path...");
-        commandless_handler(text, sender, room_id, client, storage, config, api_client).await
+        debug!(logger, "Entering no command path...");
+        commandless_handler(
+            text, sender, room_id, client, storage, config, api_client, &logger,
+        )
+        .await
     } else if text.body.to_lowercase().starts_with("!convert ") {
-        debug!("Entering unit conversion path...");
-        unit_conversion_handler(text, room_id, client, storage).await
+        debug!(logger, "Entering unit conversion path...");
+        unit_conversion_handler(text, room_id, client, storage, &logger).await
     } else if text.body.to_lowercase().starts_with("!help") {
-        debug!("Entering help path...");
-        help_handler(text, room_id, client, storage, config).await
+        debug!(logger, "Entering help path...");
+        help_handler(text, room_id, client, storage, config, &logger).await
     } else {
-        debug!("Doing nothing...");
+        debug!(logger, "Doing nothing...");
     }
 }
 
@@ -52,11 +56,12 @@ pub async fn handle_invite_event(
     room_id: &RoomId,
     client: &HttpsClient,
     config: &Config,
+    logger: &Logger,
 ) {
-    trace!("Invited by {} to room {} ", &sender, &room_id);
+    trace!(logger, "Invited by {} to room {} ", &sender, &room_id);
     if config.admins.contains(&sender) {
-        accept_invite(&sender, &room_id, &client).await;
+        accept_invite(&sender, &room_id, &client, &logger).await;
     } else {
-        reject_invite(&sender, &room_id, &client).await;
+        reject_invite(&sender, &room_id, &client, &logger).await;
     }
 }

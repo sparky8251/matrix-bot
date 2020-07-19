@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use log::{debug, error, trace};
+use slog::{debug, error, trace, Logger};
 use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
 use uom::si::mass::{kilogram, pound};
@@ -27,7 +27,10 @@ impl fmt::Display for ConvertedUnit {
 /// Converts supplied values into [ConvertedUnits](struct.ConvertedUnit.html).
 ///
 /// Returns `None` if nothing was able to be converted after parsing and processing.
-pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedUnit>> {
+pub fn convert_unit(
+    conversions: Vec<(String, String)>,
+    logger: &Logger,
+) -> Option<Vec<ConvertedUnit>> {
     let mut result = Vec::new();
     let mut working_data = Vec::new();
 
@@ -37,15 +40,15 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
             Ok(v) => working_data.push((unit, v)),
             Err(e) => {
                 error!(
-                    "Quantity unable to be parsed. Error is {:?}, quantity is {:?}",
-                    e, quantity
+                    logger,
+                    "Quantity unable to be parsed. Error is {:?}, quantity is {:?}", e, quantity
                 );
             }
         }
     }
 
     if working_data.is_empty() {
-        trace!("No units to convert after parsing quanitity to f64");
+        trace!(logger, "No units to convert after parsing quanitity to f64");
         return None;
     }
 
@@ -113,7 +116,7 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
                 ("mph", "km/h", mile_per_hour, kilometer_per_hour),
             }
             _ => {
-                debug!(
+                debug!(logger,
                 "Attempted unknown conversion for unit {:?}",
                 unit.trim().to_lowercase());
             }
@@ -123,7 +126,7 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
     if !result.is_empty() {
         Some(result)
     } else {
-        trace!("No units converted");
+        trace!(logger, "No units converted");
         None
     }
 }

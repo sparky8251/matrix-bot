@@ -74,8 +74,6 @@ use bot::Bot;
 #[tokio::main]
 /// Simple main function that initializes the bot and will run until interrupted. Saves bot config on exiting.
 async fn main() {
-    pretty_env_logger::init();
-
     let mut bot = Bot::new();
 
     {
@@ -88,5 +86,5 @@ async fn main() {
         futures::future::select(bot_fut, ctrlc_fut).await;
     }
 
-    bot.storage.save_storage();
+    bot.storage.save_storage(&bot.logger);
 }

@@ -2,21 +2,21 @@
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
+use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
+use std::path::PathBuf;
 use std::process;
 use std::time::{Duration, SystemTime};
-use std::env;
-use std::path::PathBuf;
 
-use log::{error, info, trace};
 use reqwest::header::HeaderValue;
 use ruma_client::{
     identifiers::{RoomId, UserId},
     Session,
 };
 use serde::{Deserialize, Serialize};
+use slog::{error, info, trace, Logger};
 use url::Url;
 
 /// Constant representing the crate name.
@@ -172,25 +172,28 @@ impl Config {
     ///
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
-    pub fn load_bot_config() -> Self {
+    pub fn load_bot_config(logger: &Logger) -> Self {
         let path = match env::var("MATRIX_BOT_CONFIG_DIR") {
-            Ok(v) => [v, "config.toml".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["config.toml"].iter().collect::<PathBuf>()
+            Ok(v) => [&v, "config.toml"].iter().collect::<PathBuf>(),
+            Err(_) => ["config.toml"].iter().collect::<PathBuf>(),
         };
         // File Load Section
         let mut file = match File::open(path) {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
-                    error!("Unable to find file config.toml");
+                    error!(logger, "Unable to find file config.toml");
                     process::exit(1);
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file config.toml");
+                    error!(logger, "Permission denied when opening file config.toml");
                     process::exit(1);
                 }
                 _ => {
-                    error!("Unable to open file due to unexpected error {:?}", e);
+                    error!(
+                        logger,
+                        "Unable to open file due to unexpected error {:?}", e
+                    );
                     process::exit(1);
                 }
             },
@@ -199,25 +202,26 @@ impl Config {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!("Unable to read file contents due to error {:?}", e);
+                error!(logger, "Unable to read file contents due to error {:?}", e);
                 process::exit(2)
             }
         }
         let toml: RawConfig = match toml::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!("Invalid toml. Error is {:?}", e);
+                error!(logger, "Invalid toml. Error is {:?}", e);
                 process::exit(3)
             }
         };
 
         // Set variables and exit/error if set improperly
-        let (repos, gh_access_token) = load_github_settings(&toml);
-        let (linkers, links) = load_linker_settings(&toml);
-        let unit_conversion_exclusion = load_unit_conversion_settings(&toml);
-        let (incorrect_spellings, correction_text, correction_exclusion) = load_spell_correct_settings(&toml);
-        let admins = load_admin_settings(&toml);
-        let help_rooms = load_help_settings(&toml);
+        let (repos, gh_access_token) = load_github_settings(&toml, &logger);
+        let (linkers, links) = load_linker_settings(&toml, &logger);
+        let unit_conversion_exclusion = load_unit_conversion_settings(&toml, &logger);
+        let (incorrect_spellings, correction_text, correction_exclusion) =
+            load_spell_correct_settings(&toml, &logger);
+        let admins = load_admin_settings(&toml, &logger);
+        let help_rooms = load_help_settings(&toml, &logger);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
             toml.matrix_authentication.url.clone(),
             toml.matrix_authentication.username.clone(),
@@ -235,7 +239,7 @@ impl Config {
                 ),
             };
 
-        let (group_pings, group_ping_users) = load_group_ping_settings(&toml);
+        let (group_pings, group_ping_users) = load_group_ping_settings(&toml, &logger);
 
         // Return value
         Config {
@@ -267,26 +271,26 @@ impl Storage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> Self {
+    pub fn load_storage(logger: &Logger) -> Self {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["storage.ron"].iter().collect::<PathBuf>()
+            Err(_) => ["storage.ron"].iter().collect::<PathBuf>(),
         };
         let mut file = match File::open(path) {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
-                    trace!("The next save is a default save");
-                    Self::save_storage(&ron);
+                    trace!(logger, "The next save is a default save");
+                    Self::save_storage(&ron, &logger);
                     return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file storage.ron");
+                    error!(logger, "Permission denied when opening file storage.ron");
                     process::exit(1);
                 }
                 _ => {
-                    error!("Unable to open file: {}", e);
+                    error!(logger, "Unable to open file: {}", e);
                     process::exit(1);
                 }
             },
@@ -295,14 +299,17 @@ impl Storage {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!("Unable to read file contents: {}", e);
+                error!(logger, "Unable to read file contents: {}", e);
                 process::exit(2)
             }
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!("Unable to load storage.ron due to invalid ron: {}", e);
+                error!(
+                    logger,
+                    "Unable to load storage.ron due to invalid ron: {}", e
+                );
                 process::exit(3)
             }
         };
@@ -312,38 +319,34 @@ impl Storage {
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) {
+    pub fn save_storage(&self, logger: &Logger) {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["storage.ron"].iter().collect::<PathBuf>()
+            Err(_) => ["storage.ron"].iter().collect::<PathBuf>(),
         };
         let ron = match ron::to_string(self) {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    "Unable to format storage as ron, this should never occur. Error is {}",
-                    e
+                    logger,
+                    "Unable to format storage as ron, this should never occur. Error is {}", e
                 );
                 process::exit(7)
             }
         };
-        let mut file = match OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-        {
+        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
             Ok(v) => v,
             Err(e) => {
-                error!("Unable to open storage.ron due to error {:?}", e);
+                error!(logger, "Unable to open storage.ron due to error {:?}", e);
                 process::exit(9)
             }
         };
         match file.write_all(ron.as_bytes()) {
             Ok(_) => {
-                trace!("Saved Session!");
+                trace!(logger, "Saved Session!");
             }
             Err(e) => {
-                error!("Unable to write storage data: {}", e);
+                error!(logger, "Unable to write storage data: {}", e);
                 process::exit(10)
             }
         }
@@ -409,46 +412,49 @@ impl Display for SensitiveSpelling {
     }
 }
 
-fn load_github_settings(toml: &RawConfig) -> (HashMap<String, String>, String) {
+fn load_github_settings(toml: &RawConfig, logger: &Logger) -> (HashMap<String, String>, String) {
     match &toml.searchable_repos {
         Some(r) => match &toml.github_authentication {
             Some(g) => (r.clone(), g.access_token.clone()),
             None => {
-                error!("Searchable repos configured, but no github access token found. Unable to continue...");
+                error!(logger, "Searchable repos configured, but no github access token found. Unable to continue...");
                 process::exit(4)
             }
         },
         None => {
-            info!("No searchable repos found. Disabling feature...");
+            info!(logger, "No searchable repos found. Disabling feature...");
             (HashMap::new(), String::new())
         }
     }
 }
 
-fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Url>) {
+fn load_linker_settings(
+    toml: &RawConfig,
+    logger: &Logger,
+) -> (HashSet<String>, HashMap<String, Url>) {
     match &toml.linkable_urls {
         Some(d) => match &toml.general.link_matchers {
             Some(m) => {
                 if !d.is_empty() {
                     (m.clone(), d.clone())
                 } else {
-                    error!("Link matchers exists but none are set. Exiting...");
+                    error!(logger, "Link matchers exists but none are set. Exiting...");
                     process::exit(1)
                 }
             }
             None => {
-                info!("No link matchers found. Disabling feature...");
+                info!(logger, "No link matchers found. Disabling feature...");
                 (HashSet::new(), HashMap::new())
             }
         },
         None => {
-            info!("No linkable urls found. Disabling feature...");
+            info!(logger, "No linkable urls found. Disabling feature...");
             (HashSet::new(), HashMap::new())
         }
     }
 }
 
-fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
+fn load_unit_conversion_settings(toml: &RawConfig, logger: &Logger) -> HashSet<String> {
     match &toml.general.unit_conversion_exclusion {
         Some(v) => {
             let mut hash_set = HashSet::new();
@@ -458,98 +464,118 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
             hash_set.clone()
         }
         None => {
-            info!("No unit conversion exlclusions found. Disabling feature...");
+            info!(
+                logger,
+                "No unit conversion exlclusions found. Disabling feature..."
+            );
             HashSet::new()
         }
     }
 }
 
-fn load_spell_correct_settings(toml: &RawConfig) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
+fn load_spell_correct_settings(
+    toml: &RawConfig,
+    logger: &Logger,
+) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
-            Some(i) => {
-                match &toml.general.sensitive_corrections {
-                    Some(s) => match &toml.general.correction_text {
-                        Some(c) => match &toml.general.correction_exclusion {
-                            Some(e) => {
-                                let e = if !e.is_empty() {
-                                    e.clone()
-                                } else {
-                                    info!("Empty list found. No rooms will be excluded from corrections");
-                                    HashSet::new()
-                                };
-                                let mut spk = Vec::new();
-                                for spelling in i {
-                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
-                                        InsensitiveSpelling { spelling: spelling.clone() },
-                                    ));
-                                }
-                                for spelling in s {
-                                    spk.push(SpellCheckKind::SpellCheckSensitive(
-                                        SensitiveSpelling { spelling: spelling.clone() },
-                                    ));
-                                }
-                                (spk, c.to_string(), e)
+            Some(i) => match &toml.general.sensitive_corrections {
+                Some(s) => match &toml.general.correction_text {
+                    Some(c) => match &toml.general.correction_exclusion {
+                        Some(e) => {
+                            let e = if !e.is_empty() {
+                                e.clone()
+                            } else {
+                                info!(
+                                    logger,
+                                    "Empty list found. No rooms will be excluded from corrections"
+                                );
+                                HashSet::new()
+                            };
+                            let mut spk = Vec::new();
+                            for spelling in i {
+                                spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                    InsensitiveSpelling {
+                                        spelling: spelling.clone(),
+                                    },
+                                ));
                             }
-                            None => {
-                                let mut spk = Vec::new();
-                                for spelling in i {
-                                    spk.push(SpellCheckKind::SpellCheckInsensitive(
-                                        InsensitiveSpelling { spelling: spelling.clone() },
-                                    ));
-                                }
-                                for spelling in s {
-                                    spk.push(SpellCheckKind::SpellCheckSensitive(
-                                        SensitiveSpelling { spelling: spelling.clone() },
-                                    ));
-                                }
-                                info!("No list found. No rooms will be excluded from corrections");
-                                (spk, c.to_string(), HashSet::new())
+                            for spelling in s {
+                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
+                                    spelling: spelling.clone(),
+                                }));
                             }
-                        },
+                            (spk, c.to_string(), e)
+                        }
                         None => {
-                            error!("No correction text provided even though corrections have been enabled");
-                            process::exit(5)
+                            let mut spk = Vec::new();
+                            for spelling in i {
+                                spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                    InsensitiveSpelling {
+                                        spelling: spelling.clone(),
+                                    },
+                                ));
+                            }
+                            for spelling in s {
+                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
+                                    spelling: spelling.clone(),
+                                }));
+                            }
+                            info!(
+                                logger,
+                                "No list found. No rooms will be excluded from corrections"
+                            );
+                            (spk, c.to_string(), HashSet::new())
                         }
                     },
                     None => {
-                        error!("No case sensitive corrections provided even though corrections have been enabled");
+                        error!(
+                            logger,
+                            "No correction text provided even though corrections have been enabled"
+                        );
                         process::exit(5)
                     }
+                },
+                None => {
+                    error!(logger, "No case sensitive corrections provided even though corrections have been enabled");
+                    process::exit(5)
                 }
-            }
+            },
             None => {
-                error!("No case insensitive corrections provided even though corrections have been enabled");
+                error!(logger, "No case insensitive corrections provided even though corrections have been enabled");
                 process::exit(5)
             }
         }
     } else {
-        info!("Disabling corrections feature");
+        info!(logger, "Disabling corrections feature");
         (Vec::new(), String::new(), HashSet::new())
     }
 }
 
-fn load_admin_settings(toml: &RawConfig) -> HashSet<UserId> {
+fn load_admin_settings(toml: &RawConfig, logger: &Logger) -> HashSet<UserId> {
     match &toml.general.authorized_users {
         Some(v) => v.clone(),
         None => {
-            error!("You must provide at least 1 authorized user");
+            error!(logger, "You must provide at least 1 authorized user");
             process::exit(6)
         }
     }
 }
 
-fn load_help_settings(toml: &RawConfig) -> HashSet<RoomId> {
+fn load_help_settings(toml: &RawConfig, logger: &Logger) -> HashSet<RoomId> {
     match &toml.general.help_rooms {
         Some(v) => v.clone(),
         None => {
-            info!("No help rooms specified. Allowing all rooms.");
+            info!(logger, "No help rooms specified. Allowing all rooms.");
             HashSet::new()
         }
     }
 }
 
-fn load_group_ping_settings(toml: &RawConfig) -> (HashMap<String, HashSet<UserId>>, HashSet<UserId>) {
+fn load_group_ping_settings(
+    toml: &RawConfig,
+    logger: &Logger,
+) -> (HashMap<String, HashSet<UserId>>, HashSet<UserId>) {
     match &toml.group_pings {
         Some(v) => {
             let mut group_ping_users = HashSet::new();
@@ -585,8 +611,8 @@ fn load_group_ping_settings(toml: &RawConfig) -> (HashMap<String, HashSet<UserId
                             }
                             // If list of users are not found, print error to console and move on
                             None => error!(
-                                "Group alias %{} has no corresponding group. Ignoring...",
-                                alias
+                                logger,
+                                "Group alias %{} has no corresponding group. Ignoring...", alias
                             ),
                         }
                     } else {
@@ -604,7 +630,7 @@ fn load_group_ping_settings(toml: &RawConfig) -> (HashMap<String, HashSet<UserId
             (expanded_groups, group_ping_users)
         }
         None => {
-            info!("No group pings defined. Disabling feature...");
+            info!(logger, "No group pings defined. Disabling feature...");
             (HashMap::new(), HashSet::new())
         }
     }
