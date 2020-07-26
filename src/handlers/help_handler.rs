@@ -49,7 +49,7 @@ pub(super) async fn help_handler(
     if config.help_rooms.is_empty() || config.help_rooms.contains(room_id) {
         trace!(logger, "Room is allowed, building help message");
         let mut message = String::new();
-        match text.body.split(' ').nth(1).map(|x| Command::from(x)) {
+        match text.body.split(' ').nth(1).map(Command::from) {
             Some(v) => match v {
                 Command::ActionCommand => message = action_command_help_message().await,
                 Command::ActionCommandless => message = action_commandless_help_message().await,
@@ -104,17 +104,17 @@ ACTIONS:
 }
 
 async fn action_command_help_message() -> String {
-    format!("Command Action
+    "Command Action
 
 Command actions are defined as message that have no formatting (like no italics, no inline code, not a reply, etc) that start with a !. These can only perform one action per message.
 
 EXAMPLES:
 \t!help
-\t!convert 22mi")
+\t!convert 22mi".to_string()
 }
 
 async fn action_commandless_help_message() -> String {
-    format!("Commandless Action
+    "Commandless Action
     
 Commandles actions can happen in any plain text message but certain text formatting will be ignored. Currently ignored formatting is inline code, code blocks, and the text in a reply (but not the reply itself)    
 
@@ -123,12 +123,12 @@ The exact rules for triggering a commandless action vary by action (so check act
 EXAMPLES:
 \tHey there, i think you want to read docs@troubleshooting
 \tIts not like 32f is that cold. not sure what you are complaining about
-")
+".to_string()
 }
 
 async fn group_ping_help_message(config: &Config) -> String {
     let mut groups = Vec::new();
-    for (group, _) in &config.group_pings {
+    for group in config.group_pings.keys() {
         groups.push(group);
     }
     groups.sort();
@@ -156,7 +156,7 @@ AVAILABLE GROUPS:
 
 async fn github_search_help_message(config: &Config) -> String {
     let mut repos = Vec::new();
-    for (repo, _) in &config.repos {
+    for repo in config.repos.keys() {
         repos.push(repo);
     }
     repos.sort();
@@ -195,7 +195,7 @@ async fn link_help_message(config: &Config) -> String {
     available_keywords.pop();
     let available_keywords = available_keywords.replace('|', " | ");
     let mut links = Vec::new();
-    for (link, _) in &config.links {
+    for link in config.links.keys() {
         links.push(link);
     }
     links.sort();

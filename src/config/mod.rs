@@ -226,8 +226,8 @@ impl Config {
             toml.matrix_authentication.url.clone(),
             toml.matrix_authentication.username.clone(),
             toml.matrix_authentication.password.clone(),
-            toml.general.enable_corrections.clone(),
-            toml.general.enable_unit_conversions.clone(),
+            toml.general.enable_corrections,
+            toml.general.enable_unit_conversions,
         );
 
         let user_agent: HeaderValue =
@@ -461,7 +461,7 @@ fn load_unit_conversion_settings(toml: &RawConfig, logger: &Logger) -> HashSet<S
             for set in v {
                 hash_set.insert(" ".to_owned() + &set);
             }
-            hash_set.clone()
+            hash_set
         }
         None => {
             info!(

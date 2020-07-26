@@ -1,6 +1,6 @@
 //! Helper function used to strip supplied text of HTML tags and their contents that should not be picked up in later processing steps
 
-use crate::regex::{CODE_TAG, MX_REPLY, PRE_TAG};
+use crate::regex::{CODE_TAG, MX_REPLY, PRE_TAG, PARAGRAPH_TAG};
 
 use slog::{trace, Logger};
 
@@ -18,6 +18,13 @@ pub fn clean_text(text: &str, logger: &Logger) -> String {
     trace!(
         logger,
         "Cleaned text after removing reply is {:?}",
+        clean_text
+    );
+
+    let clean_text = PARAGRAPH_TAG.replace_all(&clean_text, "");
+    trace!(
+        logger,
+        "Cleaned text after removing paragraph tags is {:?}",
         clean_text
     );
 
