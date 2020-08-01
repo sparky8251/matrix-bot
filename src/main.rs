@@ -69,6 +69,11 @@ mod matrix_handlers;
 mod messages;
 mod queries;
 mod regex;
+mod webhook;
+mod webhook_handlers;
+
+#[macro_use]
+extern crate rocket;
 
 use config::{Config, SessionStorage};
 use matrix::listener::MatrixListener;
@@ -79,6 +84,7 @@ use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
 use tokio::sync::mpsc;
+use webhook::listener::WebhookListener;
 
 #[tokio::main]
 /// Simple main function that initializes the bot and will run until interrupted. Saves bot config on exiting.
@@ -111,11 +117,13 @@ async fn main() {
 
     // Clone required clients/servers and channels
     let matrix_responder_client = matrix_listener_client.clone();
-    let (tx, rx) = mpsc::channel(8);
+    let (matrix_tx, matrix_rx) = mpsc::channel(8);
+    let webhook_tx = matrix_tx.clone();
 
     // Create thread structures
-    let mut matrix_listener = MatrixListener::new(&config, &logger, tx);
-    let mut matrix_responder = MatrixResponder::new(&logger, rx);
+    let mut matrix_listener = MatrixListener::new(&config, &logger, matrix_tx);
+    let mut matrix_responder = MatrixResponder::new(&logger, matrix_rx);
+    let webhook_listener = WebhookListener::new(&config, webhook_tx);
 
     // Spawn threads from thread structures, save their cached data when they exit
     let matrix_listener_task = tokio::spawn(async move {
@@ -131,6 +139,10 @@ async fn main() {
             .save_storage(&matrix_responder.logger);
     });
 
+    let webhook_listener_task = tokio::spawn(async move {
+        webhook_listener.start().await;
+    });
+
     // Join threads to main thread
     matrix_listener_task
         .await
@@ -138,4 +150,7 @@ async fn main() {
     matrix_responder_task
         .await
         .expect("The matrix responder task has panicked!");
+    webhook_listener_task
+        .await
+        .expect("The webhook listener task has panicked!");
 }

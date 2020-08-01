@@ -66,6 +66,10 @@ pub struct MatrixListenerConfig {
     pub group_ping_users: HashSet<UserId>,
 }
 
+pub struct WebhookListenerConfig {
+    pub token: String,
+}
+
 #[derive(Debug)]
 /// Configuration struct used at runtime. Loaded from RawConfig and its constituent parts.
 ///
@@ -106,6 +110,7 @@ pub struct Config {
     group_pings: HashMap<String, HashSet<UserId>>,
     /// Hashset containing list of users that can initiate group pings
     group_ping_users: HashSet<UserId>,
+    pub webhook_token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -149,6 +154,7 @@ struct RawGeneral {
     correction_exclusion: Option<HashSet<RoomId>>,
     /// List of all words that can be used to link URLs.
     link_matchers: Option<HashSet<String>>,
+    webhook_token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -316,6 +322,7 @@ impl Config {
             };
 
         let (group_pings, group_ping_users) = load_group_ping_settings(&toml, &logger);
+        let webhook_token = toml.general.webhook_token;
 
         // Return value
         Config {
@@ -337,6 +344,7 @@ impl Config {
             user_agent,
             group_pings,
             group_ping_users,
+            webhook_token,
         }
     }
 }

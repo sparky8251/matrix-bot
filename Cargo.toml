@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.5"
+version = "2.0.0-beta.6"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -9,6 +9,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rocket = { git = "https://github.com/SergioBenitez/Rocket.git" }
 toml = "0.5"
 thiserror = "1.0"
 ruma-client = "0.4"
@@ -19,6 +20,11 @@ uom = "0.28"
 graphql_client = "0.9"
 ron = "0.6.0"
 sloggers = "1.0.1"
+
+[dependencies.rocket_contrib]
+git = "https://github.com/SergioBenitez/Rocket.git"
+default-features = false
+features = ["json"]
 
 [dependencies.slog]
 version = "2.5.2"
