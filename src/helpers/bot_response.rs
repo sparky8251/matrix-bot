@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 #[derive(Debug, Default)]
 /// Type representing response data with helper functions. Used tih notice type replies.
-pub struct BotResponseNotice {
+pub struct MatrixNoticeResponse {
     /// List of converted units for response building
     conversions: Option<Vec<ConvertedUnit>>,
     /// List of gh search results for response building
@@ -20,12 +20,12 @@ pub struct BotResponseNotice {
 }
 
 #[derive(Debug, Default)]
-pub struct BotResponseText {
+pub struct MatrixFormattedTextResponse {
     /// List of users that will be pinged for response building
     users: Option<HashSet<UserId>>,
 }
 
-impl BotResponseNotice {
+impl MatrixNoticeResponse {
     /// Sets member conversions with supplied list of ConvertedUnits
     ///
     /// Will overwrite if suppled a second time
@@ -50,7 +50,7 @@ impl BotResponseNotice {
     }
 }
 
-impl BotResponseText {
+impl MatrixFormattedTextResponse {
     /// Sets member users with supplied list of users
     ///
     /// Will overwrite if supplied a second time
@@ -80,7 +80,7 @@ impl BotResponseText {
     }
 }
 
-impl fmt::Display for BotResponseNotice {
+impl fmt::Display for MatrixNoticeResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
         match &self.conversions {
@@ -115,7 +115,7 @@ impl fmt::Display for BotResponseNotice {
     }
 }
 
-impl fmt::Display for BotResponseText {
+impl fmt::Display for MatrixFormattedTextResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
         match &self.users {

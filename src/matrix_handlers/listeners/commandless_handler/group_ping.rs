@@ -1,7 +1,7 @@
 //! Performs group pings based on message text and builds proper response
 
-use crate::config::Config;
-use crate::helpers::{clean_text, BotResponseText};
+use crate::config::MatrixListenerConfig;
+use crate::helpers::{clean_text, MatrixFormattedTextResponse};
 use crate::regex::GROUP_PING;
 
 use std::collections::HashSet;
@@ -13,8 +13,8 @@ use slog::{debug, error, trace, Logger};
 pub fn group_ping(
     text: &TextMessageEventContent,
     sender: &UserId,
-    config: &Config,
-    text_response: &mut BotResponseText,
+    config: &MatrixListenerConfig,
+    text_response: &mut MatrixFormattedTextResponse,
     logger: &Logger,
 ) {
     let mut users: HashSet<UserId> = HashSet::new();

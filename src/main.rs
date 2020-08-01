@@ -59,32 +59,83 @@
 //!
 //! I hope you enjoy your experience and please report and issues or feature requests you might have
 
+mod config;
+mod helpers;
 #[forbid(unsafe_code)]
 #[warn(missing_docs)]
 #[warn(clippy::missing_docs_in_private_items)]
-mod bot;
-mod config;
-mod handlers;
-mod helpers;
+mod matrix;
+mod matrix_handlers;
+mod messages;
 mod queries;
 mod regex;
 
-use bot::Bot;
+use config::{Config, SessionStorage};
+use matrix::listener::MatrixListener;
+use matrix::responder::MatrixResponder;
+use ruma_client::HttpsClient;
+use slog::{info, trace};
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
+use sloggers::types::Severity;
+use sloggers::Build;
+use tokio::sync::mpsc;
 
 #[tokio::main]
 /// Simple main function that initializes the bot and will run until interrupted. Saves bot config on exiting.
 async fn main() {
-    let mut bot = Bot::new();
+    // General purpose initialization
+    let mut logger = TerminalLoggerBuilder::new();
+    logger.level(Severity::Trace);
+    logger.destination(Destination::Stderr);
+    let logger = logger.build().unwrap();
+    let config = Config::load_config(&logger);
 
-    {
-        let bot_fut = bot.start();
-        futures::pin_mut!(bot_fut);
+    // Matrix initalization and login
+    let mut session_storage = SessionStorage::load_storage(&logger);
+    let matrix_listener_client = HttpsClient::https(config.mx_url.clone(), session_storage.session);
+    let session = &matrix_listener_client
+        .log_in(
+            config.mx_uname.localpart().to_string(),
+            config.mx_pass.clone(),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
 
-        let ctrlc_fut = tokio::signal::ctrl_c();
-        futures::pin_mut!(ctrlc_fut);
+    // Save returned session
+    trace!(&logger, "Session retrived, saving session data...");
+    session_storage.session = Some(session.clone());
+    session_storage.save(&logger);
+    info!(&logger, "Successfully logged in as {}", config.mx_uname);
 
-        futures::future::select(bot_fut, ctrlc_fut).await;
-    }
+    // Clone required clients/servers and channels
+    let matrix_responder_client = matrix_listener_client.clone();
+    let (tx, rx) = mpsc::channel(8);
 
-    bot.storage.save_storage(&bot.logger);
+    // Create thread structures
+    let mut matrix_listener = MatrixListener::new(&config, &logger, tx);
+    let mut matrix_responder = MatrixResponder::new(&logger, rx);
+
+    // Spawn threads from thread structures, save their cached data when they exit
+    let matrix_listener_task = tokio::spawn(async move {
+        matrix_listener.start(matrix_listener_client).await;
+        matrix_listener
+            .storage
+            .save_storage(&matrix_listener.logger);
+    });
+    let matrix_responder_task = tokio::spawn(async move {
+        matrix_responder.start(matrix_responder_client).await;
+        matrix_responder
+            .storage
+            .save_storage(&matrix_responder.logger);
+    });
+
+    // Join threads to main thread
+    matrix_listener_task
+        .await
+        .expect("The matrix listener task has panicked!");
+    matrix_responder_task
+        .await
+        .expect("The matrix responder task has panicked!");
 }

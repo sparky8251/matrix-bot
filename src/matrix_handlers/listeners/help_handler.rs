@@ -1,22 +1,14 @@
-use crate::config::{Config, Storage};
-
-use std::convert::From;
-
-use ruma_client::{
-    api::r0::message::create_message_event,
-    events::{
-        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        EventJson, EventType,
-    },
-    identifiers::RoomId,
-    HttpsClient,
-};
+use crate::config::MatrixListenerConfig;
+use crate::messages::{MatrixMessage, MatrixMessageType};
+use ruma_client::{events::room::message::TextMessageEventContent, identifiers::RoomId};
 use slog::{debug, error, trace, Logger};
+use std::convert::From;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Debug)]
-enum Command {
-    ActionCommand,
-    ActionCommandless,
+enum HelpType {
+    Command,
+    Commandless,
     GroupPing,
     GithubSearch,
     Link,
@@ -24,16 +16,16 @@ enum Command {
     UnknownCommand,
 }
 
-impl From<&str> for Command {
+impl From<&str> for HelpType {
     fn from(value: &str) -> Self {
         match value.to_ascii_lowercase().as_ref() {
-            "command" => Command::ActionCommand,
-            "commandless" => Command::ActionCommandless,
-            "ping" => Command::GroupPing,
-            "github-search" => Command::GithubSearch,
-            "link" => Command::Link,
-            "unit-conversion" => Command::UnitConversion,
-            _ => Command::UnknownCommand,
+            "command" => HelpType::Command,
+            "commandless" => HelpType::Commandless,
+            "ping" => HelpType::GroupPing,
+            "github-search" => HelpType::GithubSearch,
+            "link" => HelpType::Link,
+            "unit-conversion" => HelpType::UnitConversion,
+            _ => HelpType::UnknownCommand,
         }
     }
 }
@@ -41,23 +33,22 @@ impl From<&str> for Command {
 pub(super) async fn help_handler(
     text: &TextMessageEventContent,
     room_id: &RoomId,
-    client: &HttpsClient,
-    mut storage: &mut Storage,
-    config: &Config,
+    config: &MatrixListenerConfig,
     logger: &Logger,
+    send: &mut Sender<MatrixMessage>,
 ) {
     if config.help_rooms.is_empty() || config.help_rooms.contains(room_id) {
         trace!(logger, "Room is allowed, building help message");
         let mut message = String::new();
-        match text.body.split(' ').nth(1).map(Command::from) {
+        match text.body.split(' ').nth(1).map(HelpType::from) {
             Some(v) => match v {
-                Command::ActionCommand => message = action_command_help_message().await,
-                Command::ActionCommandless => message = action_commandless_help_message().await,
-                Command::GroupPing => message = group_ping_help_message(&config).await,
-                Command::GithubSearch => message = github_search_help_message(&config).await,
-                Command::Link => message = link_help_message(&config).await,
-                Command::UnitConversion => message = unit_conversion_help_message(&config).await,
-                Command::UnknownCommand => (),
+                HelpType::Command => message = action_command_help_message().await,
+                HelpType::Commandless => message = action_commandless_help_message().await,
+                HelpType::GroupPing => message = group_ping_help_message(&config).await,
+                HelpType::GithubSearch => message = github_search_help_message(&config).await,
+                HelpType::Link => message = link_help_message(&config).await,
+                HelpType::UnitConversion => message = unit_conversion_help_message(&config).await,
+                HelpType::UnknownCommand => (),
             },
             None => {
                 trace!(logger, "Printing help message for program");
@@ -65,7 +56,17 @@ pub(super) async fn help_handler(
             }
         };
         if !message.is_empty() {
-            send_help_message(&room_id, &client, &mut storage, message, &logger).await;
+            match send
+                .send(MatrixMessage {
+                    room_id: room_id.clone(),
+                    message: MatrixMessageType::Notice(message),
+                })
+                .await
+            {
+                Ok(_) => (),
+                Err(_) => error!(logger, "Channel closed. Unable to send message."),
+            };
+        // send_help_message(&room_id, &client, &mut storage, message, &logger).await;
         } else {
             debug!(logger, "Unknown command");
         }
@@ -126,7 +127,7 @@ EXAMPLES:
 ".to_string()
 }
 
-async fn group_ping_help_message(config: &Config) -> String {
+async fn group_ping_help_message(config: &MatrixListenerConfig) -> String {
     let mut groups = Vec::new();
     for group in config.group_pings.keys() {
         groups.push(group);
@@ -154,7 +155,7 @@ AVAILABLE GROUPS:
     )
 }
 
-async fn github_search_help_message(config: &Config) -> String {
+async fn github_search_help_message(config: &MatrixListenerConfig) -> String {
     let mut repos = Vec::new();
     for repo in config.repos.keys() {
         repos.push(repo);
@@ -181,7 +182,7 @@ AVAILABLE REPOS:
 {}", available_repos)
 }
 
-async fn link_help_message(config: &Config) -> String {
+async fn link_help_message(config: &MatrixListenerConfig) -> String {
     let mut keywords = Vec::new();
     for keyword in &config.linkers {
         keywords.push(keyword);
@@ -224,7 +225,7 @@ AVAILABLE LINKS:
     ", available_keywords, available_links)
 }
 
-async fn unit_conversion_help_message(config: &Config) -> String {
+async fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
     let mut units = Vec::new();
     for unit in &config.unit_conversion_exclusion {
         units.push(unit);
@@ -262,31 +263,4 @@ km/h | kmh | kph | kmph | mph
 SPACE EXCLUDED UNITS:
 {}
     ", space_excluded_units)
-}
-
-async fn send_help_message(
-    room_id: &RoomId,
-    client: &HttpsClient,
-    storage: &mut Storage,
-    message: String,
-    logger: &Logger,
-) {
-    match client
-        .request(create_message_event::Request {
-            room_id: room_id.clone(), //FIXME: There has to be a better way than to clone here
-            event_type: EventType::RoomMessage,
-            txn_id: storage.next_txn_id(),
-            data: EventJson::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                body: message,
-                relates_to: None,
-                format: None,
-                formatted_body: None,
-            }))
-            .into_json(),
-        })
-        .await
-    {
-        Ok(_) => (),
-        Err(e) => error!(logger, "{:?}", e),
-    }
 }

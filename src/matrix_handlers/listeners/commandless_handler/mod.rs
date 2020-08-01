@@ -1,0 +1,127 @@
+//! Contains handlers and response functions for text based non-command events
+
+mod github_search;
+mod group_ping;
+mod link_url;
+mod spellcheck;
+mod unit_conversion;
+
+use github_search::github_search;
+use group_ping::group_ping;
+use link_url::link_url;
+use spellcheck::spellcheck;
+use unit_conversion::unit_conversion;
+
+use crate::config::{ListenerStorage, MatrixListenerConfig};
+use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
+use crate::messages::{MatrixFormattedTextMessage, MatrixMessage, MatrixMessageType};
+use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
+use ruma_client::{
+    events::room::message::TextMessageEventContent,
+    identifiers::{RoomId, UserId},
+};
+use slog::{debug, error, trace, Logger};
+use std::time::SystemTime;
+use tokio::sync::mpsc::Sender;
+
+/// Handler for all text based non-command events
+pub(super) async fn commandless_handler(
+    text: &TextMessageEventContent,
+    sender: &UserId,
+    room_id: &RoomId,
+    storage: &mut ListenerStorage,
+    config: &MatrixListenerConfig,
+    api_client: &reqwest::Client,
+    logger: &Logger,
+    send: &mut Sender<MatrixMessage>,
+) {
+    if sender == &config.mx_uname {
+        // do nothing if message is from self
+        trace!(logger, "Message is from self, doing nothing");
+    } else {
+        match check_format(&text.format, &logger) {
+            Ok(_) => {
+                let mut notice_response = MatrixNoticeResponse::default();
+                let mut text_response = MatrixFormattedTextResponse::default();
+                if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
+                    debug!(logger, "Entering commandless unit conversion path");
+                    unit_conversion(&text, &config, &mut notice_response, &logger);
+                }
+                if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
+                    debug!(logger, "Entering commandless github search path");
+                    github_search(&text, &config, &api_client, &mut notice_response, &logger).await;
+                }
+                if LINK_URL.is_match(&text.body)
+                    && !config.links.is_empty()
+                    && !config.linkers.is_empty()
+                {
+                    debug!(logger, "Entering commandless url linking path");
+                    link_url(&text, &config, &mut notice_response, &logger);
+                }
+                if GROUP_PING.is_match(&text.body) {
+                    debug!(logger, "Entering commandless group ping path");
+                    group_ping(&text, &sender, &config, &mut text_response, &logger);
+                }
+
+                let notice_response = notice_response;
+                let text_response = text_response;
+
+                if notice_response.is_some() {
+                    match send
+                        .send(MatrixMessage {
+                            room_id: room_id.clone(),
+                            message: MatrixMessageType::Notice(notice_response.to_string()),
+                        })
+                        .await
+                    {
+                        Ok(_) => (),
+                        Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                    };
+                }
+                if text_response.is_some() {
+                    let message = MatrixFormattedTextMessage {
+                        plain_text: text_response.to_string().clone(),
+                        formatted_text: text_response.format_text().clone(),
+                    };
+                    match send
+                        .send(MatrixMessage {
+                            room_id: room_id.clone(),
+                            message: MatrixMessageType::FormattedText(message),
+                        })
+                        .await
+                    {
+                        Ok(_) => (),
+                        Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                    };
+                }
+                if config.enable_corrections
+                    && text.relates_to.is_none()
+                    && storage.correction_time_cooldown(room_id)
+                    && !config.correction_exclusion.contains(room_id)
+                    && !notice_response.is_some()
+                    && !text_response.is_some()
+                {
+                    if let Some(v) = spellcheck(text, sender, config) {
+                        match send
+                            .send(MatrixMessage {
+                                room_id: room_id.clone(),
+                                message: MatrixMessageType::PlainText(v),
+                            })
+                            .await
+                        {
+                            Ok(_) => {
+                                storage
+                                    .last_correction_time
+                                    .insert(room_id.clone(), SystemTime::now());
+                            }
+                            Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                        };
+                    }
+                }
+            }
+            Err(e) => {
+                error!(logger, "{:?}", e);
+            }
+        }
+    }
+}

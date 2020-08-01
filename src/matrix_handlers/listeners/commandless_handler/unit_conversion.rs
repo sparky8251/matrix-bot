@@ -1,7 +1,7 @@
 //! Performs unit conversions and adds them to response data
 
-use crate::config::Config;
-use crate::helpers::{clean_text, convert_unit, BotResponseNotice};
+use crate::config::MatrixListenerConfig;
+use crate::helpers::{clean_text, convert_unit, MatrixNoticeResponse};
 use crate::regex::UNIT_CONVERSION;
 
 use ruma_client::events::room::message::TextMessageEventContent;
@@ -10,8 +10,8 @@ use slog::{debug, trace, Logger};
 /// Adds unit conversions to the supplied BotResponseNotice
 pub fn unit_conversion(
     text: &TextMessageEventContent,
-    config: &Config,
-    notice_response: &mut BotResponseNotice,
+    config: &MatrixListenerConfig,
+    notice_response: &mut MatrixNoticeResponse,
     logger: &Logger,
 ) {
     let mut conversions = Vec::new();
@@ -49,7 +49,7 @@ pub fn unit_conversion(
 /// Processes a unit conversion regex capture into a Vec
 fn process_capture(
     capture: &regex::Captures,
-    config: &Config,
+    config: &MatrixListenerConfig,
     conversions: &mut Vec<(String, String)>,
     logger: &Logger,
 ) {
@@ -66,7 +66,11 @@ fn process_capture(
 }
 
 /// Verifies if a capture will be excluded from conversion because of a space between the quantity and unit
-fn capture_not_excluded(capture: &regex::Captures, config: &Config, logger: &Logger) -> bool {
+fn capture_not_excluded(
+    capture: &regex::Captures,
+    config: &MatrixListenerConfig,
+    logger: &Logger,
+) -> bool {
     for exclusion in &config.unit_conversion_exclusion {
         trace!(logger, "Exclusion this loop: {:?}", exclusion);
 

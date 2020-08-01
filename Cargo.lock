@@ -772,7 +772,7 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 
 [[package]]
 name = "matrix-bot"
-version = "2.0.0-beta.4"
+version = "2.0.0-beta.5"
 dependencies = [
  "futures",
  "graphql_client",

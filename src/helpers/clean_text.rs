@@ -1,6 +1,6 @@
 //! Helper function used to strip supplied text of HTML tags and their contents that should not be picked up in later processing steps
 
-use crate::regex::{CODE_TAG, MX_REPLY, PRE_TAG, PARAGRAPH_TAG};
+use crate::regex::{CODE_TAG, MX_REPLY, PARAGRAPH_TAG, PRE_TAG};
 
 use slog::{trace, Logger};
 

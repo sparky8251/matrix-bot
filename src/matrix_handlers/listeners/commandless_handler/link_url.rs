@@ -1,7 +1,7 @@
 //! Performs lookup of URLs in message text and builds proper response
 
-use crate::config::Config;
-use crate::helpers::{clean_text, BotResponseNotice};
+use crate::config::MatrixListenerConfig;
+use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::regex::LINK_URL;
 
 use ruma_client::events::room::message::TextMessageEventContent;
@@ -11,8 +11,8 @@ use url::Url;
 /// Finds and links URLs requested and builds response text
 pub fn link_url(
     text: &TextMessageEventContent,
-    config: &Config,
-    notice_response: &mut BotResponseNotice,
+    config: &MatrixListenerConfig,
+    notice_response: &mut MatrixNoticeResponse,
     logger: &Logger,
 ) {
     let mut links: Vec<String> = Vec::new();

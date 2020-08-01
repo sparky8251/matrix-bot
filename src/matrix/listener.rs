@@ -1,86 +1,51 @@
 //! Structs and functions that represent functional bots and allow for easy loading
 //! plus main loop initialization.
 
-use crate::config::{Config, Storage};
-use crate::handlers::{handle_invite_event, handle_text_event};
-
-use std::process;
-use std::time::Duration;
-
+use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
+use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
+use crate::messages::MatrixMessage;
 use ruma_client::{
     api::r0::sync::sync_events::{self, SetPresence},
     events::{
         collections::all::RoomEvent, room::message::MessageEventContent,
         stripped::AnyStrippedStateEvent,
     },
-    Client,
+    HttpsClient,
 };
-use slog::{debug, error, info, trace, Logger};
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
-use sloggers::types::Severity;
-use sloggers::Build;
+use slog::{debug, error, trace, Logger};
+use std::time::Duration;
+use tokio::sync::mpsc::Sender;
 
 /// Struct representing all required data for a functioning bot instance.
-pub struct Bot {
+pub struct MatrixListener {
     /// Storage data.
-    pub storage: Storage,
+    pub storage: ListenerStorage,
     /// Configuration data.
-    pub config: Config,
+    pub config: MatrixListenerConfig,
     /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
     pub logger: Logger,
+    send: Sender<MatrixMessage>,
 }
 
-impl Bot {
+impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new() -> Self {
-        let mut logging_builder = TerminalLoggerBuilder::new();
-        logging_builder.level(Severity::Trace);
-        logging_builder.destination(Destination::Stderr);
-        let logger = logging_builder.build().unwrap();
-        let storage = Storage::load_storage(&logger);
-        let config = Config::load_bot_config(&logger);
+    pub fn new(config: &Config, logger: &Logger, send: Sender<MatrixMessage>) -> Self {
+        let storage = ListenerStorage::load_storage(&logger);
+        let config = MatrixListenerConfig::new(&config);
         let api_client = reqwest::Client::new();
         Self {
             storage,
             config,
             api_client,
-            logger,
+            logger: logger.clone(),
+            send,
         }
     }
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self) {
-        let client = Client::https(self.config.mx_url.clone(), self.storage.session.clone());
-        self.storage.session = match client
-            .log_in(
-                self.config.mx_uname.localpart().to_string(),
-                self.config.mx_pass.clone(),
-                None,
-                None,
-            )
-            .await
-        {
-            Ok(v) => Some(v),
-            Err(e) => {
-                error!(
-                    self.logger,
-                    "Unable to login as {} on {} due to error {:?}",
-                    self.config.mx_uname.localpart(),
-                    self.config.mx_url,
-                    e
-                );
-                process::exit(8)
-            }
-        };
-        trace!(self.logger, "Session retrived, saving storage data...");
-        self.storage.save_storage(&self.logger);
-        info!(
-            self.logger,
-            "Successfully logged in as {}", self.config.mx_uname
-        );
-
+    pub async fn start(&mut self, client: HttpsClient) {
         loop {
             let response = match client
                 .request(sync_events::Request {
@@ -112,11 +77,11 @@ impl Bot {
                                                 &t,
                                                 &m.sender,
                                                 room_id,
-                                                &client,
                                                 &mut self.storage,
                                                 &self.config,
                                                 &self.api_client,
                                                 &self.logger,
+                                                &mut self.send,
                                             )
                                             .await;
                                         }
@@ -142,9 +107,9 @@ impl Bot {
                                         handle_invite_event(
                                             &s.sender,
                                             &room_id,
-                                            &client,
                                             &self.config,
                                             &self.logger,
+                                            &mut self.send,
                                         )
                                         .await;
                                         trace!(self.logger, "Handled invite event")

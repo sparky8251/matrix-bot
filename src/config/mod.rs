@@ -28,7 +28,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Configuration struct used at runtime. Loaded from RawConfig and its constituent parts.
 ///
 /// Does not have Option<T> fields for ease of use. If its blank it will be a default value or empty.
-pub struct Config {
+pub struct MatrixListenerConfig {
     /// Matrix bot account homeserver URL.
     pub mx_url: Url,
     /// Matrix bot account username.
@@ -64,6 +64,48 @@ pub struct Config {
     pub group_pings: HashMap<String, HashSet<UserId>>,
     /// Hashset containing list of users that can initiate group pings
     pub group_ping_users: HashSet<UserId>,
+}
+
+#[derive(Debug)]
+/// Configuration struct used at runtime. Loaded from RawConfig and its constituent parts.
+///
+/// Does not have Option<T> fields for ease of use. If its blank it will be a default value or empty.
+pub struct Config {
+    /// Matrix bot account homeserver URL.
+    pub mx_url: Url,
+    /// Matrix bot account username.
+    pub mx_uname: UserId,
+    /// Matrix bot account password.
+    pub mx_pass: String,
+    /// Github access token as string.
+    gh_access_token: String,
+    /// Bool used to determine if unit conversions will be supported from plain text messages.
+    enable_unit_conversions: bool,
+    /// Bool used to determine if the corrections feature is enabled or not.
+    enable_corrections: bool,
+    /// List of units to exclude from conversions if there is a space between the quantity and unit.
+    unit_conversion_exclusion: HashSet<String>,
+    /// List of all incorrect spellings to match against
+    incorrect_spellings: Vec<SpellCheckKind>,
+    /// Text used in spellcheck correction feature.
+    correction_text: String,
+    /// List of all rooms to be excluded from spellcheck correction feature.
+    correction_exclusion: HashSet<RoomId>,
+    /// List of all words that can be used to link URLs.
+    linkers: HashSet<String>,
+    /// List of matrix users that can invite the bot to rooms.
+    admins: HashSet<UserId>,
+    help_rooms: HashSet<RoomId>,
+    /// Hashmap containing short name for a repo as a key and the org/repo as a value.
+    repos: HashMap<String, String>,
+    /// Hashmap containing searched key and matching URL for linking.
+    links: HashMap<String, Url>,
+    /// UserAgent used by reqwest
+    user_agent: HeaderValue,
+    /// Hashmap containing group ping name as key and list of user IDs as the value.
+    group_pings: HashMap<String, HashSet<UserId>>,
+    /// Hashset containing list of users that can initiate group pings
+    group_ping_users: HashSet<UserId>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,16 +170,25 @@ struct RawGithubAuthentication {
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
-/// Struct that contains all persistent data the bot modifies during runtime
-pub struct Storage {
-    /// Last sync token.
-    pub last_sync: Option<String>,
-    /// Transaction id for last sent message.
-    pub last_txn_id: u64,
+pub struct SessionStorage {
     /// Matrix session data.
     pub session: Option<Session>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+/// Struct that contains persistent matrix listener data the bot modifies during runtime
+pub struct ListenerStorage {
+    /// Last sync token.
+    pub last_sync: Option<String>,
     /// Hashmap that contains a room id key and a system time of the last correction.
     pub last_correction_time: HashMap<RoomId, SystemTime>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+/// Struct that contains persistent matrix responder data the bot modifies during runtime
+pub struct ResponderStorage {
+    /// Transaction id for last sent message.
+    pub last_txn_id: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -162,6 +213,31 @@ pub struct SensitiveSpelling {
     spelling: String,
 }
 
+impl MatrixListenerConfig {
+    pub fn new(config: &Config) -> Self {
+        Self {
+            mx_url: config.mx_url.clone(),
+            mx_uname: config.mx_uname.clone(),
+            mx_pass: config.mx_pass.clone(),
+            gh_access_token: config.gh_access_token.clone(),
+            enable_unit_conversions: config.enable_unit_conversions,
+            enable_corrections: config.enable_corrections,
+            unit_conversion_exclusion: config.unit_conversion_exclusion.clone(),
+            incorrect_spellings: config.incorrect_spellings.clone(),
+            correction_text: config.correction_text.clone(),
+            correction_exclusion: config.correction_exclusion.clone(),
+            linkers: config.linkers.clone(),
+            admins: config.admins.clone(),
+            help_rooms: config.help_rooms.clone(),
+            repos: config.repos.clone(),
+            links: config.links.clone(),
+            user_agent: config.user_agent.clone(),
+            group_pings: config.group_pings.clone(),
+            group_ping_users: config.group_ping_users.clone(),
+        }
+    }
+}
+
 impl Config {
     /// Loads bot config from config.toml.
     ///
@@ -172,7 +248,7 @@ impl Config {
     ///
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
-    pub fn load_bot_config(logger: &Logger) -> Self {
+    pub fn load_config(logger: &Logger) -> Self {
         let path = match env::var("MATRIX_BOT_CONFIG_DIR") {
             Ok(v) => [&v, "config.toml"].iter().collect::<PathBuf>(),
             Err(_) => ["config.toml"].iter().collect::<PathBuf>(),
@@ -265,7 +341,7 @@ impl Config {
     }
 }
 
-impl Storage {
+impl SessionStorage {
     /// Load of bot storage. Used only for startup.
     ///
     /// If the file doesnt exist, creates and writes a default storage file.
@@ -273,8 +349,8 @@ impl Storage {
     /// If file exists, attempts load and will exit program if it fails.
     pub fn load_storage(logger: &Logger) -> Self {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["storage.ron"].iter().collect::<PathBuf>(),
+            Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
+            Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
         };
         let mut file = match File::open(path) {
             Ok(v) => v,
@@ -282,11 +358,11 @@ impl Storage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!(logger, "The next save is a default save");
-                    Self::save_storage(&ron, &logger);
+                    Self::save(&ron, &logger);
                     return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!(logger, "Permission denied when opening file storage.ron");
+                    error!(logger, "Permission denied when opening file session.ron");
                     process::exit(1);
                 }
                 _ => {
@@ -308,7 +384,99 @@ impl Storage {
             Err(e) => {
                 error!(
                     logger,
-                    "Unable to load storage.ron due to invalid ron: {}", e
+                    "Unable to load session.ron due to invalid ron: {}", e
+                );
+                process::exit(3)
+            }
+        };
+        ron
+    }
+    /// Saves all bot associated storage data.
+    ///
+    /// One of the few functions that can terminate the program if it doesnt go well.
+    pub fn save(&self, logger: &Logger) {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
+            Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
+        };
+        let ron = match ron::to_string(self) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    logger,
+                    "Unable to format session.ron as ron, this should never occur. Error is {}", e
+                );
+                process::exit(7)
+            }
+        };
+        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(logger, "Unable to open session.ron due to error {:?}", e);
+                process::exit(9)
+            }
+        };
+        match file.write_all(ron.as_bytes()) {
+            Ok(_) => {
+                trace!(logger, "Saved Session!");
+            }
+            Err(e) => {
+                error!(logger, "Unable to write session data: {}", e);
+                process::exit(10)
+            }
+        }
+    }
+}
+
+impl ListenerStorage {
+    /// Load of bot storage. Used only for startup.
+    ///
+    /// If the file doesnt exist, creates and writes a default storage file.
+    ///
+    /// If file exists, attempts load and will exit program if it fails.
+    pub fn load_storage(logger: &Logger) -> Self {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "matrix_listener.ron".to_string()]
+                .iter()
+                .collect::<PathBuf>(),
+            Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
+        };
+        let mut file = match File::open(path) {
+            Ok(v) => v,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    let ron = Self::default();
+                    trace!(logger, "The next save is a default save");
+                    Self::save_storage(&ron, &logger);
+                    return ron;
+                }
+                ErrorKind::PermissionDenied => {
+                    error!(
+                        logger,
+                        "Permission denied when opening file matrix_listener.ron"
+                    );
+                    process::exit(1);
+                }
+                _ => {
+                    error!(logger, "Unable to open file: {}", e);
+                    process::exit(1);
+                }
+            },
+        };
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_) => (), // If read is successful, do nothing
+            Err(e) => {
+                error!(logger, "Unable to read file contents: {}", e);
+                process::exit(2)
+            }
+        }
+        let ron: Self = match ron::from_str(&contents) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    logger,
+                    "Unable to load matrix_listener.ron due to invalid ron: {}", e
                 );
                 process::exit(3)
             }
@@ -321,15 +489,17 @@ impl Storage {
     /// One of the few functions that can terminate the program if it doesnt go well.
     pub fn save_storage(&self, logger: &Logger) {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "storage.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["storage.ron"].iter().collect::<PathBuf>(),
+            Ok(v) => [v, "matrix_listener.ron".to_string()]
+                .iter()
+                .collect::<PathBuf>(),
+            Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
         };
         let ron = match ron::to_string(self) {
             Ok(v) => v,
             Err(e) => {
                 error!(
                     logger,
-                    "Unable to format storage as ron, this should never occur. Error is {}", e
+                    "Unable to format matrix_listener.ron as ron, this should never occur. Error is {}", e
                 );
                 process::exit(7)
             }
@@ -337,7 +507,10 @@ impl Storage {
         let mut file = match OpenOptions::new().write(true).create(true).open(path) {
             Ok(v) => v,
             Err(e) => {
-                error!(logger, "Unable to open storage.ron due to error {:?}", e);
+                error!(
+                    logger,
+                    "Unable to open matrix_listener.ron due to error {:?}", e
+                );
                 process::exit(9)
             }
         };
@@ -346,7 +519,117 @@ impl Storage {
                 trace!(logger, "Saved Session!");
             }
             Err(e) => {
-                error!(logger, "Unable to write storage data: {}", e);
+                error!(logger, "Unable to write matrix_listener data: {}", e);
+                process::exit(10)
+            }
+        }
+    }
+    /// Checks that the correction time cooldown for a specific room has passed.
+    ///
+    /// Returns true if there has never been a correction done in the room before.
+    pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
+        match self.last_correction_time.get(room_id) {
+            Some(t) => match t.elapsed() {
+                Ok(d) => d >= Duration::new(300, 0),
+                Err(_) => false,
+            },
+            None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
+        }
+    }
+}
+
+impl ResponderStorage {
+    /// Load of bot storage. Used only for startup.
+    ///
+    /// If the file doesnt exist, creates and writes a default storage file.
+    ///
+    /// If file exists, attempts load and will exit program if it fails.
+    pub fn load_storage(logger: &Logger) -> Self {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "matrix_responder.ron".to_string()]
+                .iter()
+                .collect::<PathBuf>(),
+            Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
+        };
+        let mut file = match File::open(path) {
+            Ok(v) => v,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    let ron = Self::default();
+                    trace!(logger, "The next save is a default save");
+                    Self::save_storage(&ron, &logger);
+                    return ron;
+                }
+                ErrorKind::PermissionDenied => {
+                    error!(
+                        logger,
+                        "Permission denied when opening file matrix_responder.ron"
+                    );
+                    process::exit(1);
+                }
+                _ => {
+                    error!(logger, "Unable to open file: {}", e);
+                    process::exit(1);
+                }
+            },
+        };
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_) => (), // If read is successful, do nothing
+            Err(e) => {
+                error!(logger, "Unable to read file contents: {}", e);
+                process::exit(2)
+            }
+        }
+        let ron: Self = match ron::from_str(&contents) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    logger,
+                    "Unable to load matrix_responder.ron due to invalid ron: {}", e
+                );
+                process::exit(3)
+            }
+        };
+        ron
+    }
+
+    /// Saves all bot associated storage data.
+    ///
+    /// One of the few functions that can terminate the program if it doesnt go well.
+    pub fn save_storage(&self, logger: &Logger) {
+        let path = match env::var("MATRIX_BOT_DATA_DIR") {
+            Ok(v) => [v, "matrix_responder.ron".to_string()]
+                .iter()
+                .collect::<PathBuf>(),
+            Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
+        };
+        let ron = match ron::to_string(self) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    logger,
+                    "Unable to format matrix_responder.ron as ron, this should never occur. Error is {}", e
+                );
+                process::exit(7)
+            }
+        };
+        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(
+                    logger,
+                    "Unable to open matrix_responder.ron due to error {:?}", e
+                );
+                process::exit(9)
+            }
+        };
+        match file.write_all(ron.as_bytes()) {
+            Ok(_) => {
+                trace!(logger, "Saved Session!");
+            }
+            Err(e) => {
+                error!(logger, "Unable to write matrix_listener data: {}", e);
                 process::exit(10)
             }
         }
@@ -359,19 +642,6 @@ impl Storage {
     pub fn next_txn_id(&mut self) -> String {
         self.last_txn_id += 1;
         self.last_txn_id.to_string()
-    }
-
-    /// Checks that the correction time cooldown for a specific room has passed.
-    ///
-    /// Returns true if there has never been a correction done in the room before.
-    pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
-        match self.last_correction_time.get(room_id) {
-            Some(t) => match t.elapsed() {
-                Ok(d) => d >= Duration::new(300, 0),
-                Err(_) => false,
-            },
-            None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
-        }
     }
 }
 

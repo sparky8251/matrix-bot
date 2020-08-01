@@ -1,7 +1,7 @@
 //! Performs search of issues and pulls in message text and builds proper response
 
-use crate::config::Config;
-use crate::helpers::{clean_text, BotResponseNotice};
+use crate::config::MatrixListenerConfig;
+use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
@@ -15,9 +15,9 @@ use url::Url;
 /// Searches and links found issues or pulls requested and builds response text
 pub async fn github_search(
     text: &TextMessageEventContent,
-    config: &Config,
+    config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
-    notice_response: &mut BotResponseNotice,
+    notice_response: &mut MatrixNoticeResponse,
     logger: &Logger,
 ) {
     let mut repos_to_search = Vec::new();

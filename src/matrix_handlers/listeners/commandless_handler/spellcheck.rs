@@ -1,6 +1,6 @@
 //! Performs spellcheck and build an appropriate correction text
 
-use crate::config::{Config, SpellCheckKind};
+use crate::config::{MatrixListenerConfig, SpellCheckKind};
 
 use ruma_client::{events::room::message::TextMessageEventContent, identifiers::UserId};
 
@@ -8,7 +8,7 @@ use ruma_client::{events::room::message::TextMessageEventContent, identifiers::U
 pub fn spellcheck(
     text: &TextMessageEventContent,
     sender: &UserId,
-    config: &Config,
+    config: &MatrixListenerConfig,
 ) -> Option<String> {
     let mut result = String::new();
     for i in config.incorrect_spellings.iter() {
