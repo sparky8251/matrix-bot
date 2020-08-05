@@ -1,7 +1,7 @@
 //! Helper function used to verify the formatting of the recieved message is processable by later steps
 
-use slog::{error, Logger};
 use thiserror::Error;
+use tracing::error;
 
 #[derive(Error, Debug)]
 /// Type used to represent the error state
@@ -23,14 +23,11 @@ pub enum CheckFormatSuccess {
 }
 
 /// Checks supplied format and returns `Ok(_)` if it can be processed in later steps and `Err(e)` if it can't.
-pub fn check_format(
-    format: &Option<String>,
-    logger: &Logger,
-) -> Result<CheckFormatSuccess, CheckFormatError> {
+pub fn check_format(format: &Option<String>) -> Result<CheckFormatSuccess, CheckFormatError> {
     match format {
         Some(v) => {
             if v != "org.matrix.custom.html" {
-                error!(logger, "Message parsed properly, but format {} is unsupported so no conversion is taking place.", v);
+                error!("Message parsed properly, but format {} is unsupported so no conversion is taking place.", v);
                 Err(CheckFormatError::FormatNotSupported(v.to_string()))
             } else {
                 Ok(CheckFormatSuccess::FormatSupported(v.to_string()))

@@ -11,14 +11,13 @@ use ruma_client::{
     identifiers::{RoomId, UserId},
     HttpsClient,
 };
-use slog::{debug, error, info, Logger};
+use tracing::{debug, error, info};
 
 pub async fn send_notice(
     client: &HttpsClient,
     room_id: RoomId,
     storage: &mut ResponderStorage,
     message: String,
-    logger: &Logger,
 ) {
     match client
         .request(create_message_event::Request {
@@ -36,7 +35,7 @@ pub async fn send_notice(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!(logger, "{:?}", e),
+        Err(e) => error!("{:?}", e),
     }
 }
 pub async fn send_plain_text(
@@ -44,7 +43,6 @@ pub async fn send_plain_text(
     room_id: RoomId,
     storage: &mut ResponderStorage,
     message: String,
-    logger: &Logger,
 ) {
     match client
         .request(create_message_event::Request {
@@ -62,7 +60,7 @@ pub async fn send_plain_text(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!(logger, "Unable to send response due to error {:?}", e),
+        Err(e) => error!("Unable to send response due to error {:?}", e),
     }
 }
 
@@ -72,7 +70,6 @@ pub async fn send_formatted_text(
     storage: &mut ResponderStorage,
     message: String,
     formatted_message: Option<String>,
-    logger: &Logger,
 ) {
     match client
         .request(create_message_event::Request {
@@ -90,14 +87,14 @@ pub async fn send_formatted_text(
         .await
     {
         Ok(_) => (),
-        Err(e) => error!(logger, "Unable to send response due to error {:?}", e),
+        Err(e) => error!("Unable to send response due to error {:?}", e),
     }
 }
 
-pub async fn accept_invite(sender: UserId, room_id: RoomId, client: &HttpsClient, logger: &Logger) {
+pub async fn accept_invite(sender: UserId, room_id: RoomId, client: &HttpsClient) {
     info!(
-        logger,
-        "Authorized user {} invited me to room {}", &sender, &room_id
+        "Authorized user {} invited me to room {}",
+        &sender, &room_id
     );
     let response = client
         .request(join_room_by_id::Request {
@@ -106,24 +103,18 @@ pub async fn accept_invite(sender: UserId, room_id: RoomId, client: &HttpsClient
         })
         .await;
     match response {
-        Ok(_) => info!(logger, "Successfully joined room {}", &room_id),
-        Err(e) => debug!(
-            logger,
-            "Unable to join room {} because of error {:?}", &room_id, e
-        ),
+        Ok(_) => info!("Successfully joined room {}", &room_id),
+        Err(e) => debug!("Unable to join room {} because of error {:?}", &room_id, e),
     }
 }
 
 /// Will reject an invite and print the user that tried to logs
-pub async fn reject_invite(sender: UserId, room_id: RoomId, client: &HttpsClient, logger: &Logger) {
+pub async fn reject_invite(sender: UserId, room_id: RoomId, client: &HttpsClient) {
     let response = client
         .request(leave_room::Request { room_id: room_id })
         .await;
     match response {
-        Ok(_) => info!(logger, "Rejected invite from unathorized user {}", &sender),
-        Err(e) => debug!(
-            logger,
-            "Unable to reject invite this loop because of error {:?}", e
-        ),
+        Ok(_) => info!("Rejected invite from unathorized user {}", &sender),
+        Err(e) => debug!("Unable to reject invite this loop because of error {:?}", e),
     }
 }

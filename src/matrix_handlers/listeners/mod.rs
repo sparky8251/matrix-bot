@@ -16,8 +16,8 @@ use ruma_client::{
     events::room::message::TextMessageEventContent,
     identifiers::{RoomId, UserId},
 };
-use slog::{debug, error, trace, Logger};
 use tokio::sync::mpsc::Sender;
+use tracing::{debug, error, trace};
 
 /// Dispatches incoming text events to a number of different handlers depending on various conditions
 pub async fn handle_text_event(
@@ -27,23 +27,22 @@ pub async fn handle_text_event(
     storage: &mut ListenerStorage,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
-    logger: &Logger,
     mut send: &mut Sender<MatrixMessage>,
 ) {
     if !&text.body.starts_with('!') {
-        debug!(logger, "Entering no command path...");
+        debug!("Entering no command path...");
         commandless_handler(
-            text, sender, room_id, storage, config, api_client, &logger, &mut send,
+            text, sender, room_id, storage, config, api_client, &mut send,
         )
         .await
     } else if text.body.to_lowercase().starts_with("!convert ") {
-        debug!(logger, "Entering unit conversion path...");
-        unit_conversion_handler(text, room_id, &logger, &mut send).await
+        debug!("Entering unit conversion path...");
+        unit_conversion_handler(text, room_id, &mut send).await
     } else if text.body.to_lowercase().starts_with("!help") {
-        debug!(logger, "Entering help path...");
-        help_handler(text, room_id, config, &logger, &mut send).await
+        debug!("Entering help path...");
+        help_handler(text, room_id, config, &mut send).await
     } else {
-        debug!(logger, "Doing nothing...");
+        debug!("Doing nothing...");
     }
 }
 
@@ -52,10 +51,9 @@ pub async fn handle_invite_event(
     sender: &UserId,
     room_id: &RoomId,
     config: &MatrixListenerConfig,
-    logger: &Logger,
     send: &mut Sender<MatrixMessage>,
 ) {
-    trace!(logger, "Invited by {} to room {} ", &sender, &room_id);
+    trace!("Invited by {} to room {} ", &sender, &room_id);
     if config.admins.contains(&sender) {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Accept,
@@ -69,7 +67,7 @@ pub async fn handle_invite_event(
             .await
         {
             Ok(_) => (),
-            Err(_) => error!(logger, "Channel closed. Unable to send message."),
+            Err(_) => error!("Channel closed. Unable to send message."),
         };
     } else {
         let message = MatrixInviteMessage {
@@ -84,7 +82,7 @@ pub async fn handle_invite_event(
             .await
         {
             Ok(_) => (),
-            Err(_) => error!(logger, "Channel closed. Unable to send message."),
+            Err(_) => error!("Channel closed. Unable to send message."),
         };
     }
 }

@@ -1,9 +1,9 @@
 use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use ruma_client::{events::room::message::TextMessageEventContent, identifiers::RoomId};
-use slog::{debug, error, trace, Logger};
 use std::convert::From;
 use tokio::sync::mpsc::Sender;
+use tracing::{debug, error, trace};
 
 #[derive(Debug)]
 enum HelpType {
@@ -34,11 +34,10 @@ pub(super) async fn help_handler(
     text: &TextMessageEventContent,
     room_id: &RoomId,
     config: &MatrixListenerConfig,
-    logger: &Logger,
     send: &mut Sender<MatrixMessage>,
 ) {
     if config.help_rooms.is_empty() || config.help_rooms.contains(room_id) {
-        trace!(logger, "Room is allowed, building help message");
+        trace!("Room is allowed, building help message");
         let mut message = String::new();
         match text.body.split(' ').nth(1).map(HelpType::from) {
             Some(v) => match v {
@@ -51,7 +50,7 @@ pub(super) async fn help_handler(
                 HelpType::UnknownCommand => (),
             },
             None => {
-                trace!(logger, "Printing help message for program");
+                trace!("Printing help message for program");
                 message = generic_help_message().await;
             }
         };
@@ -64,15 +63,14 @@ pub(super) async fn help_handler(
                 .await
             {
                 Ok(_) => (),
-                Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                Err(_) => error!("Channel closed. Unable to send message."),
             };
         // send_help_message(&room_id, &client, &mut storage, message, &logger).await;
         } else {
-            debug!(logger, "Unknown command");
+            debug!("Unknown command");
         }
     } else {
         trace!(
-            logger,
             "Rooms are limited and room {} is not in the allowed list of help command rooms",
             room_id
         );

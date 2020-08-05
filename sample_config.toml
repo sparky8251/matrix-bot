@@ -70,6 +70,9 @@ link_matchers = [
     'docs',
 ]
 
+#Required, do not set to empty either
+webhook_token = "token"
+
 # User url, account, and password bot will log in with
 # Required
 [matrix_authentication]

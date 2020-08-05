@@ -16,7 +16,7 @@ use ruma_client::{
     Session,
 };
 use serde::{Deserialize, Serialize};
-use slog::{error, info, trace, Logger};
+use tracing::{error, info, trace};
 use url::Url;
 
 /// Constant representing the crate name.
@@ -254,7 +254,7 @@ impl Config {
     ///
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
-    pub fn load_config(logger: &Logger) -> Self {
+    pub fn load_config() -> Self {
         let path = match env::var("MATRIX_BOT_CONFIG_DIR") {
             Ok(v) => [&v, "config.toml"].iter().collect::<PathBuf>(),
             Err(_) => ["config.toml"].iter().collect::<PathBuf>(),
@@ -264,18 +264,15 @@ impl Config {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
-                    error!(logger, "Unable to find file config.toml");
+                    error!("Unable to find file config.toml");
                     process::exit(1);
                 }
                 ErrorKind::PermissionDenied => {
-                    error!(logger, "Permission denied when opening file config.toml");
+                    error!("Permission denied when opening file config.toml");
                     process::exit(1);
                 }
                 _ => {
-                    error!(
-                        logger,
-                        "Unable to open file due to unexpected error {:?}", e
-                    );
+                    error!("Unable to open file due to unexpected error {:?}", e);
                     process::exit(1);
                 }
             },
@@ -284,26 +281,26 @@ impl Config {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!(logger, "Unable to read file contents due to error {:?}", e);
+                error!("Unable to read file contents due to error {:?}", e);
                 process::exit(2)
             }
         }
         let toml: RawConfig = match toml::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!(logger, "Invalid toml. Error is {:?}", e);
+                error!("Invalid toml. Error is {:?}", e);
                 process::exit(3)
             }
         };
 
         // Set variables and exit/error if set improperly
-        let (repos, gh_access_token) = load_github_settings(&toml, &logger);
-        let (linkers, links) = load_linker_settings(&toml, &logger);
-        let unit_conversion_exclusion = load_unit_conversion_settings(&toml, &logger);
+        let (repos, gh_access_token) = load_github_settings(&toml);
+        let (linkers, links) = load_linker_settings(&toml);
+        let unit_conversion_exclusion = load_unit_conversion_settings(&toml);
         let (incorrect_spellings, correction_text, correction_exclusion) =
-            load_spell_correct_settings(&toml, &logger);
-        let admins = load_admin_settings(&toml, &logger);
-        let help_rooms = load_help_settings(&toml, &logger);
+            load_spell_correct_settings(&toml);
+        let admins = load_admin_settings(&toml);
+        let help_rooms = load_help_settings(&toml);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
             toml.matrix_authentication.url.clone(),
             toml.matrix_authentication.username.clone(),
@@ -321,7 +318,7 @@ impl Config {
                 ),
             };
 
-        let (group_pings, group_ping_users) = load_group_ping_settings(&toml, &logger);
+        let (group_pings, group_ping_users) = load_group_ping_settings(&toml);
         let webhook_token = toml.general.webhook_token;
 
         // Return value
@@ -355,7 +352,7 @@ impl SessionStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage(logger: &Logger) -> Self {
+    pub fn load_storage() -> Self {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
             Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
@@ -365,16 +362,16 @@ impl SessionStorage {
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
-                    trace!(logger, "The next save is a default save");
-                    Self::save(&ron, &logger);
+                    trace!("The next save is a default save");
+                    Self::save(&ron);
                     return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!(logger, "Permission denied when opening file session.ron");
+                    error!("Permission denied when opening file session.ron");
                     process::exit(1);
                 }
                 _ => {
-                    error!(logger, "Unable to open file: {}", e);
+                    error!("Unable to open file: {}", e);
                     process::exit(1);
                 }
             },
@@ -383,17 +380,14 @@ impl SessionStorage {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!(logger, "Unable to read file contents: {}", e);
+                error!("Unable to read file contents: {}", e);
                 process::exit(2)
             }
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
             Err(e) => {
-                error!(
-                    logger,
-                    "Unable to load session.ron due to invalid ron: {}", e
-                );
+                error!("Unable to load session.ron due to invalid ron: {}", e);
                 process::exit(3)
             }
         };
@@ -402,7 +396,7 @@ impl SessionStorage {
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save(&self, logger: &Logger) {
+    pub fn save(&self) {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
             Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
@@ -411,8 +405,8 @@ impl SessionStorage {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    logger,
-                    "Unable to format session.ron as ron, this should never occur. Error is {}", e
+                    "Unable to format session.ron as ron, this should never occur. Error is {}",
+                    e
                 );
                 process::exit(7)
             }
@@ -420,16 +414,16 @@ impl SessionStorage {
         let mut file = match OpenOptions::new().write(true).create(true).open(path) {
             Ok(v) => v,
             Err(e) => {
-                error!(logger, "Unable to open session.ron due to error {:?}", e);
+                error!("Unable to open session.ron due to error {:?}", e);
                 process::exit(9)
             }
         };
         match file.write_all(ron.as_bytes()) {
             Ok(_) => {
-                trace!(logger, "Saved Session!");
+                trace!("Saved Session!");
             }
             Err(e) => {
-                error!(logger, "Unable to write session data: {}", e);
+                error!("Unable to write session data: {}", e);
                 process::exit(10)
             }
         }
@@ -442,7 +436,7 @@ impl ListenerStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage(logger: &Logger) -> Self {
+    pub fn load_storage() -> Self {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_listener.ron".to_string()]
                 .iter()
@@ -454,19 +448,16 @@ impl ListenerStorage {
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
-                    trace!(logger, "The next save is a default save");
-                    Self::save_storage(&ron, &logger);
+                    trace!("The next save is a default save");
+                    Self::save_storage(&ron);
                     return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!(
-                        logger,
-                        "Permission denied when opening file matrix_listener.ron"
-                    );
+                    error!("Permission denied when opening file matrix_listener.ron");
                     process::exit(1);
                 }
                 _ => {
-                    error!(logger, "Unable to open file: {}", e);
+                    error!("Unable to open file: {}", e);
                     process::exit(1);
                 }
             },
@@ -475,7 +466,7 @@ impl ListenerStorage {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!(logger, "Unable to read file contents: {}", e);
+                error!("Unable to read file contents: {}", e);
                 process::exit(2)
             }
         }
@@ -483,8 +474,8 @@ impl ListenerStorage {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    logger,
-                    "Unable to load matrix_listener.ron due to invalid ron: {}", e
+                    "Unable to load matrix_listener.ron due to invalid ron: {}",
+                    e
                 );
                 process::exit(3)
             }
@@ -495,7 +486,7 @@ impl ListenerStorage {
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self, logger: &Logger) {
+    pub fn save_storage(&self) {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_listener.ron".to_string()]
                 .iter()
@@ -506,7 +497,6 @@ impl ListenerStorage {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    logger,
                     "Unable to format matrix_listener.ron as ron, this should never occur. Error is {}", e
                 );
                 process::exit(7)
@@ -515,19 +505,16 @@ impl ListenerStorage {
         let mut file = match OpenOptions::new().write(true).create(true).open(path) {
             Ok(v) => v,
             Err(e) => {
-                error!(
-                    logger,
-                    "Unable to open matrix_listener.ron due to error {:?}", e
-                );
+                error!("Unable to open matrix_listener.ron due to error {:?}", e);
                 process::exit(9)
             }
         };
         match file.write_all(ron.as_bytes()) {
             Ok(_) => {
-                trace!(logger, "Saved Session!");
+                trace!("Saved Session!");
             }
             Err(e) => {
-                error!(logger, "Unable to write matrix_listener data: {}", e);
+                error!("Unable to write matrix_listener data: {}", e);
                 process::exit(10)
             }
         }
@@ -552,7 +539,7 @@ impl ResponderStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage(logger: &Logger) -> Self {
+    pub fn load_storage() -> Self {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_responder.ron".to_string()]
                 .iter()
@@ -564,19 +551,16 @@ impl ResponderStorage {
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
-                    trace!(logger, "The next save is a default save");
-                    Self::save_storage(&ron, &logger);
+                    trace!("The next save is a default save");
+                    Self::save_storage(&ron);
                     return ron;
                 }
                 ErrorKind::PermissionDenied => {
-                    error!(
-                        logger,
-                        "Permission denied when opening file matrix_responder.ron"
-                    );
+                    error!("Permission denied when opening file matrix_responder.ron");
                     process::exit(1);
                 }
                 _ => {
-                    error!(logger, "Unable to open file: {}", e);
+                    error!("Unable to open file: {}", e);
                     process::exit(1);
                 }
             },
@@ -585,7 +569,7 @@ impl ResponderStorage {
         match file.read_to_string(&mut contents) {
             Ok(_) => (), // If read is successful, do nothing
             Err(e) => {
-                error!(logger, "Unable to read file contents: {}", e);
+                error!("Unable to read file contents: {}", e);
                 process::exit(2)
             }
         }
@@ -593,8 +577,8 @@ impl ResponderStorage {
             Ok(v) => v,
             Err(e) => {
                 error!(
-                    logger,
-                    "Unable to load matrix_responder.ron due to invalid ron: {}", e
+                    "Unable to load matrix_responder.ron due to invalid ron: {}",
+                    e
                 );
                 process::exit(3)
             }
@@ -605,7 +589,7 @@ impl ResponderStorage {
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self, logger: &Logger) {
+    pub fn save_storage(&self) {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_responder.ron".to_string()]
                 .iter()
@@ -615,29 +599,23 @@ impl ResponderStorage {
         let ron = match ron::to_string(self) {
             Ok(v) => v,
             Err(e) => {
-                error!(
-                    logger,
-                    "Unable to format matrix_responder.ron as ron, this should never occur. Error is {}", e
-                );
+                error!("Unable to format matrix_responder.ron as ron, this should never occur. Error is {}", e);
                 process::exit(7)
             }
         };
         let mut file = match OpenOptions::new().write(true).create(true).open(path) {
             Ok(v) => v,
             Err(e) => {
-                error!(
-                    logger,
-                    "Unable to open matrix_responder.ron due to error {:?}", e
-                );
+                error!("Unable to open matrix_responder.ron due to error {:?}", e);
                 process::exit(9)
             }
         };
         match file.write_all(ron.as_bytes()) {
             Ok(_) => {
-                trace!(logger, "Saved Session!");
+                trace!("Saved Session!");
             }
             Err(e) => {
-                error!(logger, "Unable to write matrix_listener data: {}", e);
+                error!("Unable to write matrix_listener data: {}", e);
                 process::exit(10)
             }
         }
@@ -690,49 +668,46 @@ impl Display for SensitiveSpelling {
     }
 }
 
-fn load_github_settings(toml: &RawConfig, logger: &Logger) -> (HashMap<String, String>, String) {
+fn load_github_settings(toml: &RawConfig) -> (HashMap<String, String>, String) {
     match &toml.searchable_repos {
         Some(r) => match &toml.github_authentication {
             Some(g) => (r.clone(), g.access_token.clone()),
             None => {
-                error!(logger, "Searchable repos configured, but no github access token found. Unable to continue...");
+                error!("Searchable repos configured, but no github access token found. Unable to continue...");
                 process::exit(4)
             }
         },
         None => {
-            info!(logger, "No searchable repos found. Disabling feature...");
+            info!("No searchable repos found. Disabling feature...");
             (HashMap::new(), String::new())
         }
     }
 }
 
-fn load_linker_settings(
-    toml: &RawConfig,
-    logger: &Logger,
-) -> (HashSet<String>, HashMap<String, Url>) {
+fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Url>) {
     match &toml.linkable_urls {
         Some(d) => match &toml.general.link_matchers {
             Some(m) => {
                 if !d.is_empty() {
                     (m.clone(), d.clone())
                 } else {
-                    error!(logger, "Link matchers exists but none are set. Exiting...");
+                    error!("Link matchers exists but none are set. Exiting...");
                     process::exit(1)
                 }
             }
             None => {
-                info!(logger, "No link matchers found. Disabling feature...");
+                info!("No link matchers found. Disabling feature...");
                 (HashSet::new(), HashMap::new())
             }
         },
         None => {
-            info!(logger, "No linkable urls found. Disabling feature...");
+            info!("No linkable urls found. Disabling feature...");
             (HashSet::new(), HashMap::new())
         }
     }
 }
 
-fn load_unit_conversion_settings(toml: &RawConfig, logger: &Logger) -> HashSet<String> {
+fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
     match &toml.general.unit_conversion_exclusion {
         Some(v) => {
             let mut hash_set = HashSet::new();
@@ -742,19 +717,13 @@ fn load_unit_conversion_settings(toml: &RawConfig, logger: &Logger) -> HashSet<S
             hash_set
         }
         None => {
-            info!(
-                logger,
-                "No unit conversion exlclusions found. Disabling feature..."
-            );
+            info!("No unit conversion exlclusions found. Disabling feature...");
             HashSet::new()
         }
     }
 }
 
-fn load_spell_correct_settings(
-    toml: &RawConfig,
-    logger: &Logger,
-) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
+fn load_spell_correct_settings(toml: &RawConfig) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -765,7 +734,6 @@ fn load_spell_correct_settings(
                                 e.clone()
                             } else {
                                 info!(
-                                    logger,
                                     "Empty list found. No rooms will be excluded from corrections"
                                 );
                                 HashSet::new()
@@ -799,52 +767,48 @@ fn load_spell_correct_settings(
                                     spelling: spelling.clone(),
                                 }));
                             }
-                            info!(
-                                logger,
-                                "No list found. No rooms will be excluded from corrections"
-                            );
+                            info!("No list found. No rooms will be excluded from corrections");
                             (spk, c.to_string(), HashSet::new())
                         }
                     },
                     None => {
                         error!(
-                            logger,
                             "No correction text provided even though corrections have been enabled"
                         );
                         process::exit(5)
                     }
                 },
                 None => {
-                    error!(logger, "No case sensitive corrections provided even though corrections have been enabled");
+                    error!("No case sensitive corrections provided even though corrections have been enabled");
                     process::exit(5)
                 }
             },
             None => {
-                error!(logger, "No case insensitive corrections provided even though corrections have been enabled");
+                error!("No case insensitive corrections provided even though corrections have been enabled");
                 process::exit(5)
             }
         }
     } else {
-        info!(logger, "Disabling corrections feature");
+        info!("Disabling corrections feature");
         (Vec::new(), String::new(), HashSet::new())
     }
 }
 
-fn load_admin_settings(toml: &RawConfig, logger: &Logger) -> HashSet<UserId> {
+fn load_admin_settings(toml: &RawConfig) -> HashSet<UserId> {
     match &toml.general.authorized_users {
         Some(v) => v.clone(),
         None => {
-            error!(logger, "You must provide at least 1 authorized user");
+            error!("You must provide at least 1 authorized user");
             process::exit(6)
         }
     }
 }
 
-fn load_help_settings(toml: &RawConfig, logger: &Logger) -> HashSet<RoomId> {
+fn load_help_settings(toml: &RawConfig) -> HashSet<RoomId> {
     match &toml.general.help_rooms {
         Some(v) => v.clone(),
         None => {
-            info!(logger, "No help rooms specified. Allowing all rooms.");
+            info!("No help rooms specified. Allowing all rooms.");
             HashSet::new()
         }
     }
@@ -852,7 +816,6 @@ fn load_help_settings(toml: &RawConfig, logger: &Logger) -> HashSet<RoomId> {
 
 fn load_group_ping_settings(
     toml: &RawConfig,
-    logger: &Logger,
 ) -> (HashMap<String, HashSet<UserId>>, HashSet<UserId>) {
     match &toml.group_pings {
         Some(v) => {
@@ -889,8 +852,8 @@ fn load_group_ping_settings(
                             }
                             // If list of users are not found, print error to console and move on
                             None => error!(
-                                logger,
-                                "Group alias %{} has no corresponding group. Ignoring...", alias
+                                "Group alias %{} has no corresponding group. Ignoring...",
+                                alias
                             ),
                         }
                     } else {
@@ -908,7 +871,7 @@ fn load_group_ping_settings(
             (expanded_groups, group_ping_users)
         }
         None => {
-            info!(logger, "No group pings defined. Disabling feature...");
+            info!("No group pings defined. Disabling feature...");
             (HashMap::new(), HashSet::new())
         }
     }

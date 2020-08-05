@@ -59,11 +59,14 @@
 //!
 //! I hope you enjoy your experience and please report and issues or feature requests you might have
 
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+#![warn(clippy::missing_docs_in_private_items)]
+
+mod bot;
 mod config;
 mod helpers;
-#[forbid(unsafe_code)]
-#[warn(missing_docs)]
-#[warn(clippy::missing_docs_in_private_items)]
+mod logging;
 mod matrix;
 mod matrix_handlers;
 mod messages;
@@ -75,82 +78,9 @@ mod webhook_handlers;
 #[macro_use]
 extern crate rocket;
 
-use config::{Config, SessionStorage};
-use matrix::listener::MatrixListener;
-use matrix::responder::MatrixResponder;
-use ruma_client::HttpsClient;
-use slog::{info, trace};
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
-use sloggers::types::Severity;
-use sloggers::Build;
-use tokio::sync::mpsc;
-use webhook::listener::WebhookListener;
-
 #[tokio::main]
 /// Simple main function that initializes the bot and will run until interrupted. Saves bot config on exiting.
 async fn main() {
-    // General purpose initialization
-    let mut logger = TerminalLoggerBuilder::new();
-    logger.level(Severity::Trace);
-    logger.destination(Destination::Stderr);
-    let logger = logger.build().unwrap();
-    let config = Config::load_config(&logger);
-
-    // Matrix initalization and login
-    let mut session_storage = SessionStorage::load_storage(&logger);
-    let matrix_listener_client = HttpsClient::https(config.mx_url.clone(), session_storage.session);
-    let session = &matrix_listener_client
-        .log_in(
-            config.mx_uname.localpart().to_string(),
-            config.mx_pass.clone(),
-            None,
-            None,
-        )
-        .await
-        .unwrap();
-
-    // Save returned session
-    trace!(&logger, "Session retrived, saving session data...");
-    session_storage.session = Some(session.clone());
-    session_storage.save(&logger);
-    info!(&logger, "Successfully logged in as {}", config.mx_uname);
-
-    // Clone required clients/servers and channels
-    let matrix_responder_client = matrix_listener_client.clone();
-    let (matrix_tx, matrix_rx) = mpsc::channel(8);
-    let webhook_tx = matrix_tx.clone();
-
-    // Create thread structures
-    let mut matrix_listener = MatrixListener::new(&config, &logger, matrix_tx);
-    let mut matrix_responder = MatrixResponder::new(&logger, matrix_rx);
-    let webhook_listener = WebhookListener::new(&config, webhook_tx);
-
-    // Spawn threads from thread structures, save their cached data when they exit
-    let matrix_listener_task = tokio::spawn(async move {
-        matrix_listener.start(matrix_listener_client).await;
-        matrix_listener
-            .storage
-            .save_storage(&matrix_listener.logger);
-    });
-    let matrix_responder_task = tokio::spawn(async move {
-        matrix_responder.start(matrix_responder_client).await;
-        matrix_responder
-            .storage
-            .save_storage(&matrix_responder.logger);
-    });
-
-    let webhook_listener_task = tokio::spawn(async move {
-        webhook_listener.start().await;
-    });
-
-    // Join threads to main thread
-    matrix_listener_task
-        .await
-        .expect("The matrix listener task has panicked!");
-    matrix_responder_task
-        .await
-        .expect("The matrix responder task has panicked!");
-    webhook_listener_task
-        .await
-        .expect("The webhook listener task has panicked!");
+    logging::init();
+    bot::init().await
 }

@@ -12,9 +12,9 @@ use ruma_client::{
     },
     HttpsClient,
 };
-use slog::{debug, error, trace, Logger};
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
+use tracing::{debug, error, trace};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixListener {
@@ -24,21 +24,19 @@ pub struct MatrixListener {
     pub config: MatrixListenerConfig,
     /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
-    pub logger: Logger,
     send: Sender<MatrixMessage>,
 }
 
 impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(config: &Config, logger: &Logger, send: Sender<MatrixMessage>) -> Self {
-        let storage = ListenerStorage::load_storage(&logger);
+    pub fn new(config: &Config, send: Sender<MatrixMessage>) -> Self {
+        let storage = ListenerStorage::load_storage();
         let config = MatrixListenerConfig::new(&config);
         let api_client = reqwest::Client::new();
         Self {
             storage,
             config,
             api_client,
-            logger: logger.clone(),
             send,
         }
     }
@@ -59,7 +57,7 @@ impl MatrixListener {
             {
                 Ok(v) => Some(v),
                 Err(e) => {
-                    debug!(self.logger, "Line 73: {:?}", e);
+                    debug!("Line 73: {:?}", e);
                     None
                 }
             };
@@ -80,7 +78,6 @@ impl MatrixListener {
                                                 &mut self.storage,
                                                 &self.config,
                                                 &self.api_client,
-                                                &self.logger,
                                                 &mut self.send,
                                             )
                                             .await;
@@ -88,46 +85,42 @@ impl MatrixListener {
                                     }
                                 }
                                 Err(e) => {
-                                    debug!(self.logger, "{:?}", e);
-                                    trace!(self.logger, "Content: {:?}", raw_event.json())
+                                    debug!("{:?}", e);
+                                    trace!("Content: {:?}", raw_event.json())
                                 }
                             }
                             self.storage.last_sync = Some(v.next_batch.clone());
-                            self.storage.save_storage(&self.logger);
+                            self.storage.save_storage();
                         }
                     }
                     for (room_id, invited_room) in &v.rooms.invite {
-                        trace!(self.logger, "Invited room data: {:?}", invited_room);
+                        trace!("Invited room data: {:?}", invited_room);
                         for raw_event in &invited_room.invite_state.events {
                             let event = raw_event.deserialize();
                             match event {
                                 Ok(v) => match v {
                                     AnyStrippedStateEvent::RoomMember(s) => {
-                                        trace!(self.logger, "Invited by {}", s.sender);
+                                        trace!("Invited by {}", s.sender);
                                         handle_invite_event(
                                             &s.sender,
                                             &room_id,
                                             &self.config,
-                                            &self.logger,
                                             &mut self.send,
                                         )
                                         .await;
-                                        trace!(self.logger, "Handled invite event")
+                                        trace!("Handled invite event")
                                     }
-                                    _ => error!(self.logger, "No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
+                                    _ => error!("No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
                                 },
                                 Err(e) => {
-                                    debug!(self.logger, "{:?}", e);
-                                    trace!(self.logger, "Content: {:?}", raw_event.json())
+                                    debug!("{:?}", e);
+                                    trace!("Content: {:?}", raw_event.json())
                                 }
                             }
                         }
                     }
                 }
-                None => debug!(
-                    self.logger,
-                    "Response deserialization failed. Doing nothing this loop."
-                ),
+                None => debug!("Response deserialization failed. Doing nothing this loop."),
             }
         }
     }

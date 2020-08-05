@@ -20,9 +20,9 @@ use ruma_client::{
     events::room::message::TextMessageEventContent,
     identifiers::{RoomId, UserId},
 };
-use slog::{debug, error, trace, Logger};
 use std::time::SystemTime;
 use tokio::sync::mpsc::Sender;
+use tracing::{debug, error, trace};
 
 /// Handler for all text based non-command events
 pub(super) async fn commandless_handler(
@@ -32,35 +32,34 @@ pub(super) async fn commandless_handler(
     storage: &mut ListenerStorage,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
-    logger: &Logger,
     send: &mut Sender<MatrixMessage>,
 ) {
     if sender == &config.mx_uname {
         // do nothing if message is from self
-        trace!(logger, "Message is from self, doing nothing");
+        trace!("Message is from self, doing nothing");
     } else {
-        match check_format(&text.format, &logger) {
+        match check_format(&text.format) {
             Ok(_) => {
                 let mut notice_response = MatrixNoticeResponse::default();
                 let mut text_response = MatrixFormattedTextResponse::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
-                    debug!(logger, "Entering commandless unit conversion path");
-                    unit_conversion(&text, &config, &mut notice_response, &logger);
+                    debug!("Entering commandless unit conversion path");
+                    unit_conversion(&text, &config, &mut notice_response);
                 }
                 if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
-                    debug!(logger, "Entering commandless github search path");
-                    github_search(&text, &config, &api_client, &mut notice_response, &logger).await;
+                    debug!("Entering commandless github search path");
+                    github_search(&text, &config, &api_client, &mut notice_response).await;
                 }
                 if LINK_URL.is_match(&text.body)
                     && !config.links.is_empty()
                     && !config.linkers.is_empty()
                 {
-                    debug!(logger, "Entering commandless url linking path");
-                    link_url(&text, &config, &mut notice_response, &logger);
+                    debug!("Entering commandless url linking path");
+                    link_url(&text, &config, &mut notice_response);
                 }
                 if GROUP_PING.is_match(&text.body) {
-                    debug!(logger, "Entering commandless group ping path");
-                    group_ping(&text, &sender, &config, &mut text_response, &logger);
+                    debug!("Entering commandless group ping path");
+                    group_ping(&text, &sender, &config, &mut text_response);
                 }
 
                 let notice_response = notice_response;
@@ -75,7 +74,7 @@ pub(super) async fn commandless_handler(
                         .await
                     {
                         Ok(_) => (),
-                        Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                        Err(_) => error!("Channel closed. Unable to send message."),
                     };
                 }
                 if text_response.is_some() {
@@ -91,7 +90,7 @@ pub(super) async fn commandless_handler(
                         .await
                     {
                         Ok(_) => (),
-                        Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                        Err(_) => error!("Channel closed. Unable to send message."),
                     };
                 }
                 if config.enable_corrections
@@ -114,13 +113,13 @@ pub(super) async fn commandless_handler(
                                     .last_correction_time
                                     .insert(room_id.clone(), SystemTime::now());
                             }
-                            Err(_) => error!(logger, "Channel closed. Unable to send message."),
+                            Err(_) => error!("Channel closed. Unable to send message."),
                         };
                     }
                 }
             }
             Err(e) => {
-                error!(logger, "{:?}", e);
+                error!("{:?}", e);
             }
         }
     }

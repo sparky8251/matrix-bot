@@ -7,26 +7,21 @@ use crate::matrix_handlers::responders::{
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use ruma_client::HttpsClient;
-use slog::{info, Logger};
 use tokio::sync::mpsc::Receiver;
+use tracing::info;
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixResponder {
     /// Storage data.
     pub storage: ResponderStorage,
-    pub logger: Logger,
     recv: Receiver<MatrixMessage>,
 }
 
 impl MatrixResponder {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(logger: &Logger, recv: Receiver<MatrixMessage>) -> Self {
-        let storage = ResponderStorage::load_storage(&logger);
-        Self {
-            storage,
-            logger: logger.clone(),
-            recv,
-        }
+    pub fn new(recv: Receiver<MatrixMessage>) -> Self {
+        let storage = ResponderStorage::load_storage();
+        Self { storage, recv }
     }
 
     /// Used to start main program loop for the bot.
@@ -36,7 +31,7 @@ impl MatrixResponder {
             match self.recv.recv().await {
                 Some(v) => match v.message {
                     MatrixMessageType::Notice(m) => {
-                        send_notice(&client, v.room_id, &mut self.storage, m, &self.logger).await
+                        send_notice(&client, v.room_id, &mut self.storage, m).await
                     }
                     MatrixMessageType::FormattedText(m) => {
                         send_formatted_text(
@@ -45,28 +40,23 @@ impl MatrixResponder {
                             &mut self.storage,
                             m.plain_text,
                             m.formatted_text,
-                            &self.logger,
                         )
                         .await
                     }
                     MatrixMessageType::PlainText(m) => {
-                        send_plain_text(&client, v.room_id, &mut self.storage, m, &self.logger)
-                            .await
+                        send_plain_text(&client, v.room_id, &mut self.storage, m).await
                     }
                     MatrixMessageType::Invite(m) => match m.kind {
                         MatrixInviteType::Accept => {
-                            accept_invite(m.sender, v.room_id, &client, &self.logger).await
+                            accept_invite(m.sender, v.room_id, &client).await
                         }
                         MatrixInviteType::Reject => {
-                            reject_invite(m.sender, v.room_id, &client, &self.logger).await
+                            reject_invite(m.sender, v.room_id, &client).await
                         }
                     },
                 },
                 None => {
-                    info!(
-                        self.logger,
-                        "Matrix channel closed and empty. Exiting thread."
-                    );
+                    info!("Matrix channel closed and empty. Exiting thread.");
                     break;
                 }
             }

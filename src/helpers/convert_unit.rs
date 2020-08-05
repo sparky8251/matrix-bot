@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use slog::{debug, error, trace, Logger};
+use tracing::{debug, error, trace};
 use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
 use uom::si::mass::{kilogram, pound};
@@ -27,10 +27,7 @@ impl fmt::Display for ConvertedUnit {
 /// Converts supplied values into [ConvertedUnits](struct.ConvertedUnit.html).
 ///
 /// Returns `None` if nothing was able to be converted after parsing and processing.
-pub fn convert_unit(
-    conversions: Vec<(String, String)>,
-    logger: &Logger,
-) -> Option<Vec<ConvertedUnit>> {
+pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedUnit>> {
     let mut result = Vec::new();
     let mut working_data = Vec::new();
 
@@ -40,15 +37,15 @@ pub fn convert_unit(
             Ok(v) => working_data.push((unit, v)),
             Err(e) => {
                 error!(
-                    logger,
-                    "Quantity unable to be parsed. Error is {:?}, quantity is {:?}", e, quantity
+                    "Quantity unable to be parsed. Error is {:?}, quantity is {:?}",
+                    e, quantity
                 );
             }
         }
     }
 
     if working_data.is_empty() {
-        trace!(logger, "No units to convert after parsing quanitity to f64");
+        trace!("No units to convert after parsing quanitity to f64");
         return None;
     }
 
@@ -116,8 +113,7 @@ pub fn convert_unit(
                 ("mph", "km/h", mile_per_hour, kilometer_per_hour),
             }
             _ => {
-                debug!(logger,
-                "Attempted unknown conversion for unit {:?}",
+                debug!("Attempted unknown conversion for unit {:?}",
                 unit.trim().to_lowercase());
             }
         );
@@ -126,7 +122,7 @@ pub fn convert_unit(
     if !result.is_empty() {
         Some(result)
     } else {
-        trace!(logger, "No units converted");
+        trace!("No units converted");
         None
     }
 }
