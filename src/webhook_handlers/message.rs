@@ -5,7 +5,7 @@ use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
 use rocket::State;
 use rocket_contrib::json::Json;
-use ruma_client::identifiers::{RoomId, UserId};
+use ruma::{RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tokio::sync::mpsc::Sender;

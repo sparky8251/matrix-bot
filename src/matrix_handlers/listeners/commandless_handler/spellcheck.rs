@@ -1,7 +1,7 @@
 //! Performs spellcheck and build an appropriate correction text
 
 use crate::config::{MatrixListenerConfig, SpellCheckKind};
-use ruma_client::{events::room::message::TextMessageEventContent, identifiers::UserId};
+use ruma::{events::room::message::TextMessageEventContent, UserId};
 
 /// Checks that provided string contains an incorrect spelling and returns a formatted string that corrects the user
 pub fn spellcheck(

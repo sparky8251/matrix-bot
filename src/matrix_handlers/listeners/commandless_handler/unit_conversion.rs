@@ -3,7 +3,7 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, convert_unit, MatrixNoticeResponse};
 use crate::regex::UNIT_CONVERSION;
-use ruma_client::events::room::message::TextMessageEventContent;
+use ruma::events::room::message::TextMessageEventContent;
 use tracing::{debug, trace};
 
 /// Adds unit conversions to the supplied BotResponseNotice
@@ -13,9 +13,9 @@ pub fn unit_conversion(
     notice_response: &mut MatrixNoticeResponse,
 ) {
     let mut conversions = Vec::new();
-    match &text.formatted_body {
+    match &text.formatted {
         Some(v) => {
-            let clean_text = clean_text(v);
+            let clean_text = clean_text(&v.body);
             if UNIT_CONVERSION.is_match(&clean_text) {
                 for cap in UNIT_CONVERSION.captures_iter(&clean_text.to_lowercase()) {
                     process_capture(&cap, &config, &mut conversions)

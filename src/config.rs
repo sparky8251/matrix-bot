@@ -1,10 +1,9 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
+use http::Uri;
 use reqwest::header::HeaderValue;
-use ruma_client::{
-    identifiers::{RoomId, UserId},
-    Session,
-};
+use ruma::{RoomId, UserId};
+use ruma_client::Session;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
@@ -16,7 +15,6 @@ use std::path::PathBuf;
 use std::process;
 use std::time::{Duration, SystemTime};
 use tracing::{error, info, trace};
-use url::Url;
 
 /// Constant representing the crate name.
 pub const NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,7 +27,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Does not have Option<T> fields for ease of use. If its blank it will be a default value or empty.
 pub struct MatrixListenerConfig {
     /// Matrix bot account homeserver URL.
-    pub mx_url: Url,
+    pub mx_url: Uri,
     /// Matrix bot account username.
     pub mx_uname: UserId,
     /// Matrix bot account password.
@@ -56,7 +54,7 @@ pub struct MatrixListenerConfig {
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
-    pub links: HashMap<String, Url>,
+    pub links: HashMap<String, Uri>,
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
@@ -75,7 +73,7 @@ pub struct WebhookListenerConfig {
 /// Does not have Option<T> fields for ease of use. If its blank it will be a default value or empty.
 pub struct Config {
     /// Matrix bot account homeserver URL.
-    pub mx_url: Url,
+    pub mx_url: Uri,
     /// Matrix bot account username.
     pub mx_uname: UserId,
     /// Matrix bot account password.
@@ -102,7 +100,7 @@ pub struct Config {
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
-    links: HashMap<String, Url>,
+    links: HashMap<String, Uri>,
     /// UserAgent used by reqwest
     user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
@@ -126,7 +124,7 @@ pub struct RawConfig {
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     searchable_repos: Option<HashMap<String, String>>,
     /// Hashmap containing searched key and matching URL for linking.
-    linkable_urls: Option<HashMap<String, Url>>,
+    linkable_urls: Option<HashMap<String, String>>,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
     group_pings: Option<HashMap<String, Vec<String>>>,
 }
@@ -160,7 +158,7 @@ struct RawGeneral {
 /// Struct that contains raw matrix authentication config data.
 struct RawMatrixAuthentication {
     /// Homeserver URL for bot account.
-    url: Url,
+    url: String,
     /// Matrix username for bot account.
     username: UserId,
     /// Matrix password for bot account.
@@ -301,7 +299,10 @@ impl Config {
         let admins = load_admin_settings(&toml);
         let help_rooms = load_help_settings(&toml);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
-            toml.matrix_authentication.url.clone(),
+            toml.matrix_authentication
+                .url
+                .parse()
+                .expect("Invalid homeserver URL"),
             toml.matrix_authentication.username.clone(),
             toml.matrix_authentication.password.clone(),
             toml.general.enable_corrections,
@@ -683,12 +684,17 @@ fn load_github_settings(toml: &RawConfig) -> (HashMap<String, String>, String) {
     }
 }
 
-fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Url>) {
+fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Uri>) {
     match &toml.linkable_urls {
         Some(d) => match &toml.general.link_matchers {
             Some(m) => {
                 if !d.is_empty() {
-                    (m.clone(), d.clone())
+                    let d = d
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.parse().expect("Invalid URL")))
+                        .collect();
+
+                    (m.clone(), d)
                 } else {
                     error!("Link matchers exists but none are set. Exiting...");
                     process::exit(1)

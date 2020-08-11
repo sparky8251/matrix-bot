@@ -12,10 +12,7 @@ use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
 use crate::config::{ListenerStorage, MatrixListenerConfig};
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
-use ruma_client::{
-    events::room::message::TextMessageEventContent,
-    identifiers::{RoomId, UserId},
-};
+use ruma::{events::room::message::TextMessageEventContent, RoomId, UserId};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
 

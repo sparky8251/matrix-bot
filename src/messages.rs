@@ -1,4 +1,4 @@
-use ruma_client::identifiers::{RoomId, UserId};
+use ruma::{RoomId, UserId};
 
 #[derive(Debug)]
 pub struct MatrixMessage {

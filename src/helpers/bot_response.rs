@@ -1,10 +1,10 @@
 //! Helper type and associated functions to enable simple response building
 
 use super::ConvertedUnit;
-use ruma_client::identifiers::UserId;
+use reqwest::Url;
+use ruma::UserId;
 use std::collections::HashSet;
 use std::fmt;
-use url::Url;
 
 #[derive(Debug, Default)]
 /// Type representing response data with helper functions. Used tih notice type replies.
@@ -128,7 +128,7 @@ impl fmt::Display for MatrixNoticeResponse {
         match &self.gh_results {
             Some(v) => {
                 for s in v {
-                    response.push_str(s.as_str());
+                    response.push_str(&s.to_string());
                     response.push('\n')
                 }
             }
@@ -137,7 +137,7 @@ impl fmt::Display for MatrixNoticeResponse {
         match &self.links {
             Some(v) => {
                 for s in v {
-                    response.push_str(s.as_str());
+                    response.push_str(&s.to_string());
                     response.push('\n')
                 }
             }

@@ -3,7 +3,7 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixFormattedTextResponse};
 use crate::regex::GROUP_PING;
-use ruma_client::{events::room::message::TextMessageEventContent, identifiers::UserId};
+use ruma::{events::room::message::TextMessageEventContent, UserId};
 use std::collections::HashSet;
 use tracing::{debug, error, trace};
 
@@ -19,9 +19,9 @@ pub fn group_ping(
         debug!("User not authorized for group pings. Ignoring...");
         return;
     }
-    match &text.formatted_body {
+    match &text.formatted {
         Some(v) => {
-            let clean_text = clean_text(v);
+            let clean_text = clean_text(&v.body);
             if GROUP_PING.is_match(&clean_text) {
                 for cap in GROUP_PING.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
