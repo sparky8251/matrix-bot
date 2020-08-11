@@ -3,7 +3,6 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, convert_unit, MatrixNoticeResponse};
 use crate::regex::UNIT_CONVERSION;
-
 use ruma_client::events::room::message::TextMessageEventContent;
 use tracing::{debug, trace};
 

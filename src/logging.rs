@@ -2,6 +2,15 @@ use std::env;
 use std::fmt;
 use tracing_subscriber::FmtSubscriber;
 
+// TODO: Output to stdout+file for logging
+// let file = tracing_appender::rolling::daily("/var/log", "myapp.log");
+// let (non_blocking, _guard) = tracing_appender::non_blocking(file);
+
+// tracing_subscriber::registry()
+//     .with(tracing_subscriber::fmt::layer().with_writer(non_blocking))
+//     .with(tracing_subscriber::fmt::layer().with_writer(std::io::stdout))
+//     .init();
+
 enum Level {
     Error,
     Warn,

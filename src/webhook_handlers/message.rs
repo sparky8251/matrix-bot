@@ -1,11 +1,13 @@
 use crate::config::WebhookListenerConfig;
-use crate::messages::{MatrixMessage, MatrixMessageType};
+use crate::helpers::MatrixFormattedTextResponse;
+use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
 use rocket::State;
 use rocket_contrib::json::Json;
-use ruma_client::identifiers::RoomId;
+use ruma_client::identifiers::{RoomId, UserId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tokio::sync::mpsc::Sender;
 
 #[post("/", data = "<message>")]
@@ -21,9 +23,26 @@ pub async fn message(
             message: MatrixMessageType::Notice(message.message.clone()),
         };
         match send.clone().send(matrix_message).await {
-            Ok(_) => Status::Ok,
-            Err(_) => Status::InternalServerError,
-        }
+            Ok(_) => (),
+            Err(_) => return Status::InternalServerError,
+        };
+        if let Some(pings) = &message.ping {
+            let mut response = MatrixFormattedTextResponse::default();
+            let pings: HashSet<UserId> = pings.iter().map(|x| x.clone()).collect();
+            response.set_users(pings);
+            let matrix_message = MatrixMessage {
+                room_id: message.room_id.clone(),
+                message: MatrixMessageType::FormattedText(MatrixFormattedMessage {
+                    plain_text: response.to_string(),
+                    formatted_text: response.format_text(),
+                }),
+            };
+            match send.clone().send(matrix_message).await {
+                Ok(_) => (),
+                Err(_) => return Status::InternalServerError,
+            };
+        };
+        Status::Ok
     } else {
         Status::Unauthorized
     }
@@ -33,6 +52,7 @@ pub async fn message(
 pub struct Message {
     room_id: RoomId,
     message: String,
+    ping: Option<Vec<UserId>>,
 }
 
 #[derive(Debug, Deserialize)]

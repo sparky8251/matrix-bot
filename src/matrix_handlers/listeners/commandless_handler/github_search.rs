@@ -5,7 +5,6 @@ use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
-
 use graphql_client::GraphQLQuery;
 use reqwest::header;
 use ruma_client::events::room::message::TextMessageEventContent;

@@ -1,7 +1,6 @@
 //! Helper function used to strip supplied text of HTML tags and their contents that should not be picked up in later processing steps
 
 use crate::regex::{CODE_TAG, MX_REPLY, PARAGRAPH_TAG, PRE_TAG};
-
 use tracing::trace;
 
 /// Strips provided text of `code`, `pre`, and `mx-reply` HTML tags and their contents

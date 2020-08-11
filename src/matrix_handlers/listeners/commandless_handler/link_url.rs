@@ -3,7 +3,6 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::regex::LINK_URL;
-
 use ruma_client::events::room::message::TextMessageEventContent;
 use tracing::{debug, error, trace};
 use url::Url;

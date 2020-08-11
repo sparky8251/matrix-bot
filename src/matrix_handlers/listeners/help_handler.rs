@@ -1,5 +1,6 @@
 use crate::config::MatrixListenerConfig;
-use crate::messages::{MatrixMessage, MatrixMessageType};
+use crate::helpers::MatrixFormattedNoticeResponse;
+use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
 use ruma_client::{events::room::message::TextMessageEventContent, identifiers::RoomId};
 use std::convert::From;
 use tokio::sync::mpsc::Sender;
@@ -65,9 +66,29 @@ pub(super) async fn help_handler(
                 Ok(_) => (),
                 Err(_) => error!("Channel closed. Unable to send message."),
             };
-        // send_help_message(&room_id, &client, &mut storage, message, &logger).await;
         } else {
-            debug!("Unknown command");
+            debug!("Unknown action");
+            let mut response = MatrixFormattedNoticeResponse::default();
+            let mut errors = Vec::new();
+            errors.push(format!(
+                "Unknown action {}",
+                text.body.split(' ').nth(1).unwrap_or("")
+            ));
+            response.add_errrors(errors);
+            let formatted_text = response.format_text();
+            match send
+                .send(MatrixMessage {
+                    room_id: room_id.clone(),
+                    message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
+                        plain_text: response.to_string(),
+                        formatted_text: formatted_text,
+                    }),
+                })
+                .await
+            {
+                Ok(_) => (),
+                Err(_) => error!("Channel closed. Unable to send message."),
+            };
         }
     } else {
         trace!(

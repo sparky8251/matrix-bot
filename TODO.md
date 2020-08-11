@@ -18,9 +18,6 @@
     Use this more complex backend to enable a queue of unique IDs for messages in case
     a retry is required
 
-**Look at slog as replacement for log**
-    slog_term will be the first pass, but look at possibility of built in syslog shipping
-
 **Current logging story is a problem**
     Add more logging for admins that isnt debug/trace level
 
@@ -33,6 +30,8 @@
 **Look at having the bot respond on relevant errors with proper information**
     If the bot is unable to perform an action like github search, it should reply
     with relevant information for users.
+
+    error text should be colored #ff4b55
 
     If its rate limited for github, reply with a UTC datetime of when it can next search.
     If its unauthorized for github, reply with a message stating that.

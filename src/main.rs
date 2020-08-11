@@ -79,7 +79,7 @@ mod webhook_handlers;
 extern crate rocket;
 
 #[tokio::main]
-/// Simple main function that initializes the bot and will run until interrupted. Saves bot config on exiting.
+#[allow(clippy::missing_docs_in_private_items)]
 async fn main() {
     logging::init();
     bot::init().await

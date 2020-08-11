@@ -6,23 +6,24 @@ mod link_url;
 mod spellcheck;
 mod unit_conversion;
 
+use crate::config::{ListenerStorage, MatrixListenerConfig};
+use crate::helpers::{
+    check_format, MatrixFormattedNoticeResponse, MatrixFormattedTextResponse, MatrixNoticeResponse,
+};
+use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
+use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
-use spellcheck::spellcheck;
-use unit_conversion::unit_conversion;
-
-use crate::config::{ListenerStorage, MatrixListenerConfig};
-use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
-use crate::messages::{MatrixFormattedTextMessage, MatrixMessage, MatrixMessageType};
-use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
 use ruma_client::{
     events::room::message::TextMessageEventContent,
     identifiers::{RoomId, UserId},
 };
+use spellcheck::spellcheck;
 use std::time::SystemTime;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
+use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
 pub(super) async fn commandless_handler(
@@ -42,6 +43,7 @@ pub(super) async fn commandless_handler(
             Ok(_) => {
                 let mut notice_response = MatrixNoticeResponse::default();
                 let mut text_response = MatrixFormattedTextResponse::default();
+                let mut error_response = MatrixFormattedNoticeResponse::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
                     debug!("Entering commandless unit conversion path");
                     unit_conversion(&text, &config, &mut notice_response);
@@ -78,7 +80,7 @@ pub(super) async fn commandless_handler(
                     };
                 }
                 if text_response.is_some() {
-                    let message = MatrixFormattedTextMessage {
+                    let message = MatrixFormattedMessage {
                         plain_text: text_response.to_string().clone(),
                         formatted_text: text_response.format_text().clone(),
                     };
@@ -104,7 +106,7 @@ pub(super) async fn commandless_handler(
                         match send
                             .send(MatrixMessage {
                                 room_id: room_id.clone(),
-                                message: MatrixMessageType::PlainText(v),
+                                message: MatrixMessageType::Text(v),
                             })
                             .await
                         {

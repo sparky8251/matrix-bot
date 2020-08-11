@@ -1,7 +1,6 @@
 //! Helper function and associated type to enable simple conversion from a list of values to a list of converted values
 
 use std::fmt;
-
 use tracing::{debug, error, trace};
 use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};

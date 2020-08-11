@@ -10,9 +10,10 @@ pub struct MatrixMessage {
 #[derive(Debug)]
 pub enum MatrixMessageType {
     Invite(MatrixInviteMessage),
-    PlainText(String),
+    Text(String),
     Notice(String),
-    FormattedText(MatrixFormattedTextMessage),
+    FormattedText(MatrixFormattedMessage),
+    FormattedNotice(MatrixFormattedMessage),
 }
 
 #[derive(Debug)]
@@ -22,7 +23,7 @@ pub enum MatrixInviteType {
 }
 
 #[derive(Debug)]
-pub struct MatrixFormattedTextMessage {
+pub struct MatrixFormattedMessage {
     pub plain_text: String,
     pub formatted_text: Option<String>,
 }

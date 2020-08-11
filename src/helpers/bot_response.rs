@@ -1,12 +1,10 @@
 //! Helper type and associated functions to enable simple response building
 
-use std::fmt;
-
 use super::ConvertedUnit;
 use ruma_client::identifiers::UserId;
-use url::Url;
-
 use std::collections::HashSet;
+use std::fmt;
+use url::Url;
 
 #[derive(Debug, Default)]
 /// Type representing response data with helper functions. Used tih notice type replies.
@@ -23,6 +21,11 @@ pub struct MatrixNoticeResponse {
 pub struct MatrixFormattedTextResponse {
     /// List of users that will be pinged for response building
     users: Option<HashSet<UserId>>,
+}
+
+#[derive(Debug, Default)]
+pub struct MatrixFormattedNoticeResponse {
+    errors: Option<Vec<String>>,
 }
 
 impl MatrixNoticeResponse {
@@ -80,6 +83,36 @@ impl MatrixFormattedTextResponse {
     }
 }
 
+impl MatrixFormattedNoticeResponse {
+    pub fn add_errrors(&mut self, errors: Vec<String>) {
+        match &mut self.errors {
+            Some(v) => {
+                for e in errors {
+                    v.push(e)
+                }
+            }
+            None => self.errors = Some(errors),
+        }
+    }
+    pub fn is_some(&self) -> bool {
+        self.errors.is_some()
+    }
+    pub fn format_text(&self) -> Option<String> {
+        match &self.errors {
+            Some(v) => {
+                let mut formatted_text = String::new();
+                for error in v {
+                    formatted_text.push_str("<font color=\"#ff4b55\">");
+                    formatted_text.push_str(&error.to_string());
+                    formatted_text.push_str("</font>\n")
+                }
+                Some(formatted_text)
+            }
+            None => None,
+        }
+    }
+}
+
 impl fmt::Display for MatrixNoticeResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
@@ -123,6 +156,23 @@ impl fmt::Display for MatrixFormattedTextResponse {
                 for user in v {
                     response.push_str(&user.localpart());
                     response.push(' ')
+                }
+            }
+            None => (),
+        }
+        let response = response.trim();
+        write!(f, "{}", response)
+    }
+}
+
+impl fmt::Display for MatrixFormattedNoticeResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut response = String::new();
+        match &self.errors {
+            Some(v) => {
+                for error in v {
+                    response.push_str(&error);
+                    response.push('\n')
                 }
             }
             None => (),

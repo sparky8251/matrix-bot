@@ -3,10 +3,8 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixFormattedTextResponse};
 use crate::regex::GROUP_PING;
-
-use std::collections::HashSet;
-
 use ruma_client::{events::room::message::TextMessageEventContent, identifiers::UserId};
+use std::collections::HashSet;
 use tracing::{debug, error, trace};
 
 /// Finds requested users to ping and builds response text

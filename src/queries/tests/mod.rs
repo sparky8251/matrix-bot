@@ -2,9 +2,7 @@ mod common;
 
 use super::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Issue, PullRequest};
 use super::*;
-
 use common::load_access_token;
-
 use reqwest::header::{self, HeaderValue};
 
 #[tokio::test]

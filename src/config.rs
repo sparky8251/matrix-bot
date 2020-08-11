@@ -1,5 +1,11 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
+use reqwest::header::HeaderValue;
+use ruma_client::{
+    identifiers::{RoomId, UserId},
+    Session,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::env;
@@ -9,13 +15,6 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::PathBuf;
 use std::process;
 use std::time::{Duration, SystemTime};
-
-use reqwest::header::HeaderValue;
-use ruma_client::{
-    identifiers::{RoomId, UserId},
-    Session,
-};
-use serde::{Deserialize, Serialize};
 use tracing::{error, info, trace};
 use url::Url;
 
