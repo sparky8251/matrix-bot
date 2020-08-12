@@ -4,14 +4,15 @@
 use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
 use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use crate::messages::MatrixMessage;
-use ruma_client::{
-    api::r0::sync::sync_events::{self, SetPresence},
+use ruma::{
+    api::client::r0::sync::sync_events,
     events::{
-        collections::all::RoomEvent, room::message::MessageEventContent,
-        stripped::AnyStrippedStateEvent,
+        room::message::MessageEventContent, AnyStrippedStateEvent, AnySyncMessageEvent,
+        AnySyncRoomEvent,
     },
-    HttpsClient,
+    presence::PresenceState,
 };
+use ruma_client::HttpsClient;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
@@ -50,7 +51,7 @@ impl MatrixListener {
                     filter: None,
                     since: self.storage.last_sync.clone(),
                     full_state: false,
-                    set_presence: SetPresence::Unavailable,
+                    set_presence: PresenceState::Unavailable,
                     timeout: Some(Duration::new(2000, 0)),
                 })
                 .await
@@ -69,7 +70,10 @@ impl MatrixListener {
                             let event = raw_event.deserialize();
                             match event {
                                 Ok(r) => {
-                                    if let RoomEvent::RoomMessage(m) = r {
+                                    if let AnySyncRoomEvent::Message(
+                                        AnySyncMessageEvent::RoomMessage(m),
+                                    ) = r
+                                    {
                                         if let MessageEventContent::Text(t) = m.content {
                                             handle_text_event(
                                                 &t,

@@ -6,10 +6,9 @@ use crate::queries::issue_or_pull::IssueOrPullRepositoryIssueOrPullRequest::{Iss
 use crate::queries::*;
 use crate::regex::GITHUB_SEARCH;
 use graphql_client::GraphQLQuery;
-use reqwest::header;
-use ruma_client::events::room::message::TextMessageEventContent;
+use reqwest::{header, Url};
+use ruma::events::room::message::TextMessageEventContent;
 use tracing::{debug, error, trace};
-use url::Url;
 
 /// Searches and links found issues or pulls requested and builds response text
 pub async fn github_search(
@@ -19,9 +18,9 @@ pub async fn github_search(
     notice_response: &mut MatrixNoticeResponse,
 ) {
     let mut repos_to_search = Vec::new();
-    match &text.formatted_body {
+    match &text.formatted {
         Some(v) => {
-            let clean_text = clean_text(v);
+            let clean_text = clean_text(&v.body);
             if GITHUB_SEARCH.is_match(&clean_text) {
                 for cap in GITHUB_SEARCH.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);

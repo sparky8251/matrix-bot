@@ -4,7 +4,7 @@ use crate::helpers::convert_unit;
 use crate::helpers::MatrixNoticeResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::UNIT_CONVERSION;
-use ruma_client::{events::room::message::TextMessageEventContent, identifiers::RoomId};
+use ruma::{events::room::message::TextMessageEventContent, RoomId};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error};
 
@@ -14,7 +14,7 @@ pub(super) async fn unit_conversion_handler(
     room_id: &RoomId,
     send: &mut Sender<MatrixMessage>,
 ) {
-    if text.relates_to.is_none() && text.formatted_body.is_none() {
+    if text.relates_to.is_none() && text.formatted.is_none() {
         let mut conversions = Vec::new();
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
             conversions.push((cap[1].to_string(), cap[2].to_string()));

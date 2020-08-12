@@ -15,10 +15,7 @@ use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
-use ruma_client::{
-    events::room::message::TextMessageEventContent,
-    identifiers::{RoomId, UserId},
-};
+use ruma::{events::room::message::TextMessageEventContent, RoomId, UserId};
 use spellcheck::spellcheck;
 use std::time::SystemTime;
 use tokio::sync::mpsc::Sender;
@@ -39,7 +36,7 @@ pub(super) async fn commandless_handler(
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
-        match check_format(&text.format) {
+        match check_format(text.formatted.as_ref().map(|f| &f.format)) {
             Ok(_) => {
                 let mut notice_response = MatrixNoticeResponse::default();
                 let mut text_response = MatrixFormattedTextResponse::default();

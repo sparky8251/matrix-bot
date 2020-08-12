@@ -1,7 +1,7 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::MatrixFormattedNoticeResponse;
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
-use ruma_client::{events::room::message::TextMessageEventContent, identifiers::RoomId};
+use ruma::{events::room::message::TextMessageEventContent, RoomId};
 use std::convert::From;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
@@ -135,8 +135,8 @@ EXAMPLES:
 
 async fn action_commandless_help_message() -> String {
     "Commandless Action
-    
-Commandles actions can happen in any plain text message but certain text formatting will be ignored. Currently ignored formatting is inline code, code blocks, and the text in a reply (but not the reply itself)    
+
+Commandles actions can happen in any plain text message but certain text formatting will be ignored. Currently ignored formatting is inline code, code blocks, and the text in a reply (but not the reply itself)
 
 The exact rules for triggering a commandless action vary by action (so check action help pages for info on how to trigger them), but their defining features are that they can be in any part of a message and mutiple can be triggered per message.
 
@@ -193,7 +193,7 @@ This action is only available as commandless. It will trigger on anything that m
 
 If the repo and the number exist, it will provide a link to the issue or pull in a bot message.
 
-USAGE: 
+USAGE:
 \tI could use a review on jf#1234
 \tjf#1234
 

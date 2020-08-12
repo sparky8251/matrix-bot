@@ -3,9 +3,9 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::regex::LINK_URL;
-use ruma_client::events::room::message::TextMessageEventContent;
+use reqwest::Url;
+use ruma::events::room::message::TextMessageEventContent;
 use tracing::{debug, error, trace};
-use url::Url;
 
 /// Finds and links URLs requested and builds response text
 pub fn link_url(
@@ -14,9 +14,9 @@ pub fn link_url(
     notice_response: &mut MatrixNoticeResponse,
 ) {
     let mut links: Vec<String> = Vec::new();
-    match &text.formatted_body {
+    match &text.formatted {
         Some(v) => {
-            let clean_text = clean_text(v);
+            let clean_text = clean_text(&v.body);
             if LINK_URL.is_match(&clean_text) {
                 for cap in LINK_URL.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
