@@ -81,7 +81,7 @@ pub(super) async fn help_handler(
                     room_id: room_id.clone(),
                     message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
                         plain_text: response.to_string(),
-                        formatted_text: formatted_text,
+                        formatted_text,
                     }),
                 })
                 .await

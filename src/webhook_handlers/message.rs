@@ -28,7 +28,7 @@ pub async fn message(
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
-            let pings: HashSet<UserId> = pings.iter().map(|x| x.clone()).collect();
+            let pings: HashSet<UserId> = pings.iter().cloned().collect();
             response.set_users(pings);
             let matrix_message = MatrixMessage {
                 room_id: message.room_id.clone(),

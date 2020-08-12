@@ -7,9 +7,7 @@ mod spellcheck;
 mod unit_conversion;
 
 use crate::config::{ListenerStorage, MatrixListenerConfig};
-use crate::helpers::{
-    check_format, MatrixFormattedNoticeResponse, MatrixFormattedTextResponse, MatrixNoticeResponse,
-};
+use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
 use github_search::github_search;
@@ -40,7 +38,6 @@ pub(super) async fn commandless_handler(
             Ok(_) => {
                 let mut notice_response = MatrixNoticeResponse::default();
                 let mut text_response = MatrixFormattedTextResponse::default();
-                let mut error_response = MatrixFormattedNoticeResponse::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
                     debug!("Entering commandless unit conversion path");
                     unit_conversion(&text, &config, &mut notice_response);
@@ -78,8 +75,8 @@ pub(super) async fn commandless_handler(
                 }
                 if text_response.is_some() {
                     let message = MatrixFormattedMessage {
-                        plain_text: text_response.to_string().clone(),
-                        formatted_text: text_response.format_text().clone(),
+                        plain_text: text_response.to_string(),
+                        formatted_text: text_response.format_text(),
                     };
                     match send
                         .send(MatrixMessage {

@@ -81,7 +81,7 @@ impl From<String> for Filter {
 }
 
 fn log_filter(level: Level, filter: Filter) -> String {
-    String::from(filter.to_string() + &level.to_string())
+    filter.to_string() + &level.to_string()
 }
 
 pub fn init() {
