@@ -8,7 +8,7 @@ use ruma::{
     api::client::r0::sync::sync_events,
     events::{
         room::message::MessageEventContent, AnyStrippedStateEvent, AnySyncMessageEvent,
-        AnySyncRoomEvent,
+        AnySyncRoomEvent, SyncMessageEvent,
     },
     presence::PresenceState,
 };
@@ -69,25 +69,25 @@ impl MatrixListener {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(r) => {
-                                    if let AnySyncRoomEvent::Message(
-                                        AnySyncMessageEvent::RoomMessage(m),
-                                    ) = r
-                                    {
-                                        if let MessageEventContent::Text(t) = m.content {
-                                            handle_text_event(
-                                                &t,
-                                                &m.sender,
-                                                room_id,
-                                                &mut self.storage,
-                                                &self.config,
-                                                &self.api_client,
-                                                &mut self.send,
-                                            )
-                                            .await;
-                                        }
-                                    }
+                                Ok(AnySyncRoomEvent::Message(
+                                    AnySyncMessageEvent::RoomMessage(SyncMessageEvent {
+                                        content: MessageEventContent::Text(t),
+                                        sender,
+                                        ..
+                                    }),
+                                )) => {
+                                    handle_text_event(
+                                        &t,
+                                        &sender,
+                                        room_id,
+                                        &mut self.storage,
+                                        &self.config,
+                                        &self.api_client,
+                                        &mut self.send,
+                                    )
+                                    .await;
                                 }
+                                Ok(_) => {}
                                 Err(e) => {
                                     debug!("{:?}", e);
                                     trace!("Content: {:?}", raw_event.json())
@@ -102,20 +102,21 @@ impl MatrixListener {
                         for raw_event in &invited_room.invite_state.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(v) => match v {
-                                    AnyStrippedStateEvent::RoomMember(s) => {
-                                        trace!("Invited by {}", s.sender);
-                                        handle_invite_event(
-                                            &s.sender,
-                                            &room_id,
-                                            &self.config,
-                                            &mut self.send,
-                                        )
-                                        .await;
-                                        trace!("Handled invite event")
-                                    }
-                                    _ => error!("No known inviter. Will not join room. If you see this, report it."), //FIXME: Reject invite if there is no known sender
-                                },
+                                Ok(AnyStrippedStateEvent::RoomMember(s)) => {
+                                    trace!("Invited by {}", s.sender);
+                                    handle_invite_event(
+                                        &s.sender,
+                                        &room_id,
+                                        &self.config,
+                                        &mut self.send,
+                                    )
+                                    .await;
+                                    trace!("Handled invite event")
+                                }
+                                Ok(_) => {
+                                    // FIXME: Reject invite if there is no known sender
+                                    error!("No known inviter. Will not join room. If you see this, report it.");
+                                }
                                 Err(e) => {
                                     debug!("{:?}", e);
                                     trace!("Content: {:?}", raw_event.json())
