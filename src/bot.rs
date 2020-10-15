@@ -14,12 +14,7 @@ pub async fn init() {
     let mut session_storage = SessionStorage::load_storage();
     let matrix_listener_client = HttpsClient::https(config.mx_url.clone(), session_storage.session);
     let session = &matrix_listener_client
-        .log_in(
-            config.mx_uname.localpart().to_string(),
-            config.mx_pass.clone(),
-            None,
-            None,
-        )
+        .log_in(config.mx_uname.localpart(), &config.mx_pass, None, None)
         .await
         .unwrap();
 

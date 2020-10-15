@@ -46,16 +46,19 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: HttpsClient) {
         loop {
-            let response = match client
-                .request(sync_events::Request {
+            let req = assign!(sync_events::Request::new(),
+                {
                     filter: None,
-                    since: self.storage.last_sync.clone(),
+                    since: match &self.storage.last_sync {
+                        Some(v) => Some(v.as_str()),
+                        None => None
+                    },
                     full_state: false,
                     set_presence: PresenceState::Unavailable,
-                    timeout: Some(Duration::new(2000, 0)),
-                })
-                .await
-            {
+                    timeout: Some(Duration::new(30, 0))
+                }
+            );
+            let response = match client.request(req).await {
                 Ok(v) => Some(v),
                 Err(e) => {
                     debug!("Line 73: {:?}", e);

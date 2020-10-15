@@ -94,9 +94,9 @@ impl MatrixFormattedNoticeResponse {
             None => self.errors = Some(errors),
         }
     }
-    pub fn is_some(&self) -> bool {
-        self.errors.is_some()
-    }
+    // pub fn is_some(&self) -> bool {
+    //     self.errors.is_some()
+    // }
     pub fn format_text(&self) -> Option<String> {
         match &self.errors {
             Some(v) => {

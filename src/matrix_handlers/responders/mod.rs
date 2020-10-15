@@ -6,12 +6,12 @@ use ruma::{
     },
     events::{
         room::message::{
-            FormattedBody, MessageEventContent, NoticeMessageEventContent, TextMessageEventContent,
+            MessageEventContent, NoticeMessageEventContent, TextMessageEventContent,
         },
-        EventType,
     },
-    Raw, RoomId, UserId,
+    RoomId, UserId,
 };
+use ruma::events::AnyMessageEventContent;
 use ruma_client::HttpsClient;
 use tracing::{debug, error, info};
 
@@ -21,18 +21,12 @@ pub async fn send_notice(
     storage: &mut ResponderStorage,
     message: String,
 ) {
-    match client
-        .request(send_message_event::Request {
-            room_id,
-            event_type: EventType::RoomMessage,
-            txn_id: &storage.next_txn_id(),
-            data: Raw::from(MessageEventContent::Notice(
-                NoticeMessageEventContent::plain(message),
-            ))
-            .into_json(),
-        })
-        .await
-    {
+    let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+        NoticeMessageEventContent::plain(message),
+    ));
+    let next_txn_id = storage.next_txn_id();
+    let req = send_message_event::Request::new(room_id, &next_txn_id.as_str(), &content);
+    match client.request(req).await {
         Ok(_) => (),
         Err(e) => error!("{:?}", e),
     }
@@ -43,18 +37,12 @@ pub async fn send_plain_text(
     message: String,
     client: &HttpsClient,
 ) {
-    match client
-        .request(send_message_event::Request {
-            room_id: &room_id,
-            event_type: EventType::RoomMessage,
-            txn_id: &storage.next_txn_id(),
-            data: Raw::from(MessageEventContent::Text(TextMessageEventContent::plain(
-                message,
-            )))
-            .into_json(),
-        })
-        .await
-    {
+    let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Text(
+        TextMessageEventContent::plain(message),
+    ));
+    let next_txn_id = storage.next_txn_id();
+    let req = send_message_event::Request::new(room_id, &next_txn_id.as_str(), &content);
+    match client.request(req).await {
         Ok(_) => (),
         Err(e) => error!("Unable to send response due to error {:?}", e),
     }
@@ -67,20 +55,12 @@ pub async fn send_formatted_text(
     formatted_message: Option<String>,
     client: &HttpsClient,
 ) {
-    match client
-        .request(send_message_event::Request {
-            room_id,
-            event_type: EventType::RoomMessage,
-            txn_id: &storage.next_txn_id(),
-            data: Raw::from(MessageEventContent::Text(TextMessageEventContent {
-                body: message,
-                formatted: formatted_message.map(FormattedBody::html),
-                relates_to: None,
-            }))
-            .into_json(),
-        })
-        .await
-    {
+    let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Text(
+        TextMessageEventContent::html(message, formatted_message.unwrap_or_default()),
+    ));
+    let next_txn_id = storage.next_txn_id();
+    let req = send_message_event::Request::new(room_id, &next_txn_id.as_str(), &content);
+    match client.request(req).await {
         Ok(_) => (),
         Err(e) => error!("Unable to send response due to error {:?}", e),
     }
@@ -93,20 +73,12 @@ pub async fn send_formatted_notice(
     formatted_message: Option<String>,
     client: &HttpsClient,
 ) {
-    match client
-        .request(send_message_event::Request {
-            room_id,
-            event_type: EventType::RoomMessage,
-            txn_id: &storage.next_txn_id(),
-            data: Raw::from(MessageEventContent::Notice(NoticeMessageEventContent {
-                body: message,
-                relates_to: None,
-                formatted: formatted_message.map(FormattedBody::html),
-            }))
-            .into_json(),
-        })
-        .await
-    {
+    let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+        NoticeMessageEventContent::html(message, formatted_message.unwrap_or_default()),
+    ));
+    let next_txn_id = storage.next_txn_id();
+    let req = send_message_event::Request::new(room_id, &next_txn_id.as_str(), &content);
+    match client.request(req).await {
         Ok(_) => (),
         Err(e) => error!("{:?}", e),
     }

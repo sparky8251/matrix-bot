@@ -77,6 +77,8 @@ mod webhook_handlers;
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate assign;
 
 #[tokio::main]
 #[allow(clippy::missing_docs_in_private_items)]
