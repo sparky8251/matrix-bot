@@ -1,17 +1,15 @@
 use crate::config::ResponderStorage;
+use ruma::events::AnyMessageEventContent;
 use ruma::{
     api::client::r0::{
         membership::{join_room_by_id, leave_room},
         message::send_message_event,
     },
-    events::{
-        room::message::{
-            MessageEventContent, NoticeMessageEventContent, TextMessageEventContent,
-        },
+    events::room::message::{
+        MessageEventContent, NoticeMessageEventContent, TextMessageEventContent,
     },
     RoomId, UserId,
 };
-use ruma::events::AnyMessageEventContent;
 use ruma_client::HttpsClient;
 use tracing::{debug, error, info};
 
