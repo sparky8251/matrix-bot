@@ -79,7 +79,8 @@ impl MatrixListener {
                                         ..
                                     }),
                                 )) => {
-                                    if matches!(t.relates_to, Some(Relation::Reply{in_reply_to: _})) {
+                                    if matches!(t.relates_to, Some(Relation::Replacement(_))) {
+                                        debug!("Message is an edit, skipping handling");
                                         continue;
                                     }
                                     handle_text_event(

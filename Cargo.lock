@@ -979,7 +979,7 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 
 [[package]]
 name = "matrix-bot"
-version = "2.0.0-beta.10"
+version = "2.0.0-beta.11"
 dependencies = [
  "assign",
  "futures",
@@ -1616,6 +1616,7 @@ dependencies = [
  "ruma-client-api",
  "ruma-common",
  "ruma-events",
+ "ruma-federation-api",
  "ruma-identifiers",
  "ruma-serde",
 ]
@@ -1734,6 +1735,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "ruma-federation-api"
+version = "0.0.3"
+source = "git+https://github.com/ruma/ruma?rev=0f64a6e#0f64a6ea391cb610fdf4e5e49301b6d700d0457c"
+dependencies = [
+ "js_int",
+ "ruma-api",
+ "ruma-common",
+ "ruma-events",
+ "ruma-identifiers",
+ "ruma-serde",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

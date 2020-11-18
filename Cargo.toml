@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.10"
+version = "2.0.0-beta.11"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -16,7 +16,7 @@ lazy_static = "1.4"
 regex = "1.4"
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", rev = "8da034ab835ef1d599cd146164dffda960275c06" }
 ron = "0.6"
-ruma = { git = "https://github.com/ruma/ruma", rev = "0f64a6e", features = ["client-api"] }
+ruma = { git = "https://github.com/ruma/ruma", rev = "0f64a6e", features = ["client-api", "unstable-pre-spec"] }
 ruma-client = { git = "https://github.com/ruma/ruma", rev = "0f64a6e" }
 thiserror = "1.0"
 toml = "0.5"
