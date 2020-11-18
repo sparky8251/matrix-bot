@@ -7,12 +7,12 @@ use crate::messages::MatrixMessage;
 use ruma::{
     api::client::r0::sync::sync_events,
     events::{
-        room::message::MessageEventContent, AnyStrippedStateEvent, AnySyncMessageEvent,
+        room::message::{MessageEventContent, Relation}, AnyStrippedStateEvent, AnySyncMessageEvent,
         AnySyncRoomEvent, SyncMessageEvent,
     },
     presence::PresenceState,
 };
-use ruma_client::HttpsClient;
+use ruma_client::Client;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
@@ -44,7 +44,7 @@ impl MatrixListener {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: HttpsClient) {
+    pub async fn start(&mut self, client: Client) {
         loop {
             let req = assign!(sync_events::Request::new(),
                 {
@@ -54,7 +54,7 @@ impl MatrixListener {
                         None => None
                     },
                     full_state: false,
-                    set_presence: PresenceState::Unavailable,
+                    set_presence: &PresenceState::Unavailable,
                     timeout: Some(Duration::new(30, 0))
                 }
             );
@@ -79,6 +79,9 @@ impl MatrixListener {
                                         ..
                                     }),
                                 )) => {
+                                    if matches!(t.relates_to, Some(Relation::Reply{in_reply_to: _})) {
+                                        continue;
+                                    }
                                     handle_text_event(
                                         &t,
                                         &sender,

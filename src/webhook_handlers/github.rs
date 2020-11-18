@@ -12,30 +12,45 @@ use serde::Deserialize;
 // use std::collections::HashSet;
 use tokio::sync::mpsc::Sender as TokioSender;
 
-#[post("/", data = "<payload>")]
+#[post("/", data = "<ping>")]
+pub async fn ping(
+    // req_token: MessageToken,
+    ping: Json<PingPayload>,
+    // send: State<'_, TokioSender<MatrixMessage>>,
+) -> Status {
+    println!("{:?}", ping);
+    Status::Ok
+}
+
+#[post("/", data = "<pull_request>")]
 pub async fn pull_request(
     // req_token: MessageToken,
-    payload: Json<PullRequestPayload>,
+    pull_request: Json<PullRequestPayload>,
     _send: State<'_, TokioSender<MatrixMessage>>,
 ) -> Status {
-    println!("{:?}", payload);
+    println!("{:?}", pull_request);
     Status::Ok
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PullRequestPayload {
-    action: Option<Actions>,
-    number: usize,
-    changes: Option<String>,
-    pull_request: String,
-    repository: String,
-    organization: String,
-    intallation: String,
-    sender: String,
+pub struct PingPayload {
+    zen: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub enum Actions {
+pub struct PullRequestPayload {
+    action: Option<ActionKind>,
+    number: usize,
+    // changes: Option<String>,
+    // pull_request: String,
+    // repository: String,
+    // organization: String,
+    // intallation: String,
+    // sender: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum ActionKind {
     #[serde(rename = "opened")]
     Opened,
     #[serde(rename = "edited")]
@@ -58,6 +73,6 @@ pub enum Actions {
     Unlocked,
     #[serde(rename = "reopened")]
     Reopened,
-    #[serde(other)]    
+    #[serde(other)]
     Unknown,
 }

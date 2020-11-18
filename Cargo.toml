@@ -16,8 +16,8 @@ lazy_static = "1.4"
 regex = "1.4"
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", rev = "8da034ab835ef1d599cd146164dffda960275c06" }
 ron = "0.6"
-ruma = { git = "https://github.com/ruma/ruma", rev = "5b904dd", features = ["client-api"] }
-ruma-client = { git = "https://github.com/ruma/ruma", rev = "5b904dd" }
+ruma = { git = "https://github.com/ruma/ruma", rev = "0f64a6e", features = ["client-api"] }
+ruma-client = { git = "https://github.com/ruma/ruma", rev = "0f64a6e" }
 thiserror = "1.0"
 toml = "0.5"
 tracing = "0.1"

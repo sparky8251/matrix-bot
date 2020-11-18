@@ -10,11 +10,11 @@ use ruma::{
     },
     RoomId, UserId,
 };
-use ruma_client::HttpsClient;
+use ruma_client::Client;
 use tracing::{debug, error, info};
 
 pub async fn send_notice(
-    client: &HttpsClient,
+    client: &Client,
     room_id: &RoomId,
     storage: &mut ResponderStorage,
     message: String,
@@ -33,7 +33,7 @@ pub async fn send_plain_text(
     room_id: &RoomId,
     storage: &mut ResponderStorage,
     message: String,
-    client: &HttpsClient,
+    client: &Client,
 ) {
     let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Text(
         TextMessageEventContent::plain(message),
@@ -51,7 +51,7 @@ pub async fn send_formatted_text(
     storage: &mut ResponderStorage,
     message: String,
     formatted_message: Option<String>,
-    client: &HttpsClient,
+    client: &Client,
 ) {
     let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Text(
         TextMessageEventContent::html(message, formatted_message.unwrap_or_default()),
@@ -69,7 +69,7 @@ pub async fn send_formatted_notice(
     storage: &mut ResponderStorage,
     message: String,
     formatted_message: Option<String>,
-    client: &HttpsClient,
+    client: &Client,
 ) {
     let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
         NoticeMessageEventContent::html(message, formatted_message.unwrap_or_default()),
@@ -82,7 +82,7 @@ pub async fn send_formatted_notice(
     }
 }
 
-pub async fn accept_invite(sender: &UserId, room_id: &RoomId, client: &HttpsClient) {
+pub async fn accept_invite(sender: &UserId, room_id: &RoomId, client: &Client) {
     info!("Authorized user {} invited me to room {}", sender, room_id);
     let response = client.request(join_room_by_id::Request::new(room_id)).await;
     match response {
@@ -92,7 +92,7 @@ pub async fn accept_invite(sender: &UserId, room_id: &RoomId, client: &HttpsClie
 }
 
 /// Will reject an invite and print the user that tried to logs
-pub async fn reject_invite(sender: &UserId, room_id: &RoomId, client: &HttpsClient) {
+pub async fn reject_invite(sender: &UserId, room_id: &RoomId, client: &Client) {
     let response = client.request(leave_room::Request::new(room_id)).await;
     match response {
         Ok(_) => info!("Rejected invite from unathorized user {}", sender),

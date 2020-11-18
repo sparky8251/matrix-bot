@@ -7,7 +7,7 @@ use crate::matrix_handlers::responders::{
     send_plain_text,
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
-use ruma_client::HttpsClient;
+use ruma_client::Client;
 use tokio::sync::mpsc::Receiver;
 use tracing::info;
 
@@ -27,7 +27,7 @@ impl MatrixResponder {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: HttpsClient) {
+    pub async fn start(&mut self, client: Client) {
         loop {
             match self.recv.recv().await {
                 Some(v) => match v.message {
