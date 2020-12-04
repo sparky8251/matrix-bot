@@ -7,8 +7,8 @@ use crate::messages::MatrixMessage;
 use ruma::{
     api::client::r0::sync::sync_events,
     events::{
-        room::message::{MessageEventContent, Relation}, AnyStrippedStateEvent, AnySyncMessageEvent,
-        AnySyncRoomEvent, SyncMessageEvent,
+        room::message::{MessageEventContent, Relation},
+        AnyStrippedStateEvent, AnySyncMessageEvent, AnySyncRoomEvent, SyncMessageEvent,
     },
     presence::PresenceState,
 };

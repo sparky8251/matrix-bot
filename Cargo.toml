@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.11"
+version = "2.0.0-beta.12"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -26,6 +26,7 @@ uom = "0.29"
 assign = "1.1.0"
 sha-1 = "0.9.2"
 hmac = "0.10.1"
+serde_json = "1.0"
 
 [dependencies.reqwest]
 version = "0.10"

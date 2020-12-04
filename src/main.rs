@@ -65,6 +65,7 @@
 
 mod bot;
 mod config;
+mod events;
 mod helpers;
 mod logging;
 mod matrix;
