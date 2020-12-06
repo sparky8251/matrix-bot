@@ -1,0 +1,183 @@
+Json
+(
+    Object
+    (
+        {
+            "hook": Object
+            (
+                {
+                    "active": Bool(true),
+                    "config": Object
+                    (
+                        {
+                            "content_type": String("json"),
+                            "insecure_ssl": String("0"),
+                            "url": String("https://jf-bot.possumlodge.me/event")
+                        }
+                    ), 
+                    "created_at": String("2020-12-04T22:06:33Z"),
+                    "events": Array([String("*")]),
+                    "id": Number(266504612),
+                    "last_response": Object
+                    (
+                        {
+                            "code": Null,
+                            "message": Null,
+                            "status": String("unused")
+                        }
+                    ),
+                    "name": String("web"),
+                    "ping_url": String("https://api.github.com/repos/sparky8251/matrix-bot/hooks/266504612/pings"),
+                    "test_url": String("https://api.github.com/repos/sparky8251/matrix-bot/hooks/266504612/test"),
+                    "type": String("Repository"),
+                    "updated_at": String("2020-12-04T22:06:33Z"),
+                    "url": String("https://api.github.com/repos/sparky8251/matrix-bot/hooks/266504612")
+                }
+            ),
+            "hook_id": Number(266504612),
+            "repository": Object
+            (
+                {
+                    "archive_url": String("https://api.github.com/repos/sparky8251/matrix-bot/{archive_format}{/ref}"),
+                    "archived": Bool(false),
+                    "assignees_url": String("https://api.github.com/repos/sparky8251/matrix-bot/assignees{/user}"),
+                    "blobs_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/blobs{/sha}"),
+                    "branches_url": String("https://api.github.com/repos/sparky8251/matrix-bot/branches{/branch}"),
+                    "clone_url": String("https://github.com/sparky8251/matrix-bot.git"),
+                    "collaborators_url": String("https://api.github.com/repos/sparky8251/matrix-bot/collaborators{/collaborator}"),
+                    "comments_url": String("https://api.github.com/repos/sparky8251/matrix-bot/comments{/number}"),
+                    "commits_url": String("https://api.github.com/repos/sparky8251/matrix-bot/commits{/sha}"),
+                    "compare_url": String("https://api.github.com/repos/sparky8251/matrix-bot/compare/{base}...{head}"),
+                    "contents_url": String("https://api.github.com/repos/sparky8251/matrix-bot/contents/{+path}"),
+                    "contributors_url": String("https://api.github.com/repos/sparky8251/matrix-bot/contributors"),
+                    "created_at": String("2020-04-06T22:34:04Z"), "default_branch": String("master"),
+                    "deployments_url": String("https://api.github.com/repos/sparky8251/matrix-bot/deployments"),
+                    "description": String("Simple multipurpose project focused matrix bot"),
+                    "disabled": Bool(false),
+                    "downloads_url": String("https://api.github.com/repos/sparky8251/matrix-bot/downloads"),
+                    "events_url": String("https://api.github.com/repos/sparky8251/matrix-bot/events"),
+                    "fork": Bool(false),
+                    "forks": Number(4),
+                    "forks_count": Number(4),
+                    "forks_url": String("https://api.github.com/repos/sparky8251/matrix-bot/forks"),
+                    "full_name": String("sparky8251/matrix-bot"),
+                    "git_commits_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/commits{/sha}"),
+                    "git_refs_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/refs{/sha}"),
+                    "git_tags_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/tags{/sha}"),
+                    "git_url": String("git://github.com/sparky8251/matrix-bot.git"),
+                    "has_downloads": Bool(true),
+                    "has_issues": Bool(true),
+                    "has_pages": Bool(false),
+                    "has_projects": Bool(true),
+                    "has_wiki": Bool(true),
+                    "homepage": String(""),
+                    "hooks_url": String("https://api.github.com/repos/sparky8251/matrix-bot/hooks"),
+                    "html_url": String("https://github.com/sparky8251/matrix-bot"),
+                    "id": Number(253631019),
+                    "issue_comment_url": String("https://api.github.com/repos/sparky8251/matrix-bot/issues/comments{/number}"),
+                    "issue_events_url": String("https://api.github.com/repos/sparky8251/matrix-bot/issues/events{/number}"),
+                    "issues_url": String("https://api.github.com/repos/sparky8251/matrix-bot/issues{/number}"),
+                    "keys_url": String("https://api.github.com/repos/sparky8251/matrix-bot/keys{/key_id}"),
+                    "labels_url": String("https://api.github.com/repos/sparky8251/matrix-bot/labels{/name}"),
+                    "language": String("Rust"),
+                    "languages_url": String("https://api.github.com/repos/sparky8251/matrix-bot/languages"),
+                    "license": Object({"key": String("agpl-3.0"),
+                    "name": String("GNU Affero General Public License v3.0"),
+                    "node_id": String("MDc6TGljZW5zZTE="),
+                    "spdx_id": String("AGPL-3.0"),
+                    "url": String("https://api.github.com/licenses/agpl-3.0")
+                }
+            ),
+            "merges_url": String("https://api.github.com/repos/sparky8251/matrix-bot/merges"),
+            "milestones_url": String("https://api.github.com/repos/sparky8251/matrix-bot/milestones{/number}"),
+            "mirror_url": Null,
+            "name": String("matrix-bot"),
+            "node_id": String("MDEwOlJlcG9zaXRvcnkyNTM2MzEwMTk="),
+            "notifications_url": String("https://api.github.com/repos/sparky8251/matrix-bot/notifications{?since,all,participating}"),
+            "open_issues": Number(0),
+            "open_issues_count": Number(0),
+            "owner": Object
+            (
+                {
+                    "avatar_url": String("https://avatars1.githubusercontent.com/u/1992688?v=4"),
+                    "events_url": String("https://api.github.com/users/sparky8251/events{/privacy}"),
+                    "followers_url": String("https://api.github.com/users/sparky8251/followers"),
+                    "following_url": String("https://api.github.com/users/sparky8251/following{/other_user}"),
+                    "gists_url": String("https://api.github.com/users/sparky8251/gists{/gist_id}"),
+                    "gravatar_id": String(""), "html_url": String("https://github.com/sparky8251"),
+                    "id": Number(1992688),
+                    "login": String("sparky8251"),
+                    "node_id": String("MDQ6VXNlcjE5OTI2ODg="),
+                    "organizations_url": String("https://api.github.com/users/sparky8251/orgs"),
+                    "received_events_url": String("https://api.github.com/users/sparky8251/received_events"),
+                    "repos_url": String("https://api.github.com/users/sparky8251/repos"),
+                    "site_admin": Bool(false),
+                    "starred_url": String("https://api.github.com/users/sparky8251/starred{/owner}{/repo}"),
+                    "subscriptions_url": String("https://api.github.com/users/sparky8251/subscriptions"),
+                    "type": String("User"), "url": String("https://api.github.com/users/sparky8251")
+                }
+            ),
+          "private": Bool(false),
+            "pulls_url": String("https://api.github.com/repos/sparky8251/matrix-bot/pulls{/number}"),
+            "pushed_at": String("2020-12-04T21:12:07Z"),
+            "releases_url": String("https://api.github.com/repos/sparky8251/matrix-bot/releases{/id}"),
+            "size": Number(628),
+            "ssh_url": String("git@github.com:sparky8251/matrix-bot.git"),
+            "stargazers_count": Number(12),
+            "stargazers_url": String("https://api.github.com/repos/sparky8251/matrix-bot/stargazers"),
+            "statuses_url": String("https://api.github.com/repos/sparky8251/matrix-bot/statuses/{sha}"),
+            "subscribers_url": String("https://api.github.com/repos/sparky8251/matrix-bot/subscribers"),
+            "subscription_url": String("https://api.github.com/repos/sparky8251/matrix-bot/subscription"),
+            "svn_url": String("https://github.com/sparky8251/matrix-bot"),
+            "tags_url": String("https://api.github.com/repos/sparky8251/matrix-bot/tags"),
+            "teams_url": String("https://api.github.com/repos/sparky8251/matrix-bot/teams"),
+            "trees_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/trees{/sha}"),
+            "updated_at": String("2020-12-04T21:12:10Z"),
+            "url": String("https://api.github.com/repos/sparky8251/matrix-bot"),
+            "watchers": Number(12), "watchers_count": Number(12)  "private": Bool(false),
+            "pulls_url": String("https://api.github.com/repos/sparky8251/matrix-bot/pulls{/number}"),
+            "pushed_at": String("2020-12-04T21:12:07Z"),
+            "releases_url": String("https://api.github.com/repos/sparky8251/matrix-bot/releases{/id}"),
+            "size": Number(628),
+            "ssh_url": String("git@github.com:sparky8251/matrix-bot.git"),
+            "stargazers_count": Number(12),
+            "stargazers_url": String("https://api.github.com/repos/sparky8251/matrix-bot/stargazers"),
+            "statuses_url": String("https://api.github.com/repos/sparky8251/matrix-bot/statuses/{sha}"),
+            "subscribers_url": String("https://api.github.com/repos/sparky8251/matrix-bot/subscribers"),
+            "subscription_url": String("https://api.github.com/repos/sparky8251/matrix-bot/subscription"),
+            "svn_url": String("https://github.com/sparky8251/matrix-bot"),
+            "tags_url": String("https://api.github.com/repos/sparky8251/matrix-bot/tags"),
+            "teams_url": String("https://api.github.com/repos/sparky8251/matrix-bot/teams"),
+            "trees_url": String("https://api.github.com/repos/sparky8251/matrix-bot/git/trees{/sha}"),
+            "updated_at": String("2020-12-04T21:12:10Z"),
+            "url": String("https://api.github.com/repos/sparky8251/matrix-bot"),
+            "watchers": Number(12), "watchers_count": Number(12)
+        }   
+            ),
+            "sender": Object
+                (
+                    {
+                        "avatar_url": String("https://avatars1.githubusercontent.com/u/1992688?v=4"),
+                        "events_url": String("https://api.github.com/users/sparky8251/events{/privacy}"),
+                        "followers_url": String("https://api.github.com/users/sparky8251/followers"),
+                        "following_url": String("https://api.github.com/users/sparky8251/following{/other_user}"),
+                        "gists_url": String("https://api.github.com/users/sparky8251/gists{/gist_id}"),
+                        "gravatar_id": String(""),
+                        "html_url": String("https://github.com/sparky8251"),
+                        "id": Number(1992688),
+                        "login": String("sparky8251"),
+                        "node_id": String("MDQ6VXNlcjE5OTI2ODg="),
+                        "organizations_url": String("https://api.github.com/users/sparky8251/orgs"),
+                        "received_events_url": String("https://api.github.com/users/sparky8251/received_events"),
+                        "repos_url": String("https://api.github.com/users/sparky8251/repos"),
+                        "site_admin": Bool(false),
+                        "starred_url": String("https://api.github.com/users/sparky8251/starred{/owner}{/repo}"),
+                        "subscriptions_url": String("https://api.github.com/users/sparky8251/subscriptions"),
+                        "type": String("User"),
+                        "url": String("https://api.github.com/users/sparky8251")
+                    }
+                ), 
+            "zen": String("Speak like a human.")
+        }
+    )
+)

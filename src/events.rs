@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Value {
     pub json: serde_json::Value,
 }
@@ -13,7 +13,8 @@ impl Default for Value {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
 pub enum Event {
     CommitComment {
         action: String,
@@ -174,7 +175,7 @@ pub enum Event {
     },
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Commit {
     author: GitUser,
     committer: GitUser,
@@ -184,13 +185,13 @@ pub struct Commit {
     comment_count: u64,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct BranchRef {
     pub commit: GitRef,
     pub name: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PageBuild {
     pub commit: String,
     pub created_at: String,
@@ -202,7 +203,7 @@ pub struct PageBuild {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Comment {
     pub body: String,
     pub commit_id: String,
@@ -217,7 +218,7 @@ pub struct Comment {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct CommitRef {
     pub author: User,
     pub comments_url: String,
@@ -229,7 +230,7 @@ pub struct CommitRef {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Deployment {
     pub created_at: String,
     pub creator: User,
@@ -247,7 +248,7 @@ pub struct Deployment {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct DeploymentStatus {
     pub created_at: String,
     pub creator: User,
@@ -261,7 +262,7 @@ pub struct DeploymentStatus {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct CommitStats {
     pub added: Vec<String>,
     pub author: GitUser,
@@ -276,7 +277,7 @@ pub struct CommitStats {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Hook {
     pub active: bool,
     pub config: Config,
@@ -292,7 +293,7 @@ pub struct Hook {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Issue {
     pub assignee: Option<String>,
     pub body: Option<String>,
@@ -315,7 +316,7 @@ pub struct Issue {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct IssueCommentComment {
     pub body: String,
     pub created_at: String,
@@ -327,7 +328,7 @@ pub struct IssueCommentComment {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Organization {
     pub avatar_url: String,
     pub events_url: String,
@@ -340,7 +341,7 @@ pub struct Organization {
     pub description: Option<String>,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Pages {
     pub action: String,
     pub html_url: String,
@@ -350,7 +351,7 @@ pub struct Pages {
     pub title: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestDetails {
     pub _links: PullRequestLinks,
     pub assignee: Option<String>,
@@ -391,7 +392,7 @@ pub struct PullRequestDetails {
     pub changed_files: u64,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequest {
     pub _links: PullRequestLinks,
     pub assignee: Option<String>,
@@ -422,7 +423,7 @@ pub struct PullRequest {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestReviewComment {
     #[serde(rename = "_links")]
     pub _links: PullRequestReviewCommentLinks,
@@ -442,7 +443,7 @@ pub struct PullRequestReviewComment {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Release {
     pub assets: Vec<String>,
     pub assets_url: String,
@@ -463,14 +464,14 @@ pub struct Release {
     pub zipball_url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct UserRef {
     pub name: String,
     pub email: Option<String>,
 }
 
 /// differs from Repository in owner type and some timestamp field types
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PushRepository {
     pub archive_url: String,
     pub assignees_url: String,
@@ -540,7 +541,7 @@ pub struct PushRepository {
     pub watchers_count: u64,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Repository {
     pub archive_url: String,
     pub assignees_url: String,
@@ -610,7 +611,7 @@ pub struct Repository {
     pub watchers_count: u64,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Team {
     pub id: u64,
     pub members_url: String,
@@ -621,7 +622,7 @@ pub struct Team {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct GitUser {
     pub email: String,
     pub name: String,
@@ -629,7 +630,7 @@ pub struct GitUser {
     pub date: Option<String>,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Config {
     pub content_type: String,
     pub insecure_ssl: String,
@@ -637,12 +638,12 @@ pub struct Config {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Error {
     pub message: Option<String>,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullSource {
     pub label: String,
     #[serde(rename = "ref")]
@@ -652,21 +653,21 @@ pub struct PullSource {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Label {
     pub color: String,
     pub name: String,
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct LastResponse {
     pub code: Option<String>,
     pub message: Option<String>,
     pub status: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestLinks {
     pub comments: Link,
     pub commits: Link,
@@ -679,7 +680,7 @@ pub struct PullRequestLinks {
     pub statuses: Link,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestInnerBase {
     pub label: String,
     #[serde(rename = "ref")]
@@ -689,7 +690,7 @@ pub struct PullRequestInnerBase {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestInnerHead {
     pub label: String,
     #[serde(rename = "ref")]
@@ -699,7 +700,7 @@ pub struct PullRequestInnerHead {
     pub user: User,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct PullRequestReviewCommentLinks {
     pub html: Link,
     pub pull_request: Link,
@@ -707,7 +708,7 @@ pub struct PullRequestReviewCommentLinks {
     pub _self: Link,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct User {
     pub avatar_url: String,
     pub events_url: String,
@@ -729,12 +730,12 @@ pub struct User {
     pub url: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct Link {
     pub href: String,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Clone, Default, Debug, Deserialize)]
 pub struct GitRef {
     pub sha: String,
     pub url: String,
