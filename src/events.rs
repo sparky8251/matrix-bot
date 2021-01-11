@@ -101,10 +101,6 @@ pub enum Event {
         sender: User,
         zen: String,
     },
-    Public {
-        repository: Repository,
-        sender: User,
-    },
     PullRequest {
         action: String,
         number: u64,
@@ -170,6 +166,10 @@ pub enum Event {
     },
     Watch {
         action: String,
+        repository: Repository,
+        sender: User,
+    },
+    Public {
         repository: Repository,
         sender: User,
     },

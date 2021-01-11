@@ -11,7 +11,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 graphql_client = "0.9"
-http = "0.2.1"
+http = "0.2"
 lazy_static = "1.4"
 regex = "1.4"
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", rev = "8da034ab835ef1d599cd146164dffda960275c06" }
@@ -22,11 +22,12 @@ thiserror = "1.0"
 toml = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.2"
-uom = "0.29"
-assign = "1.1.0"
-sha-1 = "0.9.2"
-hmac = "0.10.1"
+uom = "0.31"
+assign = "1.1"
 serde_json = "1.0"
+hmac = "0.10"
+sha2 = "0.9"
+hex-literal = "0.3"
 
 [dependencies.reqwest]
 version = "0.10"
@@ -43,5 +44,5 @@ version = "1.0"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "0.2"
-features = ["signal", "macros"]
+version = "1.0"
+features = ["signal", "macros", "sync", "rt-multi-thread"]
