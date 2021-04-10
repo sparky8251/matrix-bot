@@ -19,6 +19,7 @@ enum Level {
     Trace,
 }
 
+#[allow(dead_code)]
 enum Filter {
     MatrixBot,
     All,

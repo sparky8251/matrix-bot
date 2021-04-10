@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.12"
+version = "2.0.0-beta.13"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -45,5 +45,5 @@ version = "1.0"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "1.0"
-features = ["signal", "macros", "sync", "rt-multi-thread"]
+version = "0.2"
+features = ["signal", "macros"]

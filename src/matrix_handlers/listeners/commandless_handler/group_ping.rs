@@ -56,6 +56,10 @@ pub fn group_ping(
     if users.is_empty() {
         debug!("No users to ping after processing.");
     } else {
+        // Remove user that requested ping if they exist in the list AND arent the only one in the list
+        if users.len() != 1 {
+            users.remove(&sender);
+        }
         text_response.set_users(users);
     }
 }
