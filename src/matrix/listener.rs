@@ -1,6 +1,7 @@
 //! Structs and functions that represent functional bots and allow for easy loading
 //! plus main loop initialization.
 
+use super::MatrixClient;
 use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
 use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use crate::messages::MatrixMessage;
@@ -12,7 +13,6 @@ use ruma::{
     },
     presence::PresenceState,
 };
-use ruma_client::Client;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
@@ -44,7 +44,7 @@ impl MatrixListener {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: Client) {
+    pub async fn start(&mut self, client: MatrixClient) {
         loop {
             let req = assign!(sync_events::Request::new(),
                 {
@@ -58,7 +58,7 @@ impl MatrixListener {
                     timeout: Some(Duration::new(30, 0))
                 }
             );
-            let response = match client.request(req).await {
+            let response = match client.send_request(req).await {
                 Ok(v) => Some(v),
                 Err(e) => {
                     debug!("Line 73: {:?}", e);

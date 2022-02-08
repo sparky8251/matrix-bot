@@ -3,7 +3,6 @@
 use http::Uri;
 use reqwest::header::HeaderValue;
 use ruma::{RoomId, UserId};
-use ruma_client::Session;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
@@ -174,8 +173,8 @@ struct RawGithubAuthentication {
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct SessionStorage {
-    /// Matrix session data.
-    pub session: Option<Session>,
+    /// Matrix access token.
+    pub access_token: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
