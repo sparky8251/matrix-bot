@@ -1,8 +1,8 @@
 use crate::config::{Config, SessionStorage};
 use crate::matrix::listener::MatrixListener;
 use crate::matrix::responder::MatrixResponder;
+use crate::matrix::MatrixClient;
 use crate::webhook::listener::WebhookListener;
-use ruma_client::Client;
 use tokio::sync::mpsc;
 use tracing::{info, trace};
 
@@ -12,15 +12,16 @@ pub async fn init() {
 
     // Matrix initalization and login
     let mut session_storage = SessionStorage::load_storage();
-    let matrix_listener_client = Client::new(config.mx_url.clone(), session_storage.session);
-    let session = &matrix_listener_client
+    let matrix_listener_client =
+        MatrixClient::new(config.mx_url.to_string(), session_storage.access_token);
+    let login_response = &matrix_listener_client
         .log_in(config.mx_uname.localpart(), &config.mx_pass, None, None)
         .await
         .unwrap();
 
     // Save returned session
     trace!("Session retrived, saving session data...");
-    session_storage.session = Some(session.clone());
+    session_storage.access_token = Some(login_response.access_token.clone());
     session_storage.save();
     info!("Successfully logged in as {}", config.mx_uname);
 

@@ -1,13 +1,13 @@
 //! Structs and functions that represent functional bots and allow for easy loading
 //! plus main loop initialization.
 
+use super::MatrixClient;
 use crate::config::ResponderStorage;
 use crate::matrix_handlers::responders::{
     accept_invite, reject_invite, send_formatted_notice, send_formatted_text, send_notice,
     send_plain_text,
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
-use ruma_client::Client;
 use tokio::sync::mpsc::Receiver;
 use tracing::info;
 
@@ -27,7 +27,7 @@ impl MatrixResponder {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: Client) {
+    pub async fn start(&mut self, client: MatrixClient) {
         loop {
             match self.recv.recv().await {
                 Some(v) => match v.message {
