@@ -6,9 +6,9 @@ use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
 use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use crate::messages::MatrixMessage;
 use ruma::{
-    api::client::r0::sync::sync_events,
+    api::client::sync::sync_events,
     events::{
-        room::message::{MessageEventContent, MessageType, Relation},
+        room::message::{MessageType, Relation, RoomMessageEventContent},
         AnyStrippedStateEvent, AnySyncMessageEvent, AnySyncRoomEvent, SyncMessageEvent,
     },
     presence::PresenceState,
@@ -46,7 +46,7 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient) {
         loop {
-            let req = assign!(sync_events::Request::new(),
+            let req = assign!(sync_events::v3::Request::new(),
                 {
                     filter: None,
                     since: match &self.storage.last_sync {
@@ -75,7 +75,7 @@ impl MatrixListener {
                                 Ok(AnySyncRoomEvent::Message(
                                     AnySyncMessageEvent::RoomMessage(SyncMessageEvent {
                                         content:
-                                            MessageEventContent {
+                                            RoomMessageEventContent {
                                                 msgtype: MessageType::Text(t),
                                                 relates_to,
                                                 ..

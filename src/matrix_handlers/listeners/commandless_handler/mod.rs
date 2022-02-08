@@ -74,7 +74,7 @@ pub(super) async fn commandless_handler(
                 if notice_response.is_some() {
                     match send
                         .send(MatrixMessage {
-                            room_id: room_id.clone(),
+                            room_id: room_id.to_owned(),
                             message: MatrixMessageType::Notice(notice_response.to_string()),
                         })
                         .await
@@ -90,7 +90,7 @@ pub(super) async fn commandless_handler(
                     };
                     match send
                         .send(MatrixMessage {
-                            room_id: room_id.clone(),
+                            room_id: room_id.to_owned(),
                             message: MatrixMessageType::FormattedText(message),
                         })
                         .await
@@ -109,7 +109,7 @@ pub(super) async fn commandless_handler(
                     if let Some(v) = spellcheck(text, sender, config) {
                         match send
                             .send(MatrixMessage {
-                                room_id: room_id.clone(),
+                                room_id: room_id.to_owned(),
                                 message: MatrixMessageType::Text(v),
                             })
                             .await
@@ -117,7 +117,7 @@ pub(super) async fn commandless_handler(
                             Ok(_) => {
                                 storage
                                     .last_correction_time
-                                    .insert(room_id.clone(), SystemTime::now());
+                                    .insert(room_id.to_owned(), SystemTime::now());
                             }
                             Err(_) => error!("Channel closed. Unable to send message."),
                         };

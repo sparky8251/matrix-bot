@@ -22,7 +22,7 @@ pub struct MatrixNoticeResponse {
 #[derive(Debug, Default)]
 pub struct MatrixFormattedTextResponse {
     /// List of users that will be pinged for response building
-    users: Option<HashSet<UserId>>,
+    users: Option<HashSet<Box<UserId>>>,
 }
 
 #[derive(Debug, Default)]
@@ -68,7 +68,7 @@ impl MatrixFormattedTextResponse {
     /// Sets member users with supplied list of users
     ///
     /// Will overwrite if supplied a second time
-    pub fn set_users(&mut self, users: HashSet<UserId>) {
+    pub fn set_users(&mut self, users: HashSet<Box<UserId>>) {
         self.users = Some(users)
     }
     /// Returns `true` if any member field is `Some`

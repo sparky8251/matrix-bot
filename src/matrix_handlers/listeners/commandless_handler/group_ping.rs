@@ -14,7 +14,7 @@ pub fn group_ping(
     config: &MatrixListenerConfig,
     text_response: &mut MatrixFormattedTextResponse,
 ) {
-    let mut users: HashSet<UserId> = HashSet::new();
+    let mut users: HashSet<Box<UserId>> = HashSet::new();
     if !config.group_ping_users.contains(sender) {
         debug!("User not authorized for group pings. Ignoring...");
         return;
@@ -36,13 +36,13 @@ pub fn group_ping(
     } else {
         // Remove user that requested ping if they exist in the list AND arent the only one in the list
         if users.len() != 1 {
-            users.remove(&sender);
+            users.remove(sender);
         }
         text_response.set_users(users);
     }
 }
 
-fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<UserId>) {
+fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<Box<UserId>>) {
     for cap in GROUP_PING.captures_iter(&text.to_lowercase()) {
         trace!("{:?}", cap);
         if cap[1].eq("all") {

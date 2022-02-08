@@ -28,7 +28,7 @@ pub async fn message(
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
-            let pings: HashSet<UserId> = pings.iter().cloned().collect();
+            let pings: HashSet<Box<UserId>> = pings.iter().cloned().collect();
             response.set_users(pings);
             let matrix_message = MatrixMessage {
                 room_id: message.room_id.clone(),
@@ -50,9 +50,9 @@ pub async fn message(
 
 #[derive(Debug, Deserialize)]
 pub struct Message {
-    room_id: RoomId,
+    room_id: Box<RoomId>,
     message: String,
-    ping: Option<Vec<UserId>>,
+    ping: Option<Vec<Box<UserId>>>,
 }
 
 #[derive(Debug, Deserialize)]

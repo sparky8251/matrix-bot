@@ -55,14 +55,14 @@ pub async fn handle_invite_event(
     send: &mut Sender<MatrixMessage>,
 ) {
     trace!("Invited by {} to room {} ", &sender, &room_id);
-    if config.admins.contains(&sender) {
+    if config.admins.contains(sender) {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Accept,
-            sender: sender.clone(),
+            sender: sender.to_owned(),
         };
         match send
             .send(MatrixMessage {
-                room_id: room_id.clone(),
+                room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await
@@ -73,11 +73,11 @@ pub async fn handle_invite_event(
     } else {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Reject,
-            sender: sender.clone(),
+            sender: sender.to_owned(),
         };
         match send
             .send(MatrixMessage {
-                room_id: room_id.clone(),
+                room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await

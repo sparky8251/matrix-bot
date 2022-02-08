@@ -2,7 +2,7 @@ use ruma::{RoomId, UserId};
 
 #[derive(Debug)]
 pub struct MatrixMessage {
-    pub room_id: RoomId,
+    pub room_id: Box<RoomId>,
     pub message: MatrixMessageType,
     // pub resp: Responder<MatrixMessageResult>,
 }
@@ -31,7 +31,7 @@ pub struct MatrixFormattedMessage {
 #[derive(Debug)]
 pub struct MatrixInviteMessage {
     pub kind: MatrixInviteType,
-    pub sender: UserId,
+    pub sender: Box<UserId>,
 }
 
 // #[derive(Debug)]

@@ -34,7 +34,7 @@ pub(super) async fn unit_conversion_handler(
         response.set_unit_conversions(result);
         match send
             .send(MatrixMessage {
-                room_id: room_id.clone(),
+                room_id: room_id.to_owned(),
                 message: MatrixMessageType::Notice(response.to_string()),
             })
             .await
