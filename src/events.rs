@@ -176,6 +176,7 @@ pub enum Event {
 }
 
 #[derive(Clone, Default, Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Commit {
     author: GitUser,
     committer: GitUser,

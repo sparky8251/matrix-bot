@@ -54,6 +54,8 @@ pub struct MatrixListenerConfig {
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
     pub links: HashMap<String, Uri>,
+    /// List of all text expansions.
+    pub text_expansions: HashMap<String, String>,
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
@@ -100,6 +102,8 @@ pub struct Config {
     repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
     links: HashMap<String, Uri>,
+    /// List of all text expansions.
+    text_expansions: HashMap<String, String>,
     /// UserAgent used by reqwest
     user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
@@ -124,6 +128,8 @@ pub struct RawConfig {
     searchable_repos: Option<HashMap<String, String>>,
     /// Hashmap containing searched key and matching URL for linking.
     linkable_urls: Option<HashMap<String, String>>,
+    /// List of all text expansions.
+    text_expansion: Option<HashMap<String, String>>,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
     group_pings: Option<HashMap<String, Vec<String>>>,
 }
@@ -150,6 +156,7 @@ struct RawGeneral {
     correction_exclusion: Option<HashSet<RoomId>>,
     /// List of all words that can be used to link URLs.
     link_matchers: Option<HashSet<String>>,
+
     webhook_token: String,
 }
 
@@ -233,6 +240,7 @@ impl MatrixListenerConfig {
             help_rooms: config.help_rooms.clone(),
             repos: config.repos.clone(),
             links: config.links.clone(),
+            text_expansions: config.text_expansions.clone(),
             user_agent: config.user_agent.clone(),
             group_pings: config.group_pings.clone(),
             group_ping_users: config.group_ping_users.clone(),
@@ -292,6 +300,7 @@ impl Config {
         // Set variables and exit/error if set improperly
         let (repos, gh_access_token) = load_github_settings(&toml);
         let (linkers, links) = load_linker_settings(&toml);
+        let text_expansions = load_text_expansions(&toml);
         let unit_conversion_exclusion = load_unit_conversion_settings(&toml);
         let (incorrect_spellings, correction_text, correction_exclusion) =
             load_spell_correct_settings(&toml);
@@ -333,6 +342,7 @@ impl Config {
             correction_text,
             correction_exclusion,
             linkers,
+            text_expansions,
             admins,
             help_rooms,
             repos,
@@ -707,6 +717,16 @@ fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, U
         None => {
             info!("No linkable urls found. Disabling feature...");
             (HashSet::new(), HashMap::new())
+        }
+    }
+}
+
+fn load_text_expansions(toml: &RawConfig) -> HashMap<String, String> {
+    match &toml.text_expansion {
+        Some(d) => d.clone(),
+        None => {
+            info!("No text expansions found. Disabling Feature...");
+            HashMap::new()
         }
     }
 }

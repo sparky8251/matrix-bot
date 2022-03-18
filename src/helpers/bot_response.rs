@@ -15,6 +15,8 @@ pub struct MatrixNoticeResponse {
     gh_results: Option<Vec<Url>>,
     /// List of link results for response building
     links: Option<Vec<Url>>,
+    /// Expanded text for response building
+    expanded_text: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default)]
@@ -47,9 +49,18 @@ impl MatrixNoticeResponse {
     pub fn set_links(&mut self, links: Vec<Url>) {
         self.links = Some(links)
     }
+    /// Sets member expanded text with supplied text
+    ///
+    /// Will overwrite if suppled a second time
+    pub fn set_expanded_text(&mut self, expanded_text: Vec<String>) {
+        self.expanded_text = Some(expanded_text)
+    }
     /// Returns `true` if any member field is `Some`
     pub fn is_some(&self) -> bool {
-        self.conversions.is_some() || self.gh_results.is_some() || self.links.is_some()
+        self.conversions.is_some()
+            || self.gh_results.is_some()
+            || self.links.is_some()
+            || self.expanded_text.is_some()
     }
 }
 
@@ -135,6 +146,15 @@ impl fmt::Display for MatrixNoticeResponse {
             None => (),
         }
         match &self.links {
+            Some(v) => {
+                for s in v {
+                    response.push_str(&s.to_string());
+                    response.push('\n')
+                }
+            }
+            None => (),
+        }
+        match &self.expanded_text {
             Some(v) => {
                 for s in v {
                     response.push_str(&s.to_string());

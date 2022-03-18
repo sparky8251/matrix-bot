@@ -4,12 +4,13 @@ mod github_search;
 mod group_ping;
 mod link_url;
 mod spellcheck;
+mod text_expansion;
 mod unit_conversion;
 
 use crate::config::{ListenerStorage, MatrixListenerConfig};
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
-use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, UNIT_CONVERSION};
+use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
@@ -19,6 +20,7 @@ use ruma::{
 };
 use spellcheck::spellcheck;
 use std::time::SystemTime;
+use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
 use unit_conversion::unit_conversion;
@@ -60,6 +62,10 @@ pub(super) async fn commandless_handler(
                 if GROUP_PING.is_match(&text.body) {
                     debug!("Entering commandless group ping path");
                     group_ping(&text, &sender, &config, &mut text_response);
+                }
+                if TEXT_EXPANSION.is_match(&text.body) {
+                    debug!("Entering commandless text expansion path");
+                    text_expansion(&text, &config, &mut notice_response);
                 }
 
                 let notice_response = notice_response;

@@ -43,7 +43,18 @@ lazy_static! {
     pub static ref GROUP_PING: Regex = Regex::new(
         r"(?x)
         (?:^|\s+)
-        %
+        %                              # Require one % to match for a ping
+        (?:[[\t\v\f\r ][:blank:]])*?   # Any amount of whitespace but not \n
+        ([[:alnum:]]+)
+    "
+    )
+    .unwrap();
+}
+lazy_static! {
+    pub static ref TEXT_EXPANSION: Regex = Regex::new(
+        r"(?x)
+        (?:^|\s+)
+        $                              # Require one $ to match for a text expansion
         (?:[[\t\v\f\r ][:blank:]])*?   # Any amount of whitespace but not \n
         ([[:alnum:]]+)
     "
