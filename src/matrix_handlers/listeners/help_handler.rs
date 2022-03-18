@@ -13,6 +13,7 @@ enum HelpType {
     GroupPing,
     GithubSearch,
     Link,
+    TextExpansion,
     UnitConversion,
     UnknownCommand,
 }
@@ -25,6 +26,7 @@ impl From<&str> for HelpType {
             "ping" => HelpType::GroupPing,
             "github-search" => HelpType::GithubSearch,
             "link" => HelpType::Link,
+            "text-expansion" => HelpType::TextExpansion,
             "unit-conversion" => HelpType::UnitConversion,
             _ => HelpType::UnknownCommand,
         }
@@ -47,6 +49,7 @@ pub(super) async fn help_handler(
                 HelpType::GroupPing => message = group_ping_help_message(&config).await,
                 HelpType::GithubSearch => message = github_search_help_message(&config).await,
                 HelpType::Link => message = link_help_message(&config).await,
+                HelpType::TextExpansion => message = text_expansion_help_message(&config).await,
                 HelpType::UnitConversion => message = unit_conversion_help_message(&config).await,
                 HelpType::UnknownCommand => (),
             },
@@ -242,6 +245,34 @@ AVAILABLE KEYWORDS:
 AVAILABLE LINKS:
 {}
     ", available_keywords, available_links)
+}
+
+async fn text_expansion_help_message(config: &MatrixListenerConfig) -> String {
+    let mut keywords = Vec::new();
+    for keyword in config.text_expansions.keys() {
+        keywords.push(keyword);
+    }
+    keywords.sort();
+    let mut available_keywords = String::new();
+    for keyword in keywords {
+        available_keywords.push_str(&keyword);
+        available_keywords.push('|');
+    }
+    available_keywords.pop();
+    let available_keywords = available_keywords.replace('|', " | ");
+    format!("Text Expansion
+
+This action is only available as commandless. It will trigger on anything that matches \"$text\" where \"text\" is a configured keyword.
+
+if the keyword exists, there will be a message containing designated expanded text provided in a bot message.
+
+USAGE:
+\tIf you have questions about the addon, i hope $kodi answers it for you
+\t$kodi
+
+AVAILABLE KEYWORDS:
+{}
+    ", available_keywords)
 }
 
 async fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
