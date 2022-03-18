@@ -45,7 +45,7 @@ pub fn group_ping(
 fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<UserId>) {
     for cap in GROUP_PING.captures_iter(&text.to_lowercase()) {
         trace!("{:?}", cap);
-        if cap[1].eq("%all") {
+        if cap[1].eq("all") {
             for user in config.group_pings.values().flatten() {
                 users.insert(user.clone());
             }
