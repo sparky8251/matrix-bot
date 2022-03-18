@@ -48,13 +48,19 @@ pub fn group_ping(
         None => {
             for cap in GROUP_PING.captures_iter(&text.body.to_lowercase()) {
                 trace!("{:?}", cap);
-                match config.group_pings.get(&cap[1]) {
-                    Some(v) => {
-                        for user in v {
-                            users.insert(user.clone());
-                        }
+                if cap[1].eq("%all") {
+                    for user in config.group_pings.values().flatten() {
+                        users.insert(user.clone());
                     }
-                    None => error!("Somehow lost group between regex match and insertion!"),
+                } else {
+                    match config.group_pings.get(&cap[1]) {
+                        Some(v) => {
+                            for user in v {
+                                users.insert(user.clone());
+                            }
+                        }
+                        None => error!("Somehow lost group between regex match and insertion!"),
+                    }
                 }
             }
         }
