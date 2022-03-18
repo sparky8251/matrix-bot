@@ -23,47 +23,13 @@ pub fn group_ping(
         Some(v) => {
             let clean_text = clean_text(&v.body);
             if GROUP_PING.is_match(&clean_text) {
-                for cap in GROUP_PING.captures_iter(&clean_text.to_lowercase()) {
-                    trace!("{:?}", cap);
-                    if cap[1].eq("%all") {
-                        for user in config.group_pings.values().flatten() {
-                            users.insert(user.clone());
-                        }
-                    } else {
-                        match config.group_pings.get(&cap[1]) {
-                            Some(v) => {
-                                for user in v {
-                                    users.insert(user.clone());
-                                }
-                            }
-                            None => error!("Somehow lost group between regex match and insertion!"),
-                        }
-                    }
-                }
+                determine_users(&config, &clean_text, &mut users)
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
                 return;
             }
         }
-        None => {
-            for cap in GROUP_PING.captures_iter(&text.body.to_lowercase()) {
-                trace!("{:?}", cap);
-                if cap[1].eq("%all") {
-                    for user in config.group_pings.values().flatten() {
-                        users.insert(user.clone());
-                    }
-                } else {
-                    match config.group_pings.get(&cap[1]) {
-                        Some(v) => {
-                            for user in v {
-                                users.insert(user.clone());
-                            }
-                        }
-                        None => error!("Somehow lost group between regex match and insertion!"),
-                    }
-                }
-            }
-        }
+        None => determine_users(&config, &text.body, &mut users),
     }
     if users.is_empty() {
         debug!("No users to ping after processing.");
@@ -73,5 +39,25 @@ pub fn group_ping(
             users.remove(&sender);
         }
         text_response.set_users(users);
+    }
+}
+
+fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<UserId>) {
+    for cap in GROUP_PING.captures_iter(&text.to_lowercase()) {
+        trace!("{:?}", cap);
+        if cap[1].eq("%all") {
+            for user in config.group_pings.values().flatten() {
+                users.insert(user.clone());
+            }
+        } else {
+            match config.group_pings.get(&cap[1]) {
+                Some(v) => {
+                    for user in v {
+                        users.insert(user.clone());
+                    }
+                }
+                None => error!("Somehow lost group between regex match and insertion!"),
+            }
+        }
     }
 }
