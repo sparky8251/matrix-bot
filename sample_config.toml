@@ -107,6 +107,7 @@ network = 'https://jellyfin.org/docs/general/networking/index.html'
 # messages containing "%backend" or "% frontend"
 # Group alises can be made with '%group-name' in the config file. 
 # Aliases will not expand aliases.
+# group %all is reserved, and if configured will lead to the program to close on startup
 # Optional
 [group_pings]
 backend = ['@user1:matrix.homeserver.com', '@user2:matrix.homeserver.com']

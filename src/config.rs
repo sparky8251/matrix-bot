@@ -827,6 +827,9 @@ fn load_group_ping_settings(
             let groups = v.clone();
             for group in groups {
                 for user in group.1 {
+                    if user.eq("%all") {
+                        panic!("%all is a reserved group_ping name, do not configure it manually")
+                    }
                     if user.starts_with('@') {
                         let user_id = UserId::try_from(user.clone()).expect(
                             "Somehow got an alias in a part of code meant to handle UserIds",
@@ -841,6 +844,9 @@ fn load_group_ping_settings(
                 let mut expanded_users: HashSet<UserId> = HashSet::new();
 
                 for user in users {
+                    if user.eq("%all") {
+                        panic!("%all is a reserved group_ping name, do not configure it manually")
+                    }
                     if user.starts_with('%') {
                         // If user is an alias, expand it to list of users and insert them
                         let alias = user.replace("%", "");
