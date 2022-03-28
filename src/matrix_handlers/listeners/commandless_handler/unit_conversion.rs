@@ -18,7 +18,7 @@ pub fn unit_conversion(
             let clean_text = clean_text(&v.body);
             if UNIT_CONVERSION.is_match(&clean_text) {
                 for cap in UNIT_CONVERSION.captures_iter(&clean_text.to_lowercase()) {
-                    process_capture(&cap, &config, &mut conversions)
+                    process_capture(&cap, config, &mut conversions)
                 }
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
@@ -27,7 +27,7 @@ pub fn unit_conversion(
         }
         None => {
             for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
-                process_capture(&cap, &config, &mut conversions)
+                process_capture(&cap, config, &mut conversions)
             }
         }
     }
@@ -46,7 +46,7 @@ fn process_capture(
 ) {
     trace!("Capture being processed is {:?}", capture);
     if !config.unit_conversion_exclusion.is_empty() {
-        if capture_not_excluded(&capture, &config) {
+        if capture_not_excluded(capture, config) {
             conversions.push((capture[1].to_string(), capture[2].to_string()))
         } else {
             trace!("Capture excluded due to exclusion rules");

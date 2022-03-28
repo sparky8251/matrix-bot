@@ -17,13 +17,13 @@ pub fn text_expansion(
         Some(v) => {
             let clean_text = clean_text(&v.body);
             if TEXT_EXPANSION.is_match(&clean_text) {
-                determine_expanded_text(&config, &clean_text, &mut expanded_text)
+                determine_expanded_text(config, &clean_text, &mut expanded_text)
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
                 return;
             }
         }
-        None => determine_expanded_text(&config, &text.body, &mut expanded_text),
+        None => determine_expanded_text(config, &text.body, &mut expanded_text),
     }
     if expanded_text.is_empty() {
         debug!("No text to send after processing.");

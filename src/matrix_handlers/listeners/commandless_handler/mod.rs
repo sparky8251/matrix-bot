@@ -46,26 +46,26 @@ pub(super) async fn commandless_handler(
                 let mut text_response = MatrixFormattedTextResponse::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
                     debug!("Entering commandless unit conversion path");
-                    unit_conversion(&text, &config, &mut notice_response);
+                    unit_conversion(text, config, &mut notice_response);
                 }
                 if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
                     debug!("Entering commandless github search path");
-                    github_search(&text, &config, &api_client, &mut notice_response).await;
+                    github_search(text, config, api_client, &mut notice_response).await;
                 }
                 if LINK_URL.is_match(&text.body)
                     && !config.links.is_empty()
                     && !config.linkers.is_empty()
                 {
                     debug!("Entering commandless url linking path");
-                    link_url(&text, &config, &mut notice_response);
+                    link_url(text, config, &mut notice_response);
                 }
                 if GROUP_PING.is_match(&text.body) {
                     debug!("Entering commandless group ping path");
-                    group_ping(&text, &sender, &config, &mut text_response);
+                    group_ping(text, sender, config, &mut text_response);
                 }
                 if TEXT_EXPANSION.is_match(&text.body) {
                     debug!("Entering commandless text expansion path");
-                    text_expansion(&text, &config, &mut notice_response);
+                    text_expansion(text, config, &mut notice_response);
                 }
 
                 let notice_response = notice_response;

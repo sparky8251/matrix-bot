@@ -23,13 +23,13 @@ pub fn group_ping(
         Some(v) => {
             let clean_text = clean_text(&v.body);
             if GROUP_PING.is_match(&clean_text) {
-                determine_users(&config, &clean_text, &mut users)
+                determine_users(config, &clean_text, &mut users)
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
                 return;
             }
         }
-        None => determine_users(&config, &text.body, &mut users),
+        None => determine_users(config, &text.body, &mut users),
     }
     if users.is_empty() {
         debug!("No users to ping after processing.");

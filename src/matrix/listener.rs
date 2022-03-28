@@ -32,7 +32,7 @@ impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new(config: &Config, send: Sender<MatrixMessage>) -> Self {
         let storage = ListenerStorage::load_storage();
-        let config = MatrixListenerConfig::new(&config);
+        let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
         Self {
             storage,
@@ -119,7 +119,7 @@ impl MatrixListener {
                                     trace!("Invited by {}", s.sender);
                                     handle_invite_event(
                                         &s.sender,
-                                        &room_id,
+                                        room_id,
                                         &self.config,
                                         &mut self.send,
                                     )

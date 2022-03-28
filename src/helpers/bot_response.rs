@@ -82,7 +82,7 @@ impl MatrixFormattedTextResponse {
                 let mut formatted_text = String::new();
                 for user in v {
                     formatted_text.push_str("<a href=\"https://matrix.to/#/");
-                    formatted_text.push_str(&user.to_string());
+                    formatted_text.push_str(user.as_ref());
                     formatted_text.push_str("\">");
                     formatted_text.push_str(user.localpart());
                     formatted_text.push_str("</a>\n");
@@ -114,7 +114,7 @@ impl MatrixFormattedNoticeResponse {
                 let mut formatted_text = String::new();
                 for error in v {
                     formatted_text.push_str("<font color=\"#ff4b55\">");
-                    formatted_text.push_str(&error.to_string());
+                    formatted_text.push_str(error);
                     formatted_text.push_str("</font>\n")
                 }
                 Some(formatted_text)
@@ -139,7 +139,7 @@ impl fmt::Display for MatrixNoticeResponse {
         match &self.gh_results {
             Some(v) => {
                 for s in v {
-                    response.push_str(&s.to_string());
+                    response.push_str(s.as_ref());
                     response.push('\n')
                 }
             }
@@ -148,7 +148,7 @@ impl fmt::Display for MatrixNoticeResponse {
         match &self.links {
             Some(v) => {
                 for s in v {
-                    response.push_str(&s.to_string());
+                    response.push_str(s.as_ref());
                     response.push('\n')
                 }
             }
@@ -157,7 +157,7 @@ impl fmt::Display for MatrixNoticeResponse {
         match &self.expanded_text {
             Some(v) => {
                 for s in v {
-                    response.push_str(&s.to_string());
+                    response.push_str(s);
                     response.push('\n')
                 }
             }
@@ -174,7 +174,7 @@ impl fmt::Display for MatrixFormattedTextResponse {
         match &self.users {
             Some(v) => {
                 for user in v {
-                    response.push_str(&user.localpart());
+                    response.push_str(user.localpart());
                     response.push(' ')
                 }
             }
@@ -191,7 +191,7 @@ impl fmt::Display for MatrixFormattedNoticeResponse {
         match &self.errors {
             Some(v) => {
                 for error in v {
-                    response.push_str(&error);
+                    response.push_str(error);
                     response.push('\n')
                 }
             }

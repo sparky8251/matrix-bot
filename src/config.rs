@@ -735,7 +735,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
         Some(v) => {
             let mut hash_set = HashSet::new();
             for set in v {
-                hash_set.insert(" ".to_owned() + &set);
+                hash_set.insert(" ".to_owned() + set);
             }
             hash_set
         }
@@ -870,7 +870,7 @@ fn load_group_ping_settings(
                     }
                     if user.starts_with('%') {
                         // If user is an alias, expand it to list of users and insert them
-                        let alias = user.replace("%", "");
+                        let alias = user.replace('%', "");
                         match v.get(&alias) {
                             // If list of users found, insert them
                             Some(g) => {

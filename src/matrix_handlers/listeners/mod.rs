@@ -28,20 +28,20 @@ pub async fn handle_text_event(
     storage: &mut ListenerStorage,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
-    mut send: &mut Sender<MatrixMessage>,
+    send: &mut Sender<MatrixMessage>,
 ) {
     if !&text.body.starts_with('!') {
         debug!("Entering no command path...");
         commandless_handler(
-            text, relates_to, sender, room_id, storage, config, api_client, &mut send,
+            text, relates_to, sender, room_id, storage, config, api_client, send,
         )
         .await
     } else if text.body.to_lowercase().starts_with("!convert ") {
         debug!("Entering unit conversion path...");
-        unit_conversion_handler(text, relates_to, room_id, &mut send).await
+        unit_conversion_handler(text, relates_to, room_id, send).await
     } else if text.body.to_lowercase().starts_with("!help") {
         debug!("Entering help path...");
-        help_handler(text, room_id, config, &mut send).await
+        help_handler(text, room_id, config, send).await
     } else {
         debug!("Doing nothing...");
     }
