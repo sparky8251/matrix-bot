@@ -2,7 +2,7 @@
 
 use super::ConvertedUnit;
 use reqwest::Url;
-use ruma::UserId;
+use ruma::OwnedUserId;
 use std::collections::HashSet;
 use std::fmt;
 
@@ -22,7 +22,7 @@ pub struct MatrixNoticeResponse {
 #[derive(Debug, Default)]
 pub struct MatrixFormattedTextResponse {
     /// List of users that will be pinged for response building
-    users: Option<HashSet<Box<UserId>>>,
+    users: Option<HashSet<OwnedUserId>>,
 }
 
 #[derive(Debug, Default)]
@@ -68,7 +68,7 @@ impl MatrixFormattedTextResponse {
     /// Sets member users with supplied list of users
     ///
     /// Will overwrite if supplied a second time
-    pub fn set_users(&mut self, users: HashSet<Box<UserId>>) {
+    pub fn set_users(&mut self, users: HashSet<OwnedUserId>) {
         self.users = Some(users)
     }
     /// Returns `true` if any member field is `Some`

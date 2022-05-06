@@ -2,7 +2,7 @@
 
 use http::Uri;
 use reqwest::header::HeaderValue;
-use ruma::{RoomId, TransactionId, UserId};
+use ruma::{OwnedRoomId, OwnedTransactionId, OwnedUserId, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -27,7 +27,7 @@ pub struct MatrixListenerConfig {
     /// Matrix bot account homeserver URL.
     pub mx_url: Uri,
     /// Matrix bot account username.
-    pub mx_uname: Box<UserId>,
+    pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
     pub mx_pass: String,
     /// Github access token as string.
@@ -43,12 +43,12 @@ pub struct MatrixListenerConfig {
     /// Text used in spellcheck correction feature.
     pub correction_text: String,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    pub correction_exclusion: HashSet<Box<RoomId>>,
+    pub correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
     pub linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
-    pub admins: HashSet<Box<UserId>>,
-    pub help_rooms: HashSet<Box<RoomId>>,
+    pub admins: HashSet<OwnedUserId>,
+    pub help_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -58,9 +58,9 @@ pub struct MatrixListenerConfig {
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    pub group_pings: HashMap<String, HashSet<Box<UserId>>>,
+    pub group_pings: HashMap<String, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
-    pub group_ping_users: HashSet<Box<UserId>>,
+    pub group_ping_users: HashSet<OwnedUserId>,
 }
 
 pub struct WebhookListenerConfig {
@@ -75,7 +75,7 @@ pub struct Config {
     /// Matrix bot account homeserver URL.
     pub mx_url: Uri,
     /// Matrix bot account username.
-    pub mx_uname: Box<UserId>,
+    pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
     pub mx_pass: String,
     /// Github access token as string.
@@ -91,12 +91,12 @@ pub struct Config {
     /// Text used in spellcheck correction feature.
     correction_text: String,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    correction_exclusion: HashSet<Box<RoomId>>,
+    correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
     linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
-    admins: HashSet<Box<UserId>>,
-    help_rooms: HashSet<Box<RoomId>>,
+    admins: HashSet<OwnedUserId>,
+    help_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -106,9 +106,9 @@ pub struct Config {
     /// UserAgent used by reqwest
     user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    group_pings: HashMap<String, HashSet<Box<UserId>>>,
+    group_pings: HashMap<String, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
-    group_ping_users: HashSet<Box<UserId>>,
+    group_ping_users: HashSet<OwnedUserId>,
     pub webhook_token: String,
 }
 
@@ -137,8 +137,8 @@ pub struct RawConfig {
 /// Struct that contains raw general configuration data.
 struct RawGeneral {
     /// List of matrix users that can invite the bot to rooms.
-    authorized_users: Option<HashSet<Box<UserId>>>,
-    help_rooms: Option<HashSet<Box<RoomId>>>,
+    authorized_users: Option<HashSet<OwnedUserId>>,
+    help_rooms: Option<HashSet<OwnedRoomId>>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
@@ -152,7 +152,7 @@ struct RawGeneral {
     /// Text used in spellcheck correction feature. Requires two '{}' to operate properly.
     correction_text: Option<String>,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    correction_exclusion: Option<HashSet<Box<RoomId>>>,
+    correction_exclusion: Option<HashSet<OwnedRoomId>>,
     /// List of all words that can be used to link URLs.
     link_matchers: Option<HashSet<String>>,
 
@@ -165,7 +165,7 @@ struct RawMatrixAuthentication {
     /// Homeserver URL for bot account.
     url: String,
     /// Matrix username for bot account.
-    username: Box<UserId>,
+    username: OwnedUserId,
     /// Matrix password for bot account.
     password: String,
 }
@@ -189,7 +189,7 @@ pub struct ListenerStorage {
     /// Last sync token.
     pub last_sync: Option<String>,
     /// Hashmap that contains a room id key and a system time of the last correction.
-    pub last_correction_time: HashMap<Box<RoomId>, SystemTime>,
+    pub last_correction_time: HashMap<OwnedRoomId, SystemTime>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -633,7 +633,7 @@ impl ResponderStorage {
     /// Sets the last_txn_id to a new value then returns it
     ///
     /// Must be saved after it is used successfully or you can cause homeserver issues
-    pub fn next_txn_id(&mut self) -> Box<TransactionId> {
+    pub fn next_txn_id(&mut self) -> OwnedTransactionId {
         self.last_txn_id += 1;
         self.last_txn_id.to_string().into()
     }
@@ -748,7 +748,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
 
 fn load_spell_correct_settings(
     toml: &RawConfig,
-) -> (Vec<SpellCheckKind>, String, HashSet<Box<RoomId>>) {
+) -> (Vec<SpellCheckKind>, String, HashSet<OwnedRoomId>) {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -819,7 +819,7 @@ fn load_spell_correct_settings(
     }
 }
 
-fn load_admin_settings(toml: &RawConfig) -> HashSet<Box<UserId>> {
+fn load_admin_settings(toml: &RawConfig) -> HashSet<OwnedUserId> {
     match &toml.general.authorized_users {
         Some(v) => v.clone(),
         None => {
@@ -829,7 +829,7 @@ fn load_admin_settings(toml: &RawConfig) -> HashSet<Box<UserId>> {
     }
 }
 
-fn load_help_settings(toml: &RawConfig) -> HashSet<Box<RoomId>> {
+fn load_help_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
     match &toml.general.help_rooms {
         Some(v) => v.clone(),
         None => {
@@ -841,7 +841,7 @@ fn load_help_settings(toml: &RawConfig) -> HashSet<Box<RoomId>> {
 
 fn load_group_ping_settings(
     toml: &RawConfig,
-) -> (HashMap<String, HashSet<Box<UserId>>>, HashSet<Box<UserId>>) {
+) -> (HashMap<String, HashSet<OwnedUserId>>, HashSet<OwnedUserId>) {
     match &toml.group_pings {
         Some(v) => {
             let mut group_ping_users = HashSet::new();
@@ -860,9 +860,9 @@ fn load_group_ping_settings(
                 }
             }
 
-            let mut expanded_groups: HashMap<String, HashSet<Box<UserId>>> = HashMap::new();
+            let mut expanded_groups: HashMap<String, HashSet<OwnedUserId>> = HashMap::new();
             for (group, users) in v {
-                let mut expanded_users: HashSet<Box<UserId>> = HashSet::new();
+                let mut expanded_users: HashSet<OwnedUserId> = HashSet::new();
 
                 for user in users {
                     if user.eq("%all") {

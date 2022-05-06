@@ -5,7 +5,7 @@ use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
 use rocket::State;
 use rocket_contrib::json::Json;
-use ruma::{RoomId, UserId};
+use ruma::{OwnedRoomId, OwnedUserId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tokio::sync::mpsc::Sender;
@@ -28,7 +28,7 @@ pub async fn message(
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
-            let pings: HashSet<Box<UserId>> = pings.iter().cloned().collect();
+            let pings: HashSet<OwnedUserId> = pings.iter().cloned().collect();
             response.set_users(pings);
             let matrix_message = MatrixMessage {
                 room_id: message.room_id.clone(),
@@ -50,9 +50,9 @@ pub async fn message(
 
 #[derive(Debug, Deserialize)]
 pub struct Message {
-    room_id: Box<RoomId>,
+    room_id: OwnedRoomId,
     message: String,
-    ping: Option<Vec<Box<UserId>>>,
+    ping: Option<Vec<OwnedUserId>>,
 }
 
 #[derive(Debug, Deserialize)]

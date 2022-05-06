@@ -8,8 +8,11 @@ use crate::messages::MatrixMessage;
 use ruma::{
     api::client::sync::sync_events,
     events::{
-        room::message::{MessageType, Relation, RoomMessageEventContent},
-        AnyStrippedStateEvent, AnySyncMessageEvent, AnySyncRoomEvent, SyncMessageEvent,
+        room::message::{
+            MessageType, OriginalSyncRoomMessageEvent, Relation, RoomMessageEventContent,
+            SyncRoomMessageEvent,
+        },
+        AnyStrippedStateEvent, AnySyncMessageLikeEvent, AnySyncRoomEvent,
     },
     presence::PresenceState,
 };
@@ -72,17 +75,21 @@ impl MatrixListener {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(AnySyncRoomEvent::Message(
-                                    AnySyncMessageEvent::RoomMessage(SyncMessageEvent {
-                                        content:
-                                            RoomMessageEventContent {
-                                                msgtype: MessageType::Text(t),
-                                                relates_to,
+                                Ok(AnySyncRoomEvent::MessageLike(
+                                    AnySyncMessageLikeEvent::RoomMessage(
+                                        SyncRoomMessageEvent::Original(
+                                            OriginalSyncRoomMessageEvent {
+                                                content:
+                                                    RoomMessageEventContent {
+                                                        msgtype: MessageType::Text(t),
+                                                        relates_to,
+                                                        ..
+                                                    },
+                                                sender,
                                                 ..
                                             },
-                                        sender,
-                                        ..
-                                    }),
+                                        ),
+                                    ),
                                 )) => {
                                     if matches!(relates_to, Some(Relation::Replacement(_))) {
                                         debug!("Message is an edit, skipping handling");

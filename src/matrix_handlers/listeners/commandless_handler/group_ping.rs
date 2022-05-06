@@ -3,7 +3,7 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixFormattedTextResponse};
 use crate::regex::GROUP_PING;
-use ruma::{events::room::message::TextMessageEventContent, UserId};
+use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use std::collections::HashSet;
 use tracing::{debug, error, trace};
 
@@ -14,7 +14,7 @@ pub fn group_ping(
     config: &MatrixListenerConfig,
     text_response: &mut MatrixFormattedTextResponse,
 ) {
-    let mut users: HashSet<Box<UserId>> = HashSet::new();
+    let mut users: HashSet<OwnedUserId> = HashSet::new();
     if !config.group_ping_users.contains(sender) {
         debug!("User not authorized for group pings. Ignoring...");
         return;
@@ -42,7 +42,7 @@ pub fn group_ping(
     }
 }
 
-fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<Box<UserId>>) {
+fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSet<OwnedUserId>) {
     for cap in GROUP_PING.captures_iter(&text.to_lowercase()) {
         trace!("{:?}", cap);
         if cap[1].eq("all") {

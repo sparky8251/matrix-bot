@@ -836,6 +836,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "js_option"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57ca36dc34f183b719922d262d2d144a1e6a5573cdfaec30587c2dc64ea685a6"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1457,56 +1466,22 @@ dependencies = [
 
 [[package]]
 name = "ruma"
-version = "0.5.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "377d836ac9faf53c56aa8610c596be4d2e0881600b20d0c4a3a09694989f664f"
+checksum = "8654f94cdb0c3ad1e5cfaecf73c67d94da42dd482108904eb44581aca8270f59"
 dependencies = [
  "assign",
  "js_int",
- "ruma-api",
  "ruma-client",
  "ruma-client-api",
  "ruma-common",
- "ruma-events",
- "ruma-identifiers",
- "ruma-serde",
-]
-
-[[package]]
-name = "ruma-api"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fc1c16c9b7d21791e4c2d082da3d050ea1cebe004af30275fb2e6f547e1a283"
-dependencies = [
- "bytes",
- "http",
- "percent-encoding",
- "ruma-api-macros",
- "ruma-identifiers",
- "ruma-serde",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "ruma-api-macros"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cc6143101ea576d8763468a3b8889c5d9062402204d172bde3b99912a16e5cc"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
 name = "ruma-client"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26d294010adc91fda36d8dc9163ada0b9bcfdab5f1b15d46e092452e30322277"
+checksum = "c0862dd8852c3acc769b9081d064a2c116c0691aae3bac16116428e35d30b224"
 dependencies = [
  "assign",
  "async-stream",
@@ -1515,11 +1490,8 @@ dependencies = [
  "futures-core",
  "http",
  "reqwest",
- "ruma-api",
  "ruma-client-api",
  "ruma-common",
- "ruma-identifiers",
- "ruma-serde",
  "serde",
  "serde_json",
  "tracing",
@@ -1527,9 +1499,9 @@ dependencies = [
 
 [[package]]
 name = "ruma-client-api"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d360ec8cdb7e0815b8b6ab06345c68972aa2e7c564578cd05f3eb2845a785a9"
+checksum = "16f463c15e126f5fd95ce0fc503c1b55412cfebccf8f1ae72d688dc2b0d5330f"
 dependencies = [
  "assign",
  "bytes",
@@ -1537,132 +1509,56 @@ dependencies = [
  "js_int",
  "maplit",
  "percent-encoding",
- "ruma-api",
  "ruma-common",
- "ruma-events",
- "ruma-identifiers",
- "ruma-serde",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "ruma-common"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98080b1aac4045f5988ae5e2ccfe1864487c151c1717d29fe1388b7e06383d3e"
-dependencies = [
- "indexmap",
- "js_int",
- "ruma-identifiers",
- "ruma-serde",
- "serde",
- "serde_json",
- "tracing",
- "wildmatch",
-]
-
-[[package]]
-name = "ruma-events"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b661cc7dd619039c99aea1e42c06e3ac9a29a1d648dc3bcbb4f0dffcb49d04"
-dependencies = [
- "indoc",
- "js_int",
- "ruma-common",
- "ruma-events-macros",
- "ruma-identifiers",
- "ruma-serde",
- "serde",
- "serde_json",
- "thiserror",
- "wildmatch",
-]
-
-[[package]]
-name = "ruma-events-macros"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e9f4f3ac886d490d030bd3c5e50d21b80de5537bde04dd4529e27a0cc1e2201"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "ruma-identifiers"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7bc99002443cfdf64d1158e8e6e280b3633e17d91049ad9516ad475358b3b8b"
-dependencies = [
- "percent-encoding",
- "ruma-identifiers-macros",
- "ruma-identifiers-validation 0.7.0",
- "ruma-serde",
- "ruma-serde-macros",
- "serde",
- "url",
-]
-
-[[package]]
-name = "ruma-identifiers-macros"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "503738488e3a378677e8b159478dbb07d2d70f1e1f3320c0bd3a51a99e44cf7c"
-dependencies = [
- "quote",
- "ruma-identifiers-validation 0.6.0",
- "syn",
-]
-
-[[package]]
-name = "ruma-identifiers-validation"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c670c45c3c86eaf5ff9b4bfd66a2a57116f2d808c9f8cbfc957cd34c48032ff9"
-dependencies = [
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "ruma-identifiers-validation"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dc675917d537c870035d4681d7a2b939683fb908bbc036aa55889b09c5794f1"
-dependencies = [
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "ruma-serde"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d44a6e4aabe679009ba0e26d37b43ea725591fcb3c82724bcfc0c3823d807cf"
+checksum = "c2ddfd2c191ccde0d483cf931abc627fa2205bb4a7bf4f97b7974991e9ce81ae"
 dependencies = [
  "base64",
  "bytes",
  "form_urlencoded",
+ "http",
+ "indexmap",
+ "indoc",
  "itoa",
  "js_int",
- "ruma-serde-macros",
+ "js_option",
+ "percent-encoding",
+ "ruma-identifiers-validation",
+ "ruma-macros",
  "serde",
  "serde_json",
+ "thiserror",
+ "tracing",
+ "url",
+ "wildmatch",
 ]
 
 [[package]]
-name = "ruma-serde-macros"
-version = "0.6.0"
+name = "ruma-identifiers-validation"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d38cd6f6edebc09b9e4b4ecb24279dae0b700ecfc3a2d5eff9f8b60c41f73c03"
+checksum = "74c3b1d01b5ddd8746f25d5971bc1cac5d7f1f455de839a2f817b9e04953a139"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "ruma-macros"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33a40a2948e787cb8d3dd6559437fa1725b343f126eb63edaf2e4a1132c0ce73"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
+ "ruma-identifiers-validation",
  "syn",
 ]
 
