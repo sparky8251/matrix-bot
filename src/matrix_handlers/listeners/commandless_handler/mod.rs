@@ -36,7 +36,7 @@ pub(super) async fn commandless_handler(
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
 ) {
-    if sender == &config.mx_uname {
+    if sender == config.mx_uname {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
