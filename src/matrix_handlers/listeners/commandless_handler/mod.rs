@@ -71,33 +71,33 @@ pub(super) async fn commandless_handler(
                 let notice_response = notice_response;
                 let text_response = text_response;
 
-                if notice_response.is_some() {
-                    match send
+                if notice_response.is_some()
+                    && send
                         .send(MatrixMessage {
                             room_id: room_id.to_owned(),
                             message: MatrixMessageType::Notice(notice_response.to_string()),
                         })
                         .await
-                    {
-                        Ok(_) => (),
-                        Err(_) => error!("Channel closed. Unable to send message."),
-                    };
+                        .is_err()
+                {
+                    error!("Channel closed. Unable to send message.");
                 }
+
                 if text_response.is_some() {
                     let message = MatrixFormattedMessage {
                         plain_text: text_response.to_string(),
                         formatted_text: text_response.format_text(),
                     };
-                    match send
+                    if send
                         .send(MatrixMessage {
                             room_id: room_id.to_owned(),
                             message: MatrixMessageType::FormattedText(message),
                         })
                         .await
+                        .is_err()
                     {
-                        Ok(_) => (),
-                        Err(_) => error!("Channel closed. Unable to send message."),
-                    };
+                        error!("Channel closed. Unable to send message.");
+                    }
                 }
                 if config.enable_corrections
                     && relates_to.is_none()

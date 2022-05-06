@@ -60,30 +60,30 @@ pub async fn handle_invite_event(
             kind: MatrixInviteType::Accept,
             sender: sender.to_owned(),
         };
-        match send
+        if send
             .send(MatrixMessage {
                 room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await
+            .is_err()
         {
-            Ok(_) => (),
-            Err(_) => error!("Channel closed. Unable to send message."),
-        };
+            error!("Channel closed. Unable to send message.");
+        }
     } else {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Reject,
             sender: sender.to_owned(),
         };
-        match send
+        if send
             .send(MatrixMessage {
                 room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await
+            .is_err()
         {
-            Ok(_) => (),
-            Err(_) => error!("Channel closed. Unable to send message."),
-        };
+            error!("Channel closed. Unable to send message.");
+        }
     }
 }

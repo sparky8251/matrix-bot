@@ -59,16 +59,16 @@ pub(super) async fn help_handler(
             }
         };
         if !message.is_empty() {
-            match send
+            if send
                 .send(MatrixMessage {
                     room_id: room_id.to_owned(),
                     message: MatrixMessageType::Notice(message),
                 })
                 .await
+                .is_err()
             {
-                Ok(_) => (),
-                Err(_) => error!("Channel closed. Unable to send message."),
-            };
+                error!("Channel closed. Unable to send message.");
+            }
         } else {
             debug!("Unknown action");
             let mut response = MatrixFormattedNoticeResponse::default();
@@ -79,7 +79,7 @@ pub(super) async fn help_handler(
             ));
             response.add_errrors(errors);
             let formatted_text = response.format_text();
-            match send
+            if send
                 .send(MatrixMessage {
                     room_id: room_id.to_owned(),
                     message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
@@ -88,10 +88,10 @@ pub(super) async fn help_handler(
                     }),
                 })
                 .await
+                .is_err()
             {
-                Ok(_) => (),
-                Err(_) => error!("Channel closed. Unable to send message."),
-            };
+                error!("Channel closed. Unable to send message.");
+            }
         }
     } else {
         trace!(

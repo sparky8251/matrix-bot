@@ -281,12 +281,9 @@ impl Config {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents due to error {:?}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents due to error {:?}", e);
+            process::exit(2)
         }
         let toml: RawConfig = match toml::from_str(&contents) {
             Ok(v) => v,
@@ -385,12 +382,9 @@ impl SessionStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
@@ -471,12 +465,9 @@ impl ListenerStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
@@ -574,12 +565,9 @@ impl ResponderStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,

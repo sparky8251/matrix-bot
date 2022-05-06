@@ -20,9 +20,8 @@ pub async fn send_notice(
     let next_txn_id = storage.next_txn_id();
     let req = send_message_event::v3::Request::new(room_id, &next_txn_id, &content)
         .expect("m.room.message serialization must work");
-    match client.send_request(req).await {
-        Ok(_) => (),
-        Err(e) => error!("{:?}", e),
+    if let Err(e) = client.send_request(req).await {
+        error!("{:?}", e);
     }
 }
 pub async fn send_plain_text(
@@ -35,9 +34,8 @@ pub async fn send_plain_text(
     let next_txn_id = storage.next_txn_id();
     let req = send_message_event::v3::Request::new(room_id, &next_txn_id, &content)
         .expect("m.room.message serialization must work");
-    match client.send_request(req).await {
-        Ok(_) => (),
-        Err(e) => error!("Unable to send response due to error {:?}", e),
+    if let Err(e) = client.send_request(req).await {
+        error!("Unable to send response due to error {:?}", e);
     }
 }
 
@@ -53,9 +51,8 @@ pub async fn send_formatted_text(
     let next_txn_id = storage.next_txn_id();
     let req = send_message_event::v3::Request::new(room_id, &next_txn_id, &content)
         .expect("m.room.message serialization must work");
-    match client.send_request(req).await {
-        Ok(_) => (),
-        Err(e) => error!("Unable to send response due to error {:?}", e),
+    if let Err(e) = client.send_request(req).await {
+        error!("Unable to send response due to error {:?}", e);
     }
 }
 
@@ -71,9 +68,8 @@ pub async fn send_formatted_notice(
     let next_txn_id = storage.next_txn_id();
     let req = send_message_event::v3::Request::new(room_id, &next_txn_id, &content)
         .expect("m.room.message serialization must work");
-    match client.send_request(req).await {
-        Ok(_) => (),
-        Err(e) => error!("{:?}", e),
+    if let Err(e) = client.send_request(req).await {
+        error!("{:?}", e);
     }
 }
 

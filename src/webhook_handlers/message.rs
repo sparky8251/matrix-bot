@@ -22,9 +22,8 @@ pub async fn message(
             room_id: message.room_id.clone(),
             message: MatrixMessageType::Notice(message.message.clone()),
         };
-        match send.clone().send(matrix_message).await {
-            Ok(_) => (),
-            Err(_) => return Status::InternalServerError,
+        if send.clone().send(matrix_message).await.is_err() {
+            return Status::InternalServerError;
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
@@ -37,9 +36,8 @@ pub async fn message(
                     formatted_text: response.format_text(),
                 }),
             };
-            match send.clone().send(matrix_message).await {
-                Ok(_) => (),
-                Err(_) => return Status::InternalServerError,
+            if send.clone().send(matrix_message).await.is_err() {
+                return Status::InternalServerError;
             };
         };
         Status::Ok

@@ -32,15 +32,15 @@ pub(super) async fn unit_conversion_handler(
         };
         let mut response = MatrixNoticeResponse::default();
         response.set_unit_conversions(result);
-        match send
+        if send
             .send(MatrixMessage {
                 room_id: room_id.to_owned(),
                 message: MatrixMessageType::Notice(response.to_string()),
             })
             .await
+            .is_err()
         {
-            Ok(_) => (),
-            Err(_) => error!("Channel closed. Unable to send message."),
-        };
+            error!("Channel closed. Unable to send message.");
+        }
     }
 }

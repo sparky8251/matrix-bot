@@ -25,14 +25,13 @@ impl WebhookListener {
         };
 
         let rocket = rocket::custom(rocket_config);
-        match register_handlers(rocket)
+        if let Err(e) = register_handlers(rocket)
             .manage(self.send)
             .manage(self.config)
             .launch()
             .await
         {
-            Ok(_) => (),
-            Err(e) => panic!("Unable to launch webhook listener due to error {:?}", e),
+            panic!("Unable to launch webhook listener due to error {:?}", e)
         }
     }
 }
