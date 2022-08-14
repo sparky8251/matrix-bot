@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.15"
+version = "2.0.0-beta.16"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -11,21 +11,21 @@ edition = "2018"
 [dependencies]
 assign = "1.1.1"
 futures = "0.3"
-graphql_client = "0.9"
+graphql_client = "0.11"
 http = "0.2"
 lazy_static = "1.4"
 regex = "1.4"
 rocket = { git = "https://github.com/SergioBenitez/Rocket.git", rev = "dd0c036461524c8a8a74a018af312eea56afae9e" }
-ron = "0.6"
+ron = "0.7"
 ruma = { version = "0.6.2", features = ["client-api-c", "client-ext-client-api", "client-reqwest", "unstable-msc2676"] }
 thiserror = "1.0"
 toml = "0.5"
 tracing = "0.1"
-tracing-subscriber = "0.2"
-uom = "0.31"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uom = "0.33"
 serde_json = "1.0"
-hmac = "0.10"
-sha2 = "0.9"
+hmac = "0.12"
+sha2 = "0.10"
 hex-literal = "0.3"
 hex = "0.4.2"
 
