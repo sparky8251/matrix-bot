@@ -2,7 +2,7 @@
 
 use super::ConvertedUnit;
 use reqwest::Url;
-use ruma::UserId;
+use ruma::OwnedUserId;
 use std::collections::HashSet;
 use std::fmt;
 
@@ -22,7 +22,7 @@ pub struct MatrixNoticeResponse {
 #[derive(Debug, Default)]
 pub struct MatrixFormattedTextResponse {
     /// List of users that will be pinged for response building
-    users: Option<HashSet<UserId>>,
+    users: Option<HashSet<OwnedUserId>>,
 }
 
 #[derive(Debug, Default)]
@@ -68,7 +68,7 @@ impl MatrixFormattedTextResponse {
     /// Sets member users with supplied list of users
     ///
     /// Will overwrite if supplied a second time
-    pub fn set_users(&mut self, users: HashSet<UserId>) {
+    pub fn set_users(&mut self, users: HashSet<OwnedUserId>) {
         self.users = Some(users)
     }
     /// Returns `true` if any member field is `Some`
@@ -77,20 +77,17 @@ impl MatrixFormattedTextResponse {
     }
     /// Formats users to be in line with the fancy riot style pings
     pub fn format_text(&self) -> Option<String> {
-        match &self.users {
-            Some(v) => {
-                let mut formatted_text = String::new();
-                for user in v {
-                    formatted_text.push_str("<a href=\"https://matrix.to/#/");
-                    formatted_text.push_str(&user.to_string());
-                    formatted_text.push_str("\">");
-                    formatted_text.push_str(user.localpart());
-                    formatted_text.push_str("</a>\n");
-                }
-                Some(formatted_text)
+        self.users.as_ref().map(|v| {
+            let mut formatted_text = String::new();
+            for user in v {
+                formatted_text.push_str("<a href=\"https://matrix.to/#/");
+                formatted_text.push_str(user.as_ref());
+                formatted_text.push_str("\">");
+                formatted_text.push_str(user.localpart());
+                formatted_text.push_str("</a>\n");
             }
-            None => None,
-        }
+            formatted_text
+        })
     }
 }
 
@@ -109,59 +106,44 @@ impl MatrixFormattedNoticeResponse {
     //     self.errors.is_some()
     // }
     pub fn format_text(&self) -> Option<String> {
-        match &self.errors {
-            Some(v) => {
-                let mut formatted_text = String::new();
-                for error in v {
-                    formatted_text.push_str("<font color=\"#ff4b55\">");
-                    formatted_text.push_str(&error.to_string());
-                    formatted_text.push_str("</font>\n")
-                }
-                Some(formatted_text)
+        self.errors.as_ref().map(|v| {
+            let mut formatted_text = String::new();
+            for error in v {
+                formatted_text.push_str("<font color=\"#ff4b55\">");
+                formatted_text.push_str(error);
+                formatted_text.push_str("</font>\n")
             }
-            None => None,
-        }
+            formatted_text
+        })
     }
 }
 
 impl fmt::Display for MatrixNoticeResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
-        match &self.conversions {
-            Some(v) => {
-                for s in v {
-                    response.push_str(&s.to_string());
-                    response.push('\n')
-                }
+        if let Some(v) = &self.conversions {
+            for s in v {
+                response.push_str(&s.to_string());
+                response.push('\n')
             }
-            None => (),
         }
-        match &self.gh_results {
-            Some(v) => {
-                for s in v {
-                    response.push_str(&s.to_string());
-                    response.push('\n')
-                }
+        if let Some(v) = &self.gh_results {
+            for s in v {
+                response.push_str(s.as_ref());
+                response.push('\n')
             }
-            None => (),
         }
-        match &self.links {
-            Some(v) => {
-                for s in v {
-                    response.push_str(&s.to_string());
-                    response.push('\n')
-                }
+        if let Some(v) = &self.links {
+            for s in v {
+                response.push_str(s.as_ref());
+                response.push('\n')
             }
-            None => (),
         }
-        match &self.expanded_text {
-            Some(v) => {
-                for s in v {
-                    response.push_str(&s.to_string());
-                    response.push('\n')
-                }
+        if let Some(v) = &self.expanded_text {
+            for s in v {
+                response.push_str(s);
+                response.push('\n')
             }
-            None => (),
         }
         let response = response.trim();
         write!(f, "{}", response)
@@ -171,14 +153,11 @@ impl fmt::Display for MatrixNoticeResponse {
 impl fmt::Display for MatrixFormattedTextResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
-        match &self.users {
-            Some(v) => {
-                for user in v {
-                    response.push_str(&user.localpart());
-                    response.push(' ')
-                }
+        if let Some(v) = &self.users {
+            for user in v {
+                response.push_str(user.localpart());
+                response.push(' ')
             }
-            None => (),
         }
         let response = response.trim();
         write!(f, "{}", response)
@@ -188,14 +167,11 @@ impl fmt::Display for MatrixFormattedTextResponse {
 impl fmt::Display for MatrixFormattedNoticeResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut response = String::new();
-        match &self.errors {
-            Some(v) => {
-                for error in v {
-                    response.push_str(&error);
-                    response.push('\n')
-                }
+        if let Some(v) = &self.errors {
+            for error in v {
+                response.push_str(error);
+                response.push('\n')
             }
-            None => (),
         }
         let response = response.trim();
         write!(f, "{}", response)

@@ -5,7 +5,7 @@ use rocket::http::Status;
 use rocket::request::{self, FromRequest, Request};
 use rocket::State;
 use rocket_contrib::json::Json;
-use ruma::{RoomId, UserId};
+use ruma::{OwnedRoomId, OwnedUserId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tokio::sync::mpsc::Sender;
@@ -22,13 +22,12 @@ pub async fn message(
             room_id: message.room_id.clone(),
             message: MatrixMessageType::Notice(message.message.clone()),
         };
-        match send.clone().send(matrix_message).await {
-            Ok(_) => (),
-            Err(_) => return Status::InternalServerError,
+        if send.clone().send(matrix_message).await.is_err() {
+            return Status::InternalServerError;
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
-            let pings: HashSet<UserId> = pings.iter().cloned().collect();
+            let pings: HashSet<OwnedUserId> = pings.iter().cloned().collect();
             response.set_users(pings);
             let matrix_message = MatrixMessage {
                 room_id: message.room_id.clone(),
@@ -37,9 +36,8 @@ pub async fn message(
                     formatted_text: response.format_text(),
                 }),
             };
-            match send.clone().send(matrix_message).await {
-                Ok(_) => (),
-                Err(_) => return Status::InternalServerError,
+            if send.clone().send(matrix_message).await.is_err() {
+                return Status::InternalServerError;
             };
         };
         Status::Ok
@@ -50,9 +48,9 @@ pub async fn message(
 
 #[derive(Debug, Deserialize)]
 pub struct Message {
-    room_id: RoomId,
+    room_id: OwnedRoomId,
     message: String,
-    ping: Option<Vec<UserId>>,
+    ping: Option<Vec<OwnedUserId>>,
 }
 
 #[derive(Debug, Deserialize)]

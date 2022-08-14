@@ -6,10 +6,13 @@ use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
 use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use crate::messages::MatrixMessage;
 use ruma::{
-    api::client::r0::sync::sync_events,
+    api::client::sync::sync_events,
     events::{
-        room::message::{MessageEventContent, MessageType, Relation},
-        AnyStrippedStateEvent, AnySyncMessageEvent, AnySyncRoomEvent, SyncMessageEvent,
+        room::message::{
+            MessageType, OriginalSyncRoomMessageEvent, Relation, RoomMessageEventContent,
+            SyncRoomMessageEvent,
+        },
+        AnyStrippedStateEvent, AnySyncMessageLikeEvent, AnySyncRoomEvent,
     },
     presence::PresenceState,
 };
@@ -32,7 +35,7 @@ impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new(config: &Config, send: Sender<MatrixMessage>) -> Self {
         let storage = ListenerStorage::load_storage();
-        let config = MatrixListenerConfig::new(&config);
+        let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
         Self {
             storage,
@@ -46,7 +49,7 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient) {
         loop {
-            let req = assign!(sync_events::Request::new(),
+            let req = assign!(sync_events::v3::Request::new(),
                 {
                     filter: None,
                     since: match &self.storage.last_sync {
@@ -72,17 +75,21 @@ impl MatrixListener {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(AnySyncRoomEvent::Message(
-                                    AnySyncMessageEvent::RoomMessage(SyncMessageEvent {
-                                        content:
-                                            MessageEventContent {
-                                                msgtype: MessageType::Text(t),
-                                                relates_to,
+                                Ok(AnySyncRoomEvent::MessageLike(
+                                    AnySyncMessageLikeEvent::RoomMessage(
+                                        SyncRoomMessageEvent::Original(
+                                            OriginalSyncRoomMessageEvent {
+                                                content:
+                                                    RoomMessageEventContent {
+                                                        msgtype: MessageType::Text(t),
+                                                        relates_to,
+                                                        ..
+                                                    },
+                                                sender,
                                                 ..
                                             },
-                                        sender,
-                                        ..
-                                    }),
+                                        ),
+                                    ),
                                 )) => {
                                     if matches!(relates_to, Some(Relation::Replacement(_))) {
                                         debug!("Message is an edit, skipping handling");
@@ -119,7 +126,7 @@ impl MatrixListener {
                                     trace!("Invited by {}", s.sender);
                                     handle_invite_event(
                                         &s.sender,
-                                        &room_id,
+                                        room_id,
                                         &self.config,
                                         &mut self.send,
                                     )

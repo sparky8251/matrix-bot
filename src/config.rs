@@ -2,10 +2,9 @@
 
 use http::Uri;
 use reqwest::header::HeaderValue;
-use ruma::{RoomId, UserId};
+use ruma::{OwnedRoomId, OwnedTransactionId, OwnedUserId, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
@@ -28,7 +27,7 @@ pub struct MatrixListenerConfig {
     /// Matrix bot account homeserver URL.
     pub mx_url: Uri,
     /// Matrix bot account username.
-    pub mx_uname: UserId,
+    pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
     pub mx_pass: String,
     /// Github access token as string.
@@ -44,12 +43,12 @@ pub struct MatrixListenerConfig {
     /// Text used in spellcheck correction feature.
     pub correction_text: String,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    pub correction_exclusion: HashSet<RoomId>,
+    pub correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
     pub linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
-    pub admins: HashSet<UserId>,
-    pub help_rooms: HashSet<RoomId>,
+    pub admins: HashSet<OwnedUserId>,
+    pub help_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -59,9 +58,9 @@ pub struct MatrixListenerConfig {
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    pub group_pings: HashMap<String, HashSet<UserId>>,
+    pub group_pings: HashMap<String, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
-    pub group_ping_users: HashSet<UserId>,
+    pub group_ping_users: HashSet<OwnedUserId>,
 }
 
 pub struct WebhookListenerConfig {
@@ -76,7 +75,7 @@ pub struct Config {
     /// Matrix bot account homeserver URL.
     pub mx_url: Uri,
     /// Matrix bot account username.
-    pub mx_uname: UserId,
+    pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
     pub mx_pass: String,
     /// Github access token as string.
@@ -92,12 +91,12 @@ pub struct Config {
     /// Text used in spellcheck correction feature.
     correction_text: String,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    correction_exclusion: HashSet<RoomId>,
+    correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
     linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
-    admins: HashSet<UserId>,
-    help_rooms: HashSet<RoomId>,
+    admins: HashSet<OwnedUserId>,
+    help_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -107,9 +106,9 @@ pub struct Config {
     /// UserAgent used by reqwest
     user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    group_pings: HashMap<String, HashSet<UserId>>,
+    group_pings: HashMap<String, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
-    group_ping_users: HashSet<UserId>,
+    group_ping_users: HashSet<OwnedUserId>,
     pub webhook_token: String,
 }
 
@@ -138,8 +137,8 @@ pub struct RawConfig {
 /// Struct that contains raw general configuration data.
 struct RawGeneral {
     /// List of matrix users that can invite the bot to rooms.
-    authorized_users: Option<HashSet<UserId>>,
-    help_rooms: Option<HashSet<RoomId>>,
+    authorized_users: Option<HashSet<OwnedUserId>>,
+    help_rooms: Option<HashSet<OwnedRoomId>>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
@@ -153,7 +152,7 @@ struct RawGeneral {
     /// Text used in spellcheck correction feature. Requires two '{}' to operate properly.
     correction_text: Option<String>,
     /// List of all rooms to be excluded from spellcheck correction feature.
-    correction_exclusion: Option<HashSet<RoomId>>,
+    correction_exclusion: Option<HashSet<OwnedRoomId>>,
     /// List of all words that can be used to link URLs.
     link_matchers: Option<HashSet<String>>,
 
@@ -166,7 +165,7 @@ struct RawMatrixAuthentication {
     /// Homeserver URL for bot account.
     url: String,
     /// Matrix username for bot account.
-    username: UserId,
+    username: OwnedUserId,
     /// Matrix password for bot account.
     password: String,
 }
@@ -190,7 +189,7 @@ pub struct ListenerStorage {
     /// Last sync token.
     pub last_sync: Option<String>,
     /// Hashmap that contains a room id key and a system time of the last correction.
-    pub last_correction_time: HashMap<RoomId, SystemTime>,
+    pub last_correction_time: HashMap<OwnedRoomId, SystemTime>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -282,12 +281,9 @@ impl Config {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents due to error {:?}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents due to error {:?}", e);
+            process::exit(2)
         }
         let toml: RawConfig = match toml::from_str(&contents) {
             Ok(v) => v,
@@ -386,12 +382,9 @@ impl SessionStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
@@ -472,12 +465,9 @@ impl ListenerStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
@@ -575,12 +565,9 @@ impl ResponderStorage {
             },
         };
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (), // If read is successful, do nothing
-            Err(e) => {
-                error!("Unable to read file contents: {}", e);
-                process::exit(2)
-            }
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Unable to read file contents: {}", e);
+            process::exit(2)
         }
         let ron: Self = match ron::from_str(&contents) {
             Ok(v) => v,
@@ -634,9 +621,9 @@ impl ResponderStorage {
     /// Sets the last_txn_id to a new value then returns it
     ///
     /// Must be saved after it is used successfully or you can cause homeserver issues
-    pub fn next_txn_id(&mut self) -> String {
+    pub fn next_txn_id(&mut self) -> OwnedTransactionId {
         self.last_txn_id += 1;
-        self.last_txn_id.to_string()
+        self.last_txn_id.to_string().into()
     }
 }
 
@@ -736,7 +723,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
         Some(v) => {
             let mut hash_set = HashSet::new();
             for set in v {
-                hash_set.insert(" ".to_owned() + &set);
+                hash_set.insert(" ".to_owned() + set);
             }
             hash_set
         }
@@ -747,7 +734,9 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
     }
 }
 
-fn load_spell_correct_settings(toml: &RawConfig) -> (Vec<SpellCheckKind>, String, HashSet<RoomId>) {
+fn load_spell_correct_settings(
+    toml: &RawConfig,
+) -> (Vec<SpellCheckKind>, String, HashSet<OwnedRoomId>) {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -818,7 +807,7 @@ fn load_spell_correct_settings(toml: &RawConfig) -> (Vec<SpellCheckKind>, String
     }
 }
 
-fn load_admin_settings(toml: &RawConfig) -> HashSet<UserId> {
+fn load_admin_settings(toml: &RawConfig) -> HashSet<OwnedUserId> {
     match &toml.general.authorized_users {
         Some(v) => v.clone(),
         None => {
@@ -828,7 +817,7 @@ fn load_admin_settings(toml: &RawConfig) -> HashSet<UserId> {
     }
 }
 
-fn load_help_settings(toml: &RawConfig) -> HashSet<RoomId> {
+fn load_help_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
     match &toml.general.help_rooms {
         Some(v) => v.clone(),
         None => {
@@ -840,7 +829,7 @@ fn load_help_settings(toml: &RawConfig) -> HashSet<RoomId> {
 
 fn load_group_ping_settings(
     toml: &RawConfig,
-) -> (HashMap<String, HashSet<UserId>>, HashSet<UserId>) {
+) -> (HashMap<String, HashSet<OwnedUserId>>, HashSet<OwnedUserId>) {
     match &toml.group_pings {
         Some(v) => {
             let mut group_ping_users = HashSet::new();
@@ -851,7 +840,7 @@ fn load_group_ping_settings(
                         panic!("%all is a reserved group_ping name, do not configure it manually")
                     }
                     if user.starts_with('@') {
-                        let user_id = UserId::try_from(user.clone()).expect(
+                        let user_id = UserId::parse(user.clone()).expect(
                             "Somehow got an alias in a part of code meant to handle UserIds",
                         );
                         group_ping_users.insert(user_id);
@@ -859,9 +848,9 @@ fn load_group_ping_settings(
                 }
             }
 
-            let mut expanded_groups: HashMap<String, HashSet<UserId>> = HashMap::new();
+            let mut expanded_groups: HashMap<String, HashSet<OwnedUserId>> = HashMap::new();
             for (group, users) in v {
-                let mut expanded_users: HashSet<UserId> = HashSet::new();
+                let mut expanded_users: HashSet<OwnedUserId> = HashSet::new();
 
                 for user in users {
                     if user.eq("%all") {
@@ -869,13 +858,13 @@ fn load_group_ping_settings(
                     }
                     if user.starts_with('%') {
                         // If user is an alias, expand it to list of users and insert them
-                        let alias = user.replace("%", "");
+                        let alias = user.replace('%', "");
                         match v.get(&alias) {
                             // If list of users found, insert them
                             Some(g) => {
                                 for u in g {
                                     if u.starts_with('@') {
-                                        let user_id = UserId::try_from(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
+                                        let user_id = UserId::parse(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
                                         expanded_users.insert(user_id);
                                     }
                                 }
@@ -888,7 +877,7 @@ fn load_group_ping_settings(
                         }
                     } else {
                         // If user is not alias, just insert it
-                        let user_id = UserId::try_from(user.clone()).expect(
+                        let user_id = UserId::parse(user.clone()).expect(
                             "Somehow got an alias in a part of code meant to handle UserIds",
                         );
                         expanded_users.insert(user_id);

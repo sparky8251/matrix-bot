@@ -46,11 +46,11 @@ pub(super) async fn help_handler(
             Some(v) => match v {
                 HelpType::Command => message = action_command_help_message().await,
                 HelpType::Commandless => message = action_commandless_help_message().await,
-                HelpType::GroupPing => message = group_ping_help_message(&config).await,
-                HelpType::GithubSearch => message = github_search_help_message(&config).await,
-                HelpType::Link => message = link_help_message(&config).await,
-                HelpType::TextExpansion => message = text_expansion_help_message(&config).await,
-                HelpType::UnitConversion => message = unit_conversion_help_message(&config).await,
+                HelpType::GroupPing => message = group_ping_help_message(config).await,
+                HelpType::GithubSearch => message = github_search_help_message(config).await,
+                HelpType::Link => message = link_help_message(config).await,
+                HelpType::TextExpansion => message = text_expansion_help_message(config).await,
+                HelpType::UnitConversion => message = unit_conversion_help_message(config).await,
                 HelpType::UnknownCommand => (),
             },
             None => {
@@ -59,16 +59,16 @@ pub(super) async fn help_handler(
             }
         };
         if !message.is_empty() {
-            match send
+            if send
                 .send(MatrixMessage {
-                    room_id: room_id.clone(),
+                    room_id: room_id.to_owned(),
                     message: MatrixMessageType::Notice(message),
                 })
                 .await
+                .is_err()
             {
-                Ok(_) => (),
-                Err(_) => error!("Channel closed. Unable to send message."),
-            };
+                error!("Channel closed. Unable to send message.");
+            }
         } else {
             debug!("Unknown action");
             let mut response = MatrixFormattedNoticeResponse::default();
@@ -79,19 +79,19 @@ pub(super) async fn help_handler(
             ));
             response.add_errrors(errors);
             let formatted_text = response.format_text();
-            match send
+            if send
                 .send(MatrixMessage {
-                    room_id: room_id.clone(),
+                    room_id: room_id.to_owned(),
                     message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
                         plain_text: response.to_string(),
                         formatted_text,
                     }),
                 })
                 .await
+                .is_err()
             {
-                Ok(_) => (),
-                Err(_) => error!("Channel closed. Unable to send message."),
-            };
+                error!("Channel closed. Unable to send message.");
+            }
         }
     } else {
         trace!(
@@ -212,7 +212,7 @@ async fn link_help_message(config: &MatrixListenerConfig) -> String {
     keywords.sort();
     let mut available_keywords = String::new();
     for keyword in keywords {
-        available_keywords.push_str(&keyword);
+        available_keywords.push_str(keyword);
         available_keywords.push('|');
     }
     available_keywords.pop();
@@ -224,7 +224,7 @@ async fn link_help_message(config: &MatrixListenerConfig) -> String {
     links.sort();
     let mut available_links = String::new();
     for link in links {
-        available_links.push_str(&link);
+        available_links.push_str(link);
         available_links.push('|');
     }
     available_links.pop();
@@ -255,7 +255,7 @@ async fn text_expansion_help_message(config: &MatrixListenerConfig) -> String {
     keywords.sort();
     let mut available_keywords = String::new();
     for keyword in keywords {
-        available_keywords.push_str(&keyword);
+        available_keywords.push_str(keyword);
         available_keywords.push('|');
     }
     available_keywords.pop();
@@ -283,7 +283,7 @@ async fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
     units.sort();
     let mut space_excluded_units = String::new();
     for unit in units {
-        space_excluded_units.push_str(&unit);
+        space_excluded_units.push_str(unit);
         space_excluded_units.push('|');
     }
     space_excluded_units.pop();

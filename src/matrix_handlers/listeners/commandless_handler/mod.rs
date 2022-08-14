@@ -36,7 +36,7 @@ pub(super) async fn commandless_handler(
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
 ) {
-    if sender == &config.mx_uname {
+    if sender == config.mx_uname {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
     } else {
@@ -46,58 +46,58 @@ pub(super) async fn commandless_handler(
                 let mut text_response = MatrixFormattedTextResponse::default();
                 if UNIT_CONVERSION.is_match(&text.body) && config.enable_unit_conversions {
                     debug!("Entering commandless unit conversion path");
-                    unit_conversion(&text, &config, &mut notice_response);
+                    unit_conversion(text, config, &mut notice_response);
                 }
                 if GITHUB_SEARCH.is_match(&text.body) && !config.repos.is_empty() {
                     debug!("Entering commandless github search path");
-                    github_search(&text, &config, &api_client, &mut notice_response).await;
+                    github_search(text, config, api_client, &mut notice_response).await;
                 }
                 if LINK_URL.is_match(&text.body)
                     && !config.links.is_empty()
                     && !config.linkers.is_empty()
                 {
                     debug!("Entering commandless url linking path");
-                    link_url(&text, &config, &mut notice_response);
+                    link_url(text, config, &mut notice_response);
                 }
                 if GROUP_PING.is_match(&text.body) {
                     debug!("Entering commandless group ping path");
-                    group_ping(&text, &sender, &config, &mut text_response);
+                    group_ping(text, sender, config, &mut text_response);
                 }
                 if TEXT_EXPANSION.is_match(&text.body) {
                     debug!("Entering commandless text expansion path");
-                    text_expansion(&text, &config, &mut notice_response);
+                    text_expansion(text, config, &mut notice_response);
                 }
 
                 let notice_response = notice_response;
                 let text_response = text_response;
 
-                if notice_response.is_some() {
-                    match send
+                if notice_response.is_some()
+                    && send
                         .send(MatrixMessage {
-                            room_id: room_id.clone(),
+                            room_id: room_id.to_owned(),
                             message: MatrixMessageType::Notice(notice_response.to_string()),
                         })
                         .await
-                    {
-                        Ok(_) => (),
-                        Err(_) => error!("Channel closed. Unable to send message."),
-                    };
+                        .is_err()
+                {
+                    error!("Channel closed. Unable to send message.");
                 }
+
                 if text_response.is_some() {
                     let message = MatrixFormattedMessage {
                         plain_text: text_response.to_string(),
                         formatted_text: text_response.format_text(),
                     };
-                    match send
+                    if send
                         .send(MatrixMessage {
-                            room_id: room_id.clone(),
+                            room_id: room_id.to_owned(),
                             message: MatrixMessageType::FormattedText(message),
                         })
                         .await
+                        .is_err()
                     {
-                        Ok(_) => (),
-                        Err(_) => error!("Channel closed. Unable to send message."),
-                    };
+                        error!("Channel closed. Unable to send message.");
+                    }
                 }
                 if config.enable_corrections
                     && relates_to.is_none()
@@ -109,7 +109,7 @@ pub(super) async fn commandless_handler(
                     if let Some(v) = spellcheck(text, sender, config) {
                         match send
                             .send(MatrixMessage {
-                                room_id: room_id.clone(),
+                                room_id: room_id.to_owned(),
                                 message: MatrixMessageType::Text(v),
                             })
                             .await
@@ -117,7 +117,7 @@ pub(super) async fn commandless_handler(
                             Ok(_) => {
                                 storage
                                     .last_correction_time
-                                    .insert(room_id.clone(), SystemTime::now());
+                                    .insert(room_id.to_owned(), SystemTime::now());
                             }
                             Err(_) => error!("Channel closed. Unable to send message."),
                         };

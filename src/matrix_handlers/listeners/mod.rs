@@ -28,20 +28,20 @@ pub async fn handle_text_event(
     storage: &mut ListenerStorage,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
-    mut send: &mut Sender<MatrixMessage>,
+    send: &mut Sender<MatrixMessage>,
 ) {
     if !&text.body.starts_with('!') {
         debug!("Entering no command path...");
         commandless_handler(
-            text, relates_to, sender, room_id, storage, config, api_client, &mut send,
+            text, relates_to, sender, room_id, storage, config, api_client, send,
         )
         .await
     } else if text.body.to_lowercase().starts_with("!convert ") {
         debug!("Entering unit conversion path...");
-        unit_conversion_handler(text, relates_to, room_id, &mut send).await
+        unit_conversion_handler(text, relates_to, room_id, send).await
     } else if text.body.to_lowercase().starts_with("!help") {
         debug!("Entering help path...");
-        help_handler(text, room_id, config, &mut send).await
+        help_handler(text, room_id, config, send).await
     } else {
         debug!("Doing nothing...");
     }
@@ -55,35 +55,35 @@ pub async fn handle_invite_event(
     send: &mut Sender<MatrixMessage>,
 ) {
     trace!("Invited by {} to room {} ", &sender, &room_id);
-    if config.admins.contains(&sender) {
+    if config.admins.contains(sender) {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Accept,
-            sender: sender.clone(),
+            sender: sender.to_owned(),
         };
-        match send
+        if send
             .send(MatrixMessage {
-                room_id: room_id.clone(),
+                room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await
+            .is_err()
         {
-            Ok(_) => (),
-            Err(_) => error!("Channel closed. Unable to send message."),
-        };
+            error!("Channel closed. Unable to send message.");
+        }
     } else {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Reject,
-            sender: sender.clone(),
+            sender: sender.to_owned(),
         };
-        match send
+        if send
             .send(MatrixMessage {
-                room_id: room_id.clone(),
+                room_id: room_id.to_owned(),
                 message: MatrixMessageType::Invite(message),
             })
             .await
+            .is_err()
         {
-            Ok(_) => (),
-            Err(_) => error!("Channel closed. Unable to send message."),
-        };
+            error!("Channel closed. Unable to send message.");
+        }
     }
 }

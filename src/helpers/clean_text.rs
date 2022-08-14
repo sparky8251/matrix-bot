@@ -7,7 +7,7 @@ use tracing::trace;
 ///
 /// Returns the result
 pub fn clean_text(text: &str) -> String {
-    let clean_text = MX_REPLY.replace_all(&text, "");
+    let clean_text = MX_REPLY.replace_all(text, "");
     trace!("Cleaned text after removing reply is {:?}", clean_text);
 
     let clean_text = CODE_TAG.replace_all(&clean_text, "");

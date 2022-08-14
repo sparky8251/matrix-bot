@@ -18,9 +18,8 @@ pub(super) fn load_access_token() -> String {
                 },
             };
             let mut contents = String::new();
-            match file.read_to_string(&mut contents) {
-                Ok(_) => (), // If read is successful, do nothing
-                Err(e) => panic!("Unable to read file contents due to error {:?}", e),
+            if let Err(e) = file.read_to_string(&mut contents) {
+                panic!("Unable to read file contents due to error {:?}", e);
             }
             contents
         }
