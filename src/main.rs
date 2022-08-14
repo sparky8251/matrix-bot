@@ -77,8 +77,6 @@ mod webhook;
 mod webhook_handlers;
 
 #[macro_use]
-extern crate rocket;
-#[macro_use]
 extern crate assign;
 
 #[tokio::main]

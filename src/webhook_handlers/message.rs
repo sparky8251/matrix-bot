@@ -1,29 +1,28 @@
-use crate::config::WebhookListenerConfig;
 use crate::helpers::MatrixFormattedTextResponse;
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
-use rocket::http::Status;
-use rocket::request::{self, FromRequest, Request};
-use rocket::State;
-use rocket_contrib::json::Json;
+use crate::webhook::listener::WebhookListener;
+use axum::{
+    extract::{Extension, FromRequest, RequestParts},
+    http::StatusCode,
+    Json,
+};
 use ruma::{OwnedRoomId, OwnedUserId};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashSet;
-use tokio::sync::mpsc::Sender;
+use std::sync::Arc;
 
-#[post("/", data = "<message>")]
 pub async fn message(
     req_token: MessageToken,
-    message: Json<Message>,
-    conf: State<'_, WebhookListenerConfig>,
-    send: State<'_, Sender<MatrixMessage>>,
-) -> Status {
-    if req_token.0.eq(&conf.token) {
+    Json(message): Json<Message>,
+    Extension(state): Extension<Arc<WebhookListener>>,
+) -> StatusCode {
+    if req_token.0.eq(&state.config.token) {
         let matrix_message = MatrixMessage {
             room_id: message.room_id.clone(),
             message: MatrixMessageType::Notice(message.message.clone()),
         };
-        if send.clone().send(matrix_message).await.is_err() {
-            return Status::InternalServerError;
+        if state.send.clone().send(matrix_message).await.is_err() {
+            return StatusCode::INTERNAL_SERVER_ERROR;
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
@@ -36,13 +35,13 @@ pub async fn message(
                     formatted_text: response.format_text(),
                 }),
             };
-            if send.clone().send(matrix_message).await.is_err() {
-                return Status::InternalServerError;
+            if state.send.clone().send(matrix_message).await.is_err() {
+                return StatusCode::INTERNAL_SERVER_ERROR;
             };
         };
-        Status::Ok
+        StatusCode::OK
     } else {
-        Status::Unauthorized
+        StatusCode::UNAUTHORIZED
     }
 }
 
@@ -56,21 +55,19 @@ pub struct Message {
 #[derive(Debug, Deserialize)]
 pub struct MessageToken(String);
 
-#[derive(Debug, Serialize)]
-pub enum MessageError {
-    NoToken,
-}
+#[axum::async_trait]
+impl<B: std::marker::Send> FromRequest<B> for MessageToken {
+    type Rejection = StatusCode;
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for MessageToken {
-    type Error = MessageError;
-
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        if req.headers().contains("X-Webhook-Token") {
-            let token = req.headers().get_one("X-Webhook-Token").unwrap();
-            request::Outcome::Success(MessageToken(token.to_string()))
+    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+        if req.headers().contains_key("X-Webhook-Token") {
+            let token = req.headers().get("X-Webhook-Token").unwrap();
+            match token.to_str() {
+                Ok(v) => Ok(MessageToken(v.to_owned())),
+                Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
         } else {
-            request::Outcome::Failure((Status::Unauthorized, MessageError::NoToken))
+            Err(StatusCode::UNAUTHORIZED)
         }
     }
 }
