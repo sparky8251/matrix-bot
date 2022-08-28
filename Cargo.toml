@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.17"
+version = "2.0.0-beta.18"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -9,14 +9,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-assign = "1.1.1"
+assign = "1.1"
 futures = "0.3"
 graphql_client = "0.11"
 http = "0.2"
 lazy_static = "1.4"
 regex = "1.4"
 axum = "0.5"
-ron = "0.7"
+ron = "0.8"
 thiserror = "1.0"
 toml = "0.5"
 tracing = "0.1"
@@ -26,13 +26,14 @@ hmac = "0.12"
 sha2 = "0.10"
 hex-literal = "0.3"
 hex = "0.4.2"
+sled = "0.34"
 
 [dependencies.reqwest]
-version = "0.11.3"
+version = "0.11"
 features = ["json"]
 
 [dependencies.ruma]
-version = "0.6.2"
+version = "0.6"
 features = ["client-api-c", "client-ext-client-api", "client-reqwest", "unstable-msc2676"]
 
 [dependencies.serde]
@@ -40,7 +41,7 @@ version = "1.0"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "1.5.0"
+version = "1.5"
 features = ["signal", "macros", "rt-multi-thread"]
 
 [dependencies.tracing-subscriber]

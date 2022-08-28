@@ -74,7 +74,7 @@ pub(super) async fn commandless_handler(
                 if notice_response.is_some()
                     && send
                         .send(MatrixMessage {
-                            room_id: room_id.to_owned(),
+                            room_id: Some(room_id.to_owned()),
                             message: MatrixMessageType::Notice(notice_response.to_string()),
                         })
                         .await
@@ -90,7 +90,7 @@ pub(super) async fn commandless_handler(
                     };
                     if send
                         .send(MatrixMessage {
-                            room_id: room_id.to_owned(),
+                            room_id: Some(room_id.to_owned()),
                             message: MatrixMessageType::FormattedText(message),
                         })
                         .await
@@ -109,7 +109,7 @@ pub(super) async fn commandless_handler(
                     if let Some(v) = spellcheck(text, sender, config) {
                         match send
                             .send(MatrixMessage {
-                                room_id: room_id.to_owned(),
+                                room_id: Some(room_id.to_owned()),
                                 message: MatrixMessageType::Text(v),
                             })
                             .await

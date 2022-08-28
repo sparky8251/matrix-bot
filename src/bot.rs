@@ -44,22 +44,22 @@ pub async fn init() {
         matrix_listener.start(matrix_listener_client).await;
         matrix_listener.storage.save_storage();
     });
+    let webhook_listener_task = tokio::spawn(async move {
+        webhook_listener.start().await;
+    });
     let matrix_responder_task = tokio::spawn(async move {
         matrix_responder.start(matrix_responder_client).await;
         matrix_responder.storage.save_storage();
-    });
-    let webhook_listener_task = tokio::spawn(async move {
-        webhook_listener.start().await;
     });
 
     // Join threads to main thread
     matrix_listener_task
         .await
         .expect("The matrix listener task has panicked!");
-    matrix_responder_task
-        .await
-        .expect("The matrix responder task has panicked!");
     webhook_listener_task
         .await
         .expect("The webhook listener task has panicked!");
+    matrix_responder_task
+        .await
+        .expect("The matrix responder task has panicked!");
 }

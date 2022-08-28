@@ -1,6 +1,6 @@
 [general]
 # These users are allowed to access admin features like
-# Inviting the bot to rooms
+# Inviting the bot to rooms and banning users
 # Requires at least 1
 authorized_users = [
     '@demouser1:matrix.homeserver.com',
@@ -11,6 +11,11 @@ authorized_users = [
 # If no rooms are specified, all rooms the bot is in are allowed.
 # Optional
 help_rooms = ['!randomalpha:homeserver.com']
+
+# Rooms in which users will be banned when !ban command is used
+# If no rooms are specified, ban feature is disabled.
+# Optional
+ban_rooms = ['!randomalpha:homeserver.com']
 
 # Enable bot feature to perform common imperial <--> metric conversions
 # Only applies to commandless conversions

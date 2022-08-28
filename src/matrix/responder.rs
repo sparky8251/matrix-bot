@@ -4,8 +4,8 @@
 use super::MatrixClient;
 use crate::config::ResponderStorage;
 use crate::matrix_handlers::responders::{
-    accept_invite, reject_invite, send_formatted_notice, send_formatted_text, send_notice,
-    send_plain_text,
+    accept_invite, reject_invite, send_ban_message, send_formatted_notice, send_formatted_text,
+    send_notice, send_plain_text,
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use tokio::sync::mpsc::Receiver;
@@ -32,11 +32,11 @@ impl MatrixResponder {
             match self.recv.recv().await {
                 Some(v) => match v.message {
                     MatrixMessageType::Notice(m) => {
-                        send_notice(&client, &v.room_id, &mut self.storage, m).await
+                        send_notice(&client, v.room_id, &mut self.storage, m).await
                     }
                     MatrixMessageType::FormattedText(m) => {
                         send_formatted_text(
-                            &v.room_id,
+                            v.room_id,
                             &mut self.storage,
                             m.plain_text,
                             m.formatted_text,
@@ -45,25 +45,28 @@ impl MatrixResponder {
                         .await
                     }
                     MatrixMessageType::Text(m) => {
-                        send_plain_text(&v.room_id, &mut self.storage, m, &client).await
+                        send_plain_text(v.room_id, &mut self.storage, m, &client).await
                     }
                     MatrixMessageType::Invite(m) => match m.kind {
                         MatrixInviteType::Accept => {
-                            accept_invite(&m.sender, &v.room_id, &client).await
+                            accept_invite(&m.sender, v.room_id, &client).await
                         }
                         MatrixInviteType::Reject => {
-                            reject_invite(&m.sender, &v.room_id, &client).await
+                            reject_invite(&m.sender, v.room_id, &client).await
                         }
                     },
                     MatrixMessageType::FormattedNotice(m) => {
                         send_formatted_notice(
-                            &v.room_id,
+                            v.room_id,
                             &mut self.storage,
                             m.plain_text,
                             m.formatted_text,
                             &client,
                         )
                         .await
+                    }
+                    MatrixMessageType::Ban(m) => {
+                        send_ban_message(&m.user, m.reason, m.rooms, &client).await
                     }
                 },
                 None => {

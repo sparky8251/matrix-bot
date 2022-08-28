@@ -1,8 +1,9 @@
 use ruma::{OwnedRoomId, OwnedUserId};
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct MatrixMessage {
-    pub room_id: OwnedRoomId,
+    pub room_id: Option<OwnedRoomId>,
     pub message: MatrixMessageType,
     // pub resp: Responder<MatrixMessageResult>,
 }
@@ -14,6 +15,7 @@ pub enum MatrixMessageType {
     Notice(String),
     FormattedText(MatrixFormattedMessage),
     FormattedNotice(MatrixFormattedMessage),
+    Ban(MatrixBanMessage),
 }
 
 #[derive(Debug)]
@@ -32,6 +34,13 @@ pub struct MatrixFormattedMessage {
 pub struct MatrixInviteMessage {
     pub kind: MatrixInviteType,
     pub sender: OwnedUserId,
+}
+
+#[derive(Debug)]
+pub struct MatrixBanMessage {
+    pub user: OwnedUserId,
+    pub reason: Option<String>,
+    pub rooms: HashSet<OwnedRoomId>,
 }
 
 // #[derive(Debug)]

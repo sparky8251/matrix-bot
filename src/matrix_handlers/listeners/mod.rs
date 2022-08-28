@@ -3,10 +3,12 @@
 //! Sub modules exist for performing various processes such as unit conversion
 //! and searching github
 
+mod ban_handler;
 mod commandless_handler;
 mod help_handler;
 mod unit_conversion_handler;
 
+use self::ban_handler::ban_handler;
 use self::commandless_handler::commandless_handler;
 use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
@@ -42,6 +44,9 @@ pub async fn handle_text_event(
     } else if text.body.to_lowercase().starts_with("!help") {
         debug!("Entering help path...");
         help_handler(text, room_id, config, send).await
+    } else if text.body.to_lowercase().starts_with("!ban") {
+        debug!("Entering help path...");
+        ban_handler(text, config, sender, send).await;
     } else {
         debug!("Doing nothing...");
     }
@@ -62,7 +67,7 @@ pub async fn handle_invite_event(
         };
         if send
             .send(MatrixMessage {
-                room_id: room_id.to_owned(),
+                room_id: Some(room_id.to_owned()),
                 message: MatrixMessageType::Invite(message),
             })
             .await
@@ -77,7 +82,7 @@ pub async fn handle_invite_event(
         };
         if send
             .send(MatrixMessage {
-                room_id: room_id.to_owned(),
+                room_id: Some(room_id.to_owned()),
                 message: MatrixMessageType::Invite(message),
             })
             .await

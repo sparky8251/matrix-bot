@@ -48,7 +48,10 @@ pub struct MatrixListenerConfig {
     pub linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
     pub admins: HashSet<OwnedUserId>,
+    /// List of rooms in which help function can be used.
     pub help_rooms: HashSet<OwnedRoomId>,
+    /// List of rooms in which ban function will apply.
+    pub ban_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     pub repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -96,7 +99,10 @@ pub struct Config {
     linkers: HashSet<String>,
     /// List of matrix users that can invite the bot to rooms.
     admins: HashSet<OwnedUserId>,
+    /// List of matrix rooms that the help function can be used in
     help_rooms: HashSet<OwnedRoomId>,
+    /// List of matrix rooms in which bans will be applied
+    ban_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
     repos: HashMap<String, String>,
     /// Hashmap containing searched key and matching URL for linking.
@@ -138,7 +144,10 @@ pub struct RawConfig {
 struct RawGeneral {
     /// List of matrix users that can invite the bot to rooms.
     authorized_users: Option<HashSet<OwnedUserId>>,
+    /// List of rooms the help function can be used in.
     help_rooms: Option<HashSet<OwnedRoomId>>,
+    /// List of rooms the ban function will apply to
+    ban_rooms: Option<HashSet<OwnedRoomId>>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
@@ -237,6 +246,7 @@ impl MatrixListenerConfig {
             linkers: config.linkers.clone(),
             admins: config.admins.clone(),
             help_rooms: config.help_rooms.clone(),
+            ban_rooms: config.ban_rooms.clone(),
             repos: config.repos.clone(),
             links: config.links.clone(),
             text_expansions: config.text_expansions.clone(),
@@ -302,6 +312,7 @@ impl Config {
             load_spell_correct_settings(&toml);
         let admins = load_admin_settings(&toml);
         let help_rooms = load_help_settings(&toml);
+        let ban_rooms = load_ban_room_settings(&toml);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
             toml.matrix_authentication
                 .url
@@ -341,6 +352,7 @@ impl Config {
             text_expansions,
             admins,
             help_rooms,
+            ban_rooms,
             repos,
             links,
             user_agent,
@@ -822,6 +834,16 @@ fn load_help_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
         Some(v) => v.clone(),
         None => {
             info!("No help rooms specified. Allowing all rooms.");
+            HashSet::new()
+        }
+    }
+}
+
+fn load_ban_room_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
+    match &toml.general.ban_rooms {
+        Some(v) => v.clone(),
+        None => {
+            info!("No ban rooms specified. Disabling feature.");
             HashSet::new()
         }
     }

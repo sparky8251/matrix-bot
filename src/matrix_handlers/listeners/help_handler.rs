@@ -61,7 +61,7 @@ pub(super) async fn help_handler(
         if !message.is_empty() {
             if send
                 .send(MatrixMessage {
-                    room_id: room_id.to_owned(),
+                    room_id: Some(room_id.to_owned()),
                     message: MatrixMessageType::Notice(message),
                 })
                 .await
@@ -81,7 +81,7 @@ pub(super) async fn help_handler(
             let formatted_text = response.format_text();
             if send
                 .send(MatrixMessage {
-                    room_id: room_id.to_owned(),
+                    room_id: Some(room_id.to_owned()),
                     message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
                         plain_text: response.to_string(),
                         formatted_text,

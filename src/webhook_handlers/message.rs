@@ -18,7 +18,7 @@ pub async fn message(
 ) -> StatusCode {
     if req_token.0.eq(&state.config.token) {
         let matrix_message = MatrixMessage {
-            room_id: message.room_id.clone(),
+            room_id: Some(message.room_id.clone()),
             message: MatrixMessageType::Notice(message.message.clone()),
         };
         if state.send.clone().send(matrix_message).await.is_err() {
@@ -29,7 +29,7 @@ pub async fn message(
             let pings: HashSet<OwnedUserId> = pings.iter().cloned().collect();
             response.set_users(pings);
             let matrix_message = MatrixMessage {
-                room_id: message.room_id.clone(),
+                room_id: Some(message.room_id.clone()),
                 message: MatrixMessageType::FormattedText(MatrixFormattedMessage {
                     plain_text: response.to_string(),
                     formatted_text: response.format_text(),
