@@ -104,14 +104,14 @@ pub async fn send_formatted_notice(
 
 pub async fn send_ban_message(
     user: &UserId,
-    _reason: Option<String>,
+    reason: Option<String>,
     rooms: HashSet<OwnedRoomId>,
     client: &MatrixClient,
 ) {
     for room_id in rooms {
         debug!("Banning user {} in room {}...", user, room_id);
-        let req = ban_user::v3::Request::new(&room_id, user);
-        // TODO: Figure out way to actually include reason
+        let mut req = ban_user::v3::Request::new(&room_id, user);
+        req.reason = reason.as_deref();
         if let Err(e) = client.send_request(req).await {
             error!("{:?}", e);
         };
