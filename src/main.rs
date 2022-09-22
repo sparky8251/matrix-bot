@@ -76,9 +76,6 @@ mod regex;
 mod webhook;
 mod webhook_handlers;
 
-#[macro_use]
-extern crate assign;
-
 #[tokio::main]
 #[allow(clippy::missing_docs_in_private_items)]
 async fn main() {
