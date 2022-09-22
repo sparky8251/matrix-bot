@@ -1,6 +1,6 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
-use http::Uri;
+use axum::http::Uri;
 use reqwest::header::HeaderValue;
 use ruma::{OwnedRoomId, OwnedTransactionId, OwnedUserId, RoomId, UserId};
 use serde::{Deserialize, Serialize};

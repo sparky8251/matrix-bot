@@ -9,24 +9,29 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-assign = "1.1"
-futures = "0.3"
+assign = "1"
 graphql_client = "0.11"
-http = "0.2"
-lazy_static = "1.4"
-regex = "1.4"
+once_cell = "1"
+regex = "1"
 axum = "0.5"
 ron = "0.8"
-thiserror = "1.0"
+thiserror = "1"
 toml = "0.5"
 tracing = "0.1"
 uom = "0.33"
-serde_json = "1.0"
-hmac = "0.12"
-sha2 = "0.10"
-hex-literal = "0.3"
-hex = "0.4.2"
-sled = "0.34"
+serde_json = "1"
+anyhow = "1"
+figment = "0.10"
+
+# Deps below are for unimplemented secured github webhook listener.
+# hmac = "0.12"
+# sha2 = "0.10"
+# hex-literal = "0.3"
+# hex = "0.4"
+
+[dependencies.rusqlite]
+version = "0.28"
+features = ["bundled"]
 
 [dependencies.reqwest]
 version = "0.11"
@@ -37,11 +42,11 @@ version = "0.7"
 features = ["client-api-c", "client-ext-client-api", "client-reqwest", "unstable-msc2676"]
 
 [dependencies.serde]
-version = "1.0"
+version = "1"
 features = ["derive"]
 
 [dependencies.tokio]
-version = "1.5"
+version = "1"
 features = ["signal", "macros", "rt-multi-thread"]
 
 [dependencies.tracing-subscriber]
