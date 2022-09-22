@@ -309,8 +309,8 @@ impl Config {
             toml.general.enable_unit_conversions,
         );
 
-        let user_agent = HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION))
-            .with_context(|| {
+        let user_agent =
+            HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION)).with_context(|| {
                 format!(
                     "Unable to create valid user agent from {} and {}",
                     NAME, VERSION
@@ -422,11 +422,14 @@ impl ListenerStorage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save_storage(&ron).context("Unable to save default matrix_listener.ron")?;
+                    Self::save_storage(&ron)
+                        .context("Unable to save default matrix_listener.ron")?;
                     return Ok(ron);
                 }
                 ErrorKind::PermissionDenied => {
-                    return Err(anyhow!("Permission denied when opening file matrix_listener.ron"));
+                    return Err(anyhow!(
+                        "Permission denied when opening file matrix_listener.ron"
+                    ));
                 }
                 _ => {
                     return Err(anyhow!("Unable to open matrix_listener.ron"));
@@ -434,8 +437,10 @@ impl ListenerStorage {
             },
         };
         let mut contents = String::new();
-        file.read_to_string(&mut contents).context("Unable to read file contents of matrix_listener.ron")?;
-        let ron = ron::from_str(&contents).context("Unable to load matrix_listener.ron due to invald RON")?;
+        file.read_to_string(&mut contents)
+            .context("Unable to read file contents of matrix_listener.ron")?;
+        let ron = ron::from_str(&contents)
+            .context("Unable to load matrix_listener.ron due to invald RON")?;
         Ok(ron)
     }
 
@@ -495,11 +500,14 @@ impl ResponderStorage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save_storage(&ron).context("Unable to save default matrix_responder.ron")?;
+                    Self::save_storage(&ron)
+                        .context("Unable to save default matrix_responder.ron")?;
                     return Ok(ron);
                 }
                 ErrorKind::PermissionDenied => {
-                    return Err(anyhow!("Permission denied when opening file matrix_responder.ron"));
+                    return Err(anyhow!(
+                        "Permission denied when opening file matrix_responder.ron"
+                    ));
                 }
                 _ => {
                     return Err(anyhow!("Unable to open matrix_responder file"));
@@ -507,8 +515,10 @@ impl ResponderStorage {
             },
         };
         let mut contents = String::new();
-        file.read_to_string(&mut contents).context("Unable to read matrix_responder.ron during load")?;
-        let ron = ron::from_str(&contents).context("Unable to load matrix_responder.ron due to invalid RON")?;
+        file.read_to_string(&mut contents)
+            .context("Unable to read matrix_responder.ron during load")?;
+        let ron = ron::from_str(&contents)
+            .context("Unable to load matrix_responder.ron due to invalid RON")?;
         Ok(ron)
     }
 
@@ -522,9 +532,15 @@ impl ResponderStorage {
                 .collect::<PathBuf>(),
             Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
         };
-        let ron = ron::to_string(self).expect("Unable to format matrix_responder data as RON. This should never happen!");
-        let mut file = OpenOptions::new().write(true).create(true).open(path).context("Unable to open matrix_responder.ron file")?;
-        file.write_all(ron.as_bytes()).context("Unable to write matrix_listener.ron data")?;
+        let ron = ron::to_string(self)
+            .expect("Unable to format matrix_responder data as RON. This should never happen!");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .context("Unable to open matrix_responder.ron file")?;
+        file.write_all(ron.as_bytes())
+            .context("Unable to write matrix_listener.ron data")?;
         trace!("Saved Session!");
         Ok(())
     }
