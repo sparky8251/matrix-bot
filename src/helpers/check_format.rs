@@ -1,17 +1,25 @@
 //! Helper function used to verify the formatting of the recieved message is processable by later steps
 
 use ruma::events::room::message::MessageFormat;
-use thiserror::Error;
+use std::fmt;
+use std::fmt::Formatter;
 use tracing::error;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 /// Type used to represent the error state
 pub enum CheckFormatError {
-    #[error("Format {0} is not supported")]
     /// Returned if supplied format is not supported
     ///
     /// Has related `Display` implementation for ease of error reporting to the admin
     FormatNotSupported(String),
+}
+
+impl fmt::Display for CheckFormatError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            CheckFormatError::FormatNotSupported(e) => write!(f, "Format {} is not supported", e),
+        }
+    }
 }
 
 #[derive(Debug)]

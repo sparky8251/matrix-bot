@@ -125,7 +125,7 @@ pub(super) async fn commandless_handler(
                 }
             }
             Err(e) => {
-                error!("{:?}", e);
+                error!("{}", e);
             }
         }
     }
