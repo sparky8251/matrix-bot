@@ -78,7 +78,8 @@ mod webhook_handlers;
 
 #[tokio::main]
 #[allow(clippy::missing_docs_in_private_items)]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     logging::init();
-    bot::init().await
+    bot::init().await?;
+    Ok(())
 }

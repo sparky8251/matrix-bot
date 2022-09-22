@@ -20,9 +20,9 @@ pub struct MatrixResponder {
 
 impl MatrixResponder {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(recv: Receiver<MatrixMessage>) -> Self {
-        let storage = ResponderStorage::load_storage();
-        Self { storage, recv }
+    pub fn new(recv: Receiver<MatrixMessage>) -> anyhow::Result<Self> {
+        let storage = ResponderStorage::load_storage()?;
+        Ok(Self { storage, recv })
     }
 
     /// Used to start main program loop for the bot.

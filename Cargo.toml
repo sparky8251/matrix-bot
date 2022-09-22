@@ -18,8 +18,7 @@ toml = "0.5"
 tracing = "0.1"
 uom = "0.33"
 serde_json = "1"
-#anyhow = "1"
-figment = "0.10"
+anyhow = "1"
 
 # Deps below are for unimplemented secured github webhook listener.
 #hmac = "0.12"

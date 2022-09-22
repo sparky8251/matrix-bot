@@ -1,5 +1,12 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
+// TODO: Implement Option type enum that will ecapsulate the logic and potential states of config options that
+// TODO: are disable-able. This would be to prevent improper use down the line, whereas right now I pass around
+// TODO: empty but usable types such as HashMap, which could accidentally be used if I fail to uphold the invariants manually.
+// TODO: This problem has gotten worse recently, as now not all empty items mean disabled
+// TODO: and as such, the type system needs to come to the rescue
+
+use anyhow::{anyhow, Context};
 use axum::http::Uri;
 use reqwest::header::HeaderValue;
 use ruma::{OwnedRoomId, OwnedTransactionId, OwnedUserId, RoomId, UserId};
@@ -216,6 +223,7 @@ pub enum SpellCheckKind {
     /// Variant that contains a case sensitive string
     SpellCheckSensitive(SensitiveSpelling),
 }
+
 #[derive(Clone, Debug)]
 /// A struct representing a case insensitive string for comparion purposes.
 pub struct InsensitiveSpelling {
@@ -267,41 +275,18 @@ impl Config {
     ///
     /// If something is disabled, the value in the final struct is just "new" or "blank" but
     /// does not utilize Option<T> for ease of use and matching later on in the program.
-    pub fn load_config() -> Self {
+    pub fn load_config() -> anyhow::Result<Self> {
         let path = match env::var("MATRIX_BOT_CONFIG_DIR") {
             Ok(v) => [&v, "config.toml"].iter().collect::<PathBuf>(),
             Err(_) => ["config.toml"].iter().collect::<PathBuf>(),
         };
         // File Load Section
-        let mut file = match File::open(path) {
-            Ok(v) => v,
-            Err(e) => match e.kind() {
-                ErrorKind::NotFound => {
-                    error!("Unable to find file config.toml");
-                    process::exit(1);
-                }
-                ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file config.toml");
-                    process::exit(1);
-                }
-                _ => {
-                    error!("Unable to open file due to unexpected error {:?}", e);
-                    process::exit(1);
-                }
-            },
-        };
+        let mut file = File::open(&path)
+            .with_context(|| format!("Unable to open config file at {:?}", path))?;
         let mut contents = String::new();
-        if let Err(e) = file.read_to_string(&mut contents) {
-            error!("Unable to read file contents due to error {:?}", e);
-            process::exit(2)
-        }
-        let toml: RawConfig = match toml::from_str(&contents) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Invalid toml. Error is {:?}", e);
-                process::exit(3)
-            }
-        };
+        file.read_to_string(&mut contents)
+            .with_context(|| format!("Unable to read file contents at {:?}", path))?;
+        let toml: RawConfig = toml::from_str(&contents).context("Invalid toml")?;
 
         // Set variables and exit/error if set improperly
         let (repos, gh_access_token) = load_github_settings(&toml);
@@ -317,27 +302,26 @@ impl Config {
             toml.matrix_authentication
                 .url
                 .parse()
-                .expect("Invalid homeserver URL"),
+                .context("Invalid homeserevr URL")?,
             toml.matrix_authentication.username.clone(),
             toml.matrix_authentication.password.clone(),
             toml.general.enable_corrections,
             toml.general.enable_unit_conversions,
         );
 
-        let user_agent: HeaderValue =
-            match HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION)) {
-                Ok(v) => v,
-                Err(e) => panic!(
-                    "Unable to create valid user agent from {} and {}. Error is {:?}",
-                    NAME, VERSION, e
-                ),
-            };
+        let user_agent = HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION))
+            .with_context(|| {
+                format!(
+                    "Unable to create valid user agent from {} and {}",
+                    NAME, VERSION
+                )
+            })?;
 
         let (group_pings, group_ping_users) = load_group_ping_settings(&toml);
         let webhook_token = toml.general.webhook_token;
 
         // Return value
-        Config {
+        Ok(Config {
             mx_url,
             mx_uname,
             mx_pass,
@@ -359,7 +343,7 @@ impl Config {
             group_pings,
             group_ping_users,
             webhook_token,
-        }
+        })
     }
 }
 
@@ -369,7 +353,7 @@ impl SessionStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> Self {
+    pub fn load_storage() -> anyhow::Result<Self> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
             Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
@@ -380,67 +364,42 @@ impl SessionStorage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save(&ron);
-                    return ron;
+                    Self::save_storage(&ron).context("Unable to save default session.ron")?;
+                    return Ok(ron);
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file session.ron");
-                    process::exit(1);
+                    return Err(anyhow!("Permission denied when opening file session.ron"));
                 }
                 _ => {
-                    error!("Unable to open file: {}", e);
-                    process::exit(1);
+                    return Err(anyhow!("Unable to open file session.ron"));
                 }
             },
         };
         let mut contents = String::new();
-        if let Err(e) = file.read_to_string(&mut contents) {
-            error!("Unable to read file contents: {}", e);
-            process::exit(2)
-        }
-        let ron: Self = match ron::from_str(&contents) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Unable to load session.ron due to invalid ron: {}", e);
-                process::exit(3)
-            }
-        };
-        ron
+        file.read_to_string(&mut contents)
+            .context("Unable to read session.ron")?;
+        let ron = ron::from_str(&contents).context("Unable to load session.ron")?;
+        Ok(ron)
     }
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save(&self) {
+    pub fn save_storage(&self) -> anyhow::Result<()> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
             Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
         };
-        let ron = match ron::to_string(self) {
-            Ok(v) => v,
-            Err(e) => {
-                error!(
-                    "Unable to format session.ron as ron, this should never occur. Error is {}",
-                    e
-                );
-                process::exit(7)
-            }
-        };
-        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Unable to open session.ron due to error {:?}", e);
-                process::exit(9)
-            }
-        };
-        match file.write_all(ron.as_bytes()) {
-            Ok(_) => {
-                trace!("Saved Session!");
-            }
-            Err(e) => {
-                error!("Unable to write session data: {}", e);
-                process::exit(10)
-            }
-        }
+        let ron = ron::to_string(self)
+            .expect("Unable to format session.ron save data as RON. This should never occur!");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .context("Unable to open session.ron during saving")?;
+        file.write_all(ron.as_bytes())
+            .context("Unable to write session data")?;
+        trace!("Saved Session!");
+        Ok(())
     }
 }
 
@@ -450,7 +409,7 @@ impl ListenerStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> Self {
+    pub fn load_storage() -> anyhow::Result<Self> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_listener.ron".to_string()]
                 .iter()
@@ -463,72 +422,45 @@ impl ListenerStorage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save_storage(&ron);
-                    return ron;
+                    Self::save_storage(&ron).context("Unable to save default matrix_listener.ron")?;
+                    return Ok(ron);
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file matrix_listener.ron");
-                    process::exit(1);
+                    return Err(anyhow!("Permission denied when opening file matrix_listener.ron"));
                 }
                 _ => {
-                    error!("Unable to open file: {}", e);
-                    process::exit(1);
+                    return Err(anyhow!("Unable to open matrix_listener.ron"));
                 }
             },
         };
         let mut contents = String::new();
-        if let Err(e) = file.read_to_string(&mut contents) {
-            error!("Unable to read file contents: {}", e);
-            process::exit(2)
-        }
-        let ron: Self = match ron::from_str(&contents) {
-            Ok(v) => v,
-            Err(e) => {
-                error!(
-                    "Unable to load matrix_listener.ron due to invalid ron: {}",
-                    e
-                );
-                process::exit(3)
-            }
-        };
-        ron
+        file.read_to_string(&mut contents).context("Unable to read file contents of matrix_listener.ron")?;
+        let ron = ron::from_str(&contents).context("Unable to load matrix_listener.ron due to invald RON")?;
+        Ok(ron)
     }
 
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) {
+    pub fn save_storage(&self) -> anyhow::Result<()> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_listener.ron".to_string()]
                 .iter()
                 .collect::<PathBuf>(),
             Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
         };
-        let ron = match ron::to_string(self) {
-            Ok(v) => v,
-            Err(e) => {
-                error!(
-                    "Unable to format matrix_listener.ron as ron, this should never occur. Error is {}", e
-                );
-                process::exit(7)
-            }
-        };
-        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Unable to open matrix_listener.ron due to error {:?}", e);
-                process::exit(9)
-            }
-        };
-        match file.write_all(ron.as_bytes()) {
-            Ok(_) => {
-                trace!("Saved Session!");
-            }
-            Err(e) => {
-                error!("Unable to write matrix_listener data: {}", e);
-                process::exit(10)
-            }
-        }
+        let ron = ron::to_string(self).expect(
+            "Unable to format matrix_listener.ron save data as RON. This should never occur!",
+        );
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .context("Unable to open matrix_listener.ron during save")?;
+        file.write_all(ron.as_bytes())
+            .context("Unable to write matrix_listener.ron while saving")?;
+        trace!("Saved Session!");
+        Ok(())
     }
     /// Checks that the correction time cooldown for a specific room has passed.
     ///
@@ -550,7 +482,7 @@ impl ResponderStorage {
     /// If the file doesnt exist, creates and writes a default storage file.
     ///
     /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> Self {
+    pub fn load_storage() -> anyhow::Result<Self> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_responder.ron".to_string()]
                 .iter()
@@ -563,70 +495,38 @@ impl ResponderStorage {
                 ErrorKind::NotFound => {
                     let ron = Self::default();
                     trace!("The next save is a default save");
-                    Self::save_storage(&ron);
-                    return ron;
+                    Self::save_storage(&ron).context("Unable to save default matrix_responder.ron")?;
+                    return Ok(ron);
                 }
                 ErrorKind::PermissionDenied => {
-                    error!("Permission denied when opening file matrix_responder.ron");
-                    process::exit(1);
+                    return Err(anyhow!("Permission denied when opening file matrix_responder.ron"));
                 }
                 _ => {
-                    error!("Unable to open file: {}", e);
-                    process::exit(1);
+                    return Err(anyhow!("Unable to open matrix_responder file"));
                 }
             },
         };
         let mut contents = String::new();
-        if let Err(e) = file.read_to_string(&mut contents) {
-            error!("Unable to read file contents: {}", e);
-            process::exit(2)
-        }
-        let ron: Self = match ron::from_str(&contents) {
-            Ok(v) => v,
-            Err(e) => {
-                error!(
-                    "Unable to load matrix_responder.ron due to invalid ron: {}",
-                    e
-                );
-                process::exit(3)
-            }
-        };
-        ron
+        file.read_to_string(&mut contents).context("Unable to read matrix_responder.ron during load")?;
+        let ron = ron::from_str(&contents).context("Unable to load matrix_responder.ron due to invalid RON")?;
+        Ok(ron)
     }
 
     /// Saves all bot associated storage data.
     ///
     /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) {
+    pub fn save_storage(&self) -> anyhow::Result<()> {
         let path = match env::var("MATRIX_BOT_DATA_DIR") {
             Ok(v) => [v, "matrix_responder.ron".to_string()]
                 .iter()
                 .collect::<PathBuf>(),
             Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
         };
-        let ron = match ron::to_string(self) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Unable to format matrix_responder.ron as ron, this should never occur. Error is {}", e);
-                process::exit(7)
-            }
-        };
-        let mut file = match OpenOptions::new().write(true).create(true).open(path) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Unable to open matrix_responder.ron due to error {:?}", e);
-                process::exit(9)
-            }
-        };
-        match file.write_all(ron.as_bytes()) {
-            Ok(_) => {
-                trace!("Saved Session!");
-            }
-            Err(e) => {
-                error!("Unable to write matrix_listener data: {}", e);
-                process::exit(10)
-            }
-        }
+        let ron = ron::to_string(self).expect("Unable to format matrix_responder data as RON. This should never happen!");
+        let mut file = OpenOptions::new().write(true).create(true).open(path).context("Unable to open matrix_responder.ron file")?;
+        file.write_all(ron.as_bytes()).context("Unable to write matrix_listener.ron data")?;
+        trace!("Saved Session!");
+        Ok(())
     }
 
     // FIXME: This needs to be an idempotent/unique ID per txn to be spec compliant

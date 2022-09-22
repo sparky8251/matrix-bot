@@ -33,16 +33,16 @@ pub struct MatrixListener {
 
 impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(config: &Config, send: Sender<MatrixMessage>) -> Self {
-        let storage = ListenerStorage::load_storage();
+    pub fn new(config: &Config, send: Sender<MatrixMessage>) -> anyhow::Result<Self> {
+        let storage = ListenerStorage::load_storage()?;
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
-        Self {
+        Ok(Self {
             storage,
             config,
             api_client,
             send,
-        }
+        })
     }
 
     /// Used to start main program loop for the bot.
@@ -112,7 +112,9 @@ impl MatrixListener {
                                 }
                             }
                             self.storage.last_sync = Some(v.next_batch.clone());
-                            self.storage.save_storage();
+                            if let Err(e) = self.storage.save_storage() {
+                                error!("Unable to save matrix_listener.ron during normal operation. {}", e)
+                            };
                         }
                     }
                     for (room_id, invited_room) in &v.rooms.invite {
