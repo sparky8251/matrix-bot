@@ -12,7 +12,7 @@ use ruma::{
             MessageType, OriginalSyncRoomMessageEvent, Relation, RoomMessageEventContent,
             SyncRoomMessageEvent,
         },
-        AnyStrippedStateEvent, AnySyncMessageLikeEvent, AnySyncRoomEvent,
+        AnyStrippedStateEvent, AnySyncMessageLikeEvent, AnySyncTimelineEvent,
     },
     presence::PresenceState,
 };
@@ -75,7 +75,7 @@ impl MatrixListener {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
                             match event {
-                                Ok(AnySyncRoomEvent::MessageLike(
+                                Ok(AnySyncTimelineEvent::MessageLike(
                                     AnySyncMessageLikeEvent::RoomMessage(
                                         SyncRoomMessageEvent::Original(
                                             OriginalSyncRoomMessageEvent {
