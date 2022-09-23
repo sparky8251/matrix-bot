@@ -53,7 +53,7 @@ pub enum Event {
     },
     Fork {
         forkee: Repository,
-        repository: Repository,
+        repository: Box<Repository>,
         sender: User,
     },
     Gollum {
@@ -104,14 +104,14 @@ pub enum Event {
     PullRequest {
         action: String,
         number: u64,
-        pull_request: PullRequestDetails,
+        pull_request: Box<PullRequestDetails>,
         repository: Repository,
         sender: User,
     },
     PullRequestReviewComment {
         action: String,
         comment: PullRequestReviewComment,
-        pull_request: PullRequest,
+        pull_request: Box<PullRequest>,
         repository: Repository,
         sender: User,
     },

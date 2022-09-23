@@ -1,6 +1,6 @@
 //! Structs and functions for loading and saving configuration and storage data.
 
-// TODO: Implement Option type enum that will ecapsulate the logic and potential states of config options that
+// TODO: Implement Option type enum that will encapsulate the logic and potential states of config options that
 // TODO: are disable-able. This would be to prevent improper use down the line, whereas right now I pass around
 // TODO: empty but usable types such as HashMap, which could accidentally be used if I fail to uphold the invariants manually.
 // TODO: This problem has gotten worse recently, as now not all empty items mean disabled
@@ -17,9 +17,8 @@ use std::fmt::{Display, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
 use std::path::PathBuf;
-use std::process;
 use std::time::{Duration, SystemTime};
-use tracing::{error, info, trace};
+use tracing::{info, trace};
 
 /// Constant representing the crate name.
 pub const NAME: &str = env!("CARGO_PKG_NAME");
@@ -289,13 +288,13 @@ impl Config {
         let toml: RawConfig = toml::from_str(&contents).context("Invalid toml")?;
 
         // Set variables and exit/error if set improperly
-        let (repos, gh_access_token) = load_github_settings(&toml);
-        let (linkers, links) = load_linker_settings(&toml);
+        let (repos, gh_access_token) = load_github_settings(&toml)?;
+        let (linkers, links) = load_linker_settings(&toml)?;
         let text_expansions = load_text_expansions(&toml);
         let unit_conversion_exclusion = load_unit_conversion_settings(&toml);
         let (incorrect_spellings, correction_text, correction_exclusion) =
-            load_spell_correct_settings(&toml);
-        let admins = load_admin_settings(&toml);
+            load_spell_correct_settings(&toml)?;
+        let admins = load_admin_settings(&toml)?;
         let help_rooms = load_help_settings(&toml);
         let ban_rooms = load_ban_room_settings(&toml);
         let (mx_url, mx_uname, mx_pass, enable_corrections, enable_unit_conversions) = (
@@ -317,7 +316,7 @@ impl Config {
                 )
             })?;
 
-        let (group_pings, group_ping_users) = load_group_ping_settings(&toml);
+        let (group_pings, group_ping_users) = load_group_ping_settings(&toml)?;
         let webhook_token = toml.general.webhook_token;
 
         // Return value
@@ -390,7 +389,7 @@ impl SessionStorage {
             Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
         };
         let ron = ron::to_string(self)
-            .expect("Unable to format session.ron save data as RON. This should never occur!");
+            .context("Unable to format session.ron save data as RON. This should never occur!")?;
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -454,9 +453,9 @@ impl ListenerStorage {
                 .collect::<PathBuf>(),
             Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
         };
-        let ron = ron::to_string(self).expect(
+        let ron = ron::to_string(self).context(
             "Unable to format matrix_listener.ron save data as RON. This should never occur!",
-        );
+        )?;
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -533,7 +532,7 @@ impl ResponderStorage {
             Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
         };
         let ron = ron::to_string(self)
-            .expect("Unable to format matrix_responder data as RON. This should never happen!");
+            .context("Unable to format matrix_responder data as RON. This should never happen!")?;
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -592,46 +591,53 @@ impl Display for SensitiveSpelling {
     }
 }
 
-fn load_github_settings(toml: &RawConfig) -> (HashMap<String, String>, String) {
+fn load_github_settings(toml: &RawConfig) -> anyhow::Result<(HashMap<String, String>, String)> {
     match &toml.searchable_repos {
         Some(r) => match &toml.github_authentication {
-            Some(g) => (r.clone(), g.access_token.clone()),
+            Some(g) => Ok((r.clone(), g.access_token.clone())),
             None => {
-                error!("Searchable repos configured, but no github access token found. Unable to continue...");
-                process::exit(4)
+                Err(anyhow!(format!("Searchable repos configured, but no github access token found. Unable to continue...")))
             }
         },
         None => {
             info!("No searchable repos found. Disabling feature...");
-            (HashMap::new(), String::new())
+            Ok((HashMap::new(), String::new()))
         }
     }
 }
 
-fn load_linker_settings(toml: &RawConfig) -> (HashSet<String>, HashMap<String, Uri>) {
+fn load_linker_settings(
+    toml: &RawConfig,
+) -> anyhow::Result<(HashSet<String>, HashMap<String, Uri>)> {
     match &toml.linkable_urls {
         Some(d) => match &toml.general.link_matchers {
             Some(m) => {
                 if !d.is_empty() {
                     let d = d
                         .iter()
-                        .map(|(k, v)| (k.clone(), v.parse().expect("Invalid URL")))
+                        .map(|(k, v)| {
+                            (
+                                k.clone(),
+                                v.parse().expect("Invalid URL in linker settings"),
+                            )
+                        })
                         .collect();
 
-                    (m.clone(), d)
+                    Ok((m.clone(), d))
                 } else {
-                    error!("Link matchers exists but none are set. Exiting...");
-                    process::exit(1)
+                    Err(anyhow!(format!(
+                        "Link matchers exist, but none are set. Exiting..."
+                    )))
                 }
             }
             None => {
                 info!("No link matchers found. Disabling feature...");
-                (HashSet::new(), HashMap::new())
+                Ok((HashSet::new(), HashMap::new()))
             }
         },
         None => {
             info!("No linkable urls found. Disabling feature...");
-            (HashSet::new(), HashMap::new())
+            Ok((HashSet::new(), HashMap::new()))
         }
     }
 }
@@ -656,7 +662,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
             hash_set
         }
         None => {
-            info!("No unit conversion exlclusions found. Disabling feature...");
+            info!("No unit conversion exclusions found. Disabling feature...");
             HashSet::new()
         }
     }
@@ -664,7 +670,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
 
 fn load_spell_correct_settings(
     toml: &RawConfig,
-) -> (Vec<SpellCheckKind>, String, HashSet<OwnedRoomId>) {
+) -> anyhow::Result<(Vec<SpellCheckKind>, String, HashSet<OwnedRoomId>)> {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -692,7 +698,7 @@ fn load_spell_correct_settings(
                                     spelling: spelling.clone(),
                                 }));
                             }
-                            (spk, c.to_string(), e)
+                            Ok((spk, c.to_string(), e))
                         }
                         None => {
                             let mut spk = Vec::new();
@@ -709,39 +715,33 @@ fn load_spell_correct_settings(
                                 }));
                             }
                             info!("No list found. No rooms will be excluded from corrections");
-                            (spk, c.to_string(), HashSet::new())
+                            Ok((spk, c.to_string(), HashSet::new()))
                         }
                     },
                     None => {
-                        error!(
-                            "No correction text provided even though corrections have been enabled"
-                        );
-                        process::exit(5)
+                        Err(anyhow!(format!("No correction text provided, even though corrections have been enabled.")))
                     }
                 },
                 None => {
-                    error!("No case sensitive corrections provided even though corrections have been enabled");
-                    process::exit(5)
+                    Err(anyhow!(format!("No case sensitive corrections provided even though case corrections have been enabled.")))
                 }
             },
             None => {
-                error!("No case insensitive corrections provided even though corrections have been enabled");
-                process::exit(5)
+                Err(anyhow!(format!("No case insensitive corrections provided even though corrections have been enabled.")))
             }
         }
     } else {
         info!("Disabling corrections feature");
-        (Vec::new(), String::new(), HashSet::new())
+        Ok((Vec::new(), String::new(), HashSet::new()))
     }
 }
 
-fn load_admin_settings(toml: &RawConfig) -> HashSet<OwnedUserId> {
+fn load_admin_settings(toml: &RawConfig) -> anyhow::Result<HashSet<OwnedUserId>> {
     match &toml.general.authorized_users {
-        Some(v) => v.clone(),
-        None => {
-            error!("You must provide at least 1 authorized user");
-            process::exit(6)
-        }
+        Some(v) => Ok(v.clone()),
+        None => Err(anyhow!(format!(
+            "You must provide at least 1 authorized user"
+        ))),
     }
 }
 
@@ -767,7 +767,7 @@ fn load_ban_room_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
 
 fn load_group_ping_settings(
     toml: &RawConfig,
-) -> (HashMap<String, HashSet<OwnedUserId>>, HashSet<OwnedUserId>) {
+) -> anyhow::Result<(HashMap<String, HashSet<OwnedUserId>>, HashSet<OwnedUserId>)> {
     match &toml.group_pings {
         Some(v) => {
             let mut group_ping_users = HashSet::new();
@@ -775,12 +775,14 @@ fn load_group_ping_settings(
             for group in groups {
                 for user in group.1 {
                     if user.eq("%all") {
-                        panic!("%all is a reserved group_ping name, do not configure it manually")
+                        return Err(anyhow!(format!(
+                            "%all is a reserved group_ping name, do not configure it manually"
+                        )));
                     }
                     if user.starts_with('@') {
-                        let user_id = UserId::parse(user.clone()).expect(
+                        let user_id = UserId::parse(user.clone()).context(
                             "Somehow got an alias in a part of code meant to handle UserIds",
-                        );
+                        )?;
                         group_ping_users.insert(user_id);
                     }
                 }
@@ -792,7 +794,9 @@ fn load_group_ping_settings(
 
                 for user in users {
                     if user.eq("%all") {
-                        panic!("%all is a reserved group_ping name, do not configure it manually")
+                        return Err(anyhow!(format!(
+                            "%all is a reserved group_ping name, do not configure it manually"
+                        )));
                     }
                     if user.starts_with('%') {
                         // If user is an alias, expand it to list of users and insert them
@@ -802,22 +806,24 @@ fn load_group_ping_settings(
                             Some(g) => {
                                 for u in g {
                                     if u.starts_with('@') {
-                                        let user_id = UserId::parse(u.clone()).expect("Somehow got an alias in a part of code meant to handle UserIds");
+                                        let user_id = UserId::parse(u.clone()).context("Somehow got an alias in a part of code meant to handle UserIds")?;
                                         expanded_users.insert(user_id);
                                     }
                                 }
                             }
                             // If list of users are not found, print error to console and move on
-                            None => error!(
-                                "Group alias %{} has no corresponding group. Ignoring...",
-                                alias
-                            ),
+                            None => {
+                                return Err(anyhow!(format!(
+                                    "Group alias %{} has no corresponding group. Ignoring...",
+                                    alias
+                                )))
+                            }
                         }
                     } else {
                         // If user is not alias, just insert it
-                        let user_id = UserId::parse(user.clone()).expect(
+                        let user_id = UserId::parse(user.clone()).context(
                             "Somehow got an alias in a part of code meant to handle UserIds",
-                        );
+                        )?;
                         expanded_users.insert(user_id);
                     }
                 }
@@ -825,11 +831,11 @@ fn load_group_ping_settings(
                 expanded_groups.insert(group.to_string(), expanded_users);
             }
 
-            (expanded_groups, group_ping_users)
+            Ok((expanded_groups, group_ping_users))
         }
         None => {
             info!("No group pings defined. Disabling feature...");
-            (HashMap::new(), HashSet::new())
+            Ok((HashMap::new(), HashSet::new()))
         }
     }
 }

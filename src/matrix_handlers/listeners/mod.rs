@@ -22,6 +22,7 @@ use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
 
 /// Dispatches incoming text events to a number of different handlers depending on various conditions
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_text_event(
     text: &TextMessageEventContent,
     relates_to: Option<&Relation>,

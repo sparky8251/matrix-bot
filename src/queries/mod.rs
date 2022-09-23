@@ -12,6 +12,7 @@ use graphql_client::*;
 
 /// Type that represents URI results from query
 /// Cannot be `Url` as the returned URI is not a complete URL
+#[allow(clippy::upper_case_acronyms)]
 type URI = String;
 
 #[derive(GraphQLQuery)]

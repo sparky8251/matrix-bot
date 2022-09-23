@@ -26,6 +26,7 @@ use tracing::{debug, error, trace};
 use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn commandless_handler(
     text: &TextMessageEventContent,
     relates_to: Option<&Relation>,
