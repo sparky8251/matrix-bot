@@ -1,9 +1,9 @@
 //! Helper function used to verify the formatting of the recieved message is processable by later steps
 
+use anyhow::anyhow;
 use ruma::events::room::message::MessageFormat;
 use std::fmt;
 use std::fmt::Formatter;
-use tracing::error;
 
 #[derive(Debug)]
 /// Type used to represent the error state
@@ -17,7 +17,8 @@ pub enum CheckFormatError {
 impl fmt::Display for CheckFormatError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            CheckFormatError::FormatNotSupported(e) => write!(f, "Format {} is not supported", e),
+            CheckFormatError::FormatNotSupported(e) =>
+                write!(f, "Message parsed properly, but format {} is not supported so no conversion is taking place.", e),
         }
     }
 }
@@ -32,15 +33,10 @@ pub enum CheckFormatSuccess {
 }
 
 /// Checks supplied format and returns `Ok(_)` if it can be processed in later steps and `Err(e)` if it can't.
-pub fn check_format(
-    format: Option<&MessageFormat>,
-) -> Result<CheckFormatSuccess, CheckFormatError> {
+pub fn check_format(format: Option<&MessageFormat>) -> anyhow::Result<CheckFormatSuccess> {
     match format {
         Some(MessageFormat::Html) => Ok(CheckFormatSuccess::FormatSupported(MessageFormat::Html)),
-        Some(v) => {
-            error!("Message parsed properly, but format {} is unsupported so no conversion is taking place.", v);
-            Err(CheckFormatError::FormatNotSupported(v.to_string()))
-        }
+        Some(v) => Err(anyhow!(CheckFormatError::FormatNotSupported(v.to_string()))),
         None => Ok(CheckFormatSuccess::NoFormat),
     }
 }

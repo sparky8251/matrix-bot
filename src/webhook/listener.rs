@@ -24,29 +24,9 @@ impl WebhookListener {
             .route("/message", post(message_fn))
             .layer(Extension(state));
 
-        // TODO: insert proper function
-
         axum::Server::bind(&"0.0.0.0:33333".parse().unwrap())
             .serve(app.into_make_service())
             .await
             .unwrap();
-
-        // TODO: insert state data for functions
-
-        // let rocket_config = RocketConfig {
-        //     log_level: LogLevel::Off,
-        //     port: 33333,
-        //     ..RocketConfig::release_default()
-        // };
-
-        // let rocket = rocket::custom(rocket_config);
-        // if let Err(e) = register_handlers(rocket)
-        //     .manage(self.send)
-        //     .manage(self.config)
-        //     .launch()
-        //     .await
-        // {
-        //     panic!("Unable to launch webhook listener due to error {:?}", e)
-        // }
     }
 }

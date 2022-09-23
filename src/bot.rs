@@ -56,6 +56,7 @@ pub async fn init() -> anyhow::Result<()> {
         };
     });
 
+    // TODO: collect errors instead of expect, and initiate clean shutdown of remaining threads on crash of a thread
     // Join threads to main thread
     matrix_listener_task
         .await

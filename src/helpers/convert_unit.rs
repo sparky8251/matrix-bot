@@ -1,7 +1,7 @@
 //! Helper function and associated type to enable simple conversion from a list of values to a list of converted values
 
 use std::fmt;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 use uom::si::f64::*;
 use uom::si::length::{centimeter, foot, inch, kilometer, meter, mile};
 use uom::si::mass::{kilogram, pound};
@@ -35,7 +35,7 @@ pub fn convert_unit(conversions: Vec<(String, String)>) -> Option<Vec<ConvertedU
         match quantity.parse::<f64>() {
             Ok(v) => working_data.push((unit, v)),
             Err(e) => {
-                error!(
+                debug!(
                     "Quantity unable to be parsed. Error is {:?}, quantity is {:?}",
                     e, quantity
                 );
