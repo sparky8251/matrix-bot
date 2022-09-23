@@ -26,4 +26,4 @@
 [x] webhook/mod.rs
 [ ] webhook/listener.rs
 [x] webhook_handlers/mod.rs
-[ ] webhook_handlers/message.rs
+[x] webhook_handlers/message.rs
