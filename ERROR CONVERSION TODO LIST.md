@@ -24,6 +24,6 @@
 [x] queries/mod.rs
 [x] regex/mod.rs
 [x] webhook/mod.rs
-[ ] webhook/listener.rs
+[x] webhook/listener.rs
 [x] webhook_handlers/mod.rs
 [x] webhook_handlers/message.rs

@@ -47,12 +47,8 @@ pub async fn init() -> anyhow::Result<()> {
         };
     });
     let webhook_listener_task = tokio::spawn(async move {
-        let _ = webhook_listener.start().await?; // {
-           // return e;
-            //error!("Unable to start webhook listener due to {}", e);
-            //std::process::exit(255);
-        //};
-        anyhow::Result::Ok(())
+        let _ = webhook_listener.start().await?;
+        Result::<_, anyhow::Error>::Ok(())
     });
     let matrix_responder_task = tokio::spawn(async move {
         matrix_responder.start(matrix_responder_client).await;
@@ -66,6 +62,7 @@ pub async fn init() -> anyhow::Result<()> {
     matrix_listener_task
         .await
         .expect("The matrix listener task has panicked!");
+    #[allow(unused_must_use)]
     webhook_listener_task
         .await
         .expect("The webhook listener task has panicked!");
