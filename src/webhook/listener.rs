@@ -1,10 +1,10 @@
 use crate::config::{Config, WebhookListenerConfig};
 use crate::messages::MatrixMessage;
 use crate::webhook_handlers::message_fn;
+use anyhow::Context;
 use axum::{extract::Extension, routing::post, Router};
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
-use anyhow::Context;
 
 pub struct WebhookListener {
     pub send: Sender<MatrixMessage>,
@@ -26,10 +26,14 @@ impl WebhookListener {
             .layer(Extension(state));
 
         // TODO: enable customized binding of ip and port
-        axum::Server::bind(&"0.0.0.0:33333".parse().context("Unable to parse bind address")?)
-            .serve(app.into_make_service())
-            .await
-            .context("Unable to start server")?;
+        axum::Server::bind(
+            &"0.0.0.0:33333"
+                .parse()
+                .context("Unable to parse bind address")?,
+        )
+        .serve(app.into_make_service())
+        .await
+        .context("Unable to start server")?;
 
         Ok(())
     }

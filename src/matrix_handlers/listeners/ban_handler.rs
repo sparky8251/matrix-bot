@@ -1,8 +1,9 @@
 use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixBanMessage, MatrixMessage, MatrixMessageType};
+use crate::regex::{FORMATTED_USERNAME, HTTPS_LINE};
 use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 pub(super) async fn ban_handler(
     text: &TextMessageEventContent,
@@ -29,8 +30,37 @@ pub(super) async fn ban_handler(
             }
         },
         None => {
-            error!("Ban command doesnt appear to include user, unable to continue");
-            return;
+            debug!("Ban command doesnt appear to include user, attempting formatted body parsing");
+            match &text.formatted {
+                Some(t) => {
+                    let username = match HTTPS_LINE.captures_iter(&t.body).nth(1) {
+                        Some(l) => {
+                            match FORMATTED_USERNAME.captures_iter(&l[0]).nth(1) {
+                                Some(u) => match UserId::parse(&u[0]) {
+                                    Ok(u) => u,
+                                    Err(_) => {
+                                        error!("User was invalid format, unable to continue ban handler");
+                                        return;
+                                    }
+                                },
+                                None => {
+                                    warn!("Found HTTPS line, but unable to find username for ban. Unable to continue.");
+                                    return;
+                                }
+                            }
+                        }
+                        None => {
+                            warn!("Unable to fine HTTPS line in formatted body for user ban. Unable to continue.");
+                            return;
+                        }
+                    };
+                    username
+                }
+                None => {
+                    warn!("No formatted body present, unable to attempt parse of user for ban. Unable to continue.");
+                    return;
+                }
+            }
         }
     };
 
