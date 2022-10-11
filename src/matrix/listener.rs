@@ -16,9 +16,9 @@ use ruma::{
     },
     presence::PresenceState,
 };
-use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
+use std::{time::Duration, thread};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixListener {
@@ -49,6 +49,7 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient) {
         loop {
+            thread::sleep(Duration::from_millis(250));
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
             req.since = match &self.storage.last_sync {
