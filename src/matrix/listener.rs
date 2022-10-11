@@ -16,9 +16,9 @@ use ruma::{
     },
     presence::PresenceState,
 };
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace};
-use std::{time::Duration, thread};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixListener {
@@ -49,7 +49,6 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient) {
         loop {
-            thread::sleep(Duration::from_millis(250));
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
             req.since = match &self.storage.last_sync {
@@ -70,6 +69,13 @@ impl MatrixListener {
 
             match response {
                 Some(v) => {
+                    self.storage.last_sync = Some(v.next_batch.clone());
+                    if let Err(e) = self.storage.save_storage() {
+                        error!(
+                            "Unable to save matrix_listener.ron during normal operation. {}",
+                            e
+                        )
+                    };
                     for (room_id, joined_room) in &v.rooms.join {
                         for raw_event in &joined_room.timeline.events {
                             let event = raw_event.deserialize();
@@ -112,10 +118,6 @@ impl MatrixListener {
                                     trace!("Content: {:?}", raw_event.json())
                                 }
                             }
-                            self.storage.last_sync = Some(v.next_batch.clone());
-                            if let Err(e) = self.storage.save_storage() {
-                                error!("Unable to save matrix_listener.ron during normal operation. {}", e)
-                            };
                         }
                     }
                     for (room_id, invited_room) in &v.rooms.invite {
