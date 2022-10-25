@@ -148,6 +148,21 @@ mod no_capture {
     }
 }
 
-// mod capture {
-//     use crate::regex::*;
-// }
+mod capture {
+    use crate::regex::*;
+    use ruma::UserId;
+
+    #[test]
+    fn capture_formatted_username_for_ban_handler() {
+        let input_string = "The other one had the mention in the nice tag like when I do this <a href=\"https://matrix.to/#/@sparky:matrix.possumlodge.me\">sparky</a>";
+        let actual_username = UserId::parse("@sparky:matrix.possumlodge.me").unwrap();
+
+        let captured_username = FORMATTED_USERNAME
+            .captures_iter(input_string)
+            .nth(0)
+            .unwrap();
+        let captured_username = UserId::parse(&captured_username[0]).unwrap();
+
+        assert_eq!(actual_username, captured_username)
+    }
+}

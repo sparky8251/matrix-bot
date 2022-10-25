@@ -1,6 +1,6 @@
 use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixBanMessage, MatrixMessage, MatrixMessageType};
-use crate::regex::{FORMATTED_USERNAME, HTTPS_LINE};
+use crate::regex::FORMATTED_USERNAME;
 use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, trace, warn};
@@ -33,22 +33,14 @@ pub(super) async fn ban_handler(
             debug!("Ban command doesnt appear to include user, attempting formatted body parsing");
             match &text.formatted {
                 Some(t) => {
-                    let username = match HTTPS_LINE.captures_iter(&t.body).nth(1) {
-                        Some(l) => {
-                            match FORMATTED_USERNAME.captures_iter(&l[0]).nth(1) {
-                                Some(u) => match UserId::parse(&u[0]) {
-                                    Ok(u) => u,
-                                    Err(_) => {
-                                        error!("User was invalid format, unable to continue ban handler");
-                                        return;
-                                    }
-                                },
-                                None => {
-                                    warn!("Found HTTPS line, but unable to find username for ban. Unable to continue.");
-                                    return;
-                                }
+                    let username = match FORMATTED_USERNAME.captures_iter(&t.body).nth(0) {
+                        Some(l) => match UserId::parse(&l[0]) {
+                            Ok(u) => u,
+                            Err(_) => {
+                                error!("User was invalid format, unable to continue ban handler");
+                                return;
                             }
-                        }
+                        },
                         None => {
                             warn!("Unable to fine HTTPS line in formatted body for user ban. Unable to continue.");
                             return;

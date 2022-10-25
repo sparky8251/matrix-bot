@@ -75,6 +75,4 @@ pub static MX_REPLY: Lazy<Regex> =
 
 pub static PARAGRAPH_TAG: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s)(</*?p>)*").unwrap());
 
-pub static HTTPS_LINE: Lazy<Regex> = Lazy::new(|| Regex::new("([\"]{1}.+[\"]{1})").unwrap());
-
-pub static FORMATTED_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"(@.+:.+)").unwrap());
+pub static FORMATTED_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new("(@.+:[^\"]+)").unwrap());
