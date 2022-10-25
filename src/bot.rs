@@ -47,7 +47,7 @@ pub async fn init() -> anyhow::Result<()> {
         };
     });
     let webhook_listener_task = tokio::spawn(async move {
-        let _ = webhook_listener.start().await?;
+        webhook_listener.start().await?;
         Result::<_, anyhow::Error>::Ok(())
     });
     let matrix_responder_task = tokio::spawn(async move {

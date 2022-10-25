@@ -44,18 +44,18 @@ pub(super) async fn help_handler(
         let mut message = String::new();
         match text.body.split(' ').nth(1).map(HelpType::from) {
             Some(v) => match v {
-                HelpType::Command => message = action_command_help_message().await,
-                HelpType::Commandless => message = action_commandless_help_message().await,
-                HelpType::GroupPing => message = group_ping_help_message(config).await,
-                HelpType::GithubSearch => message = github_search_help_message(config).await,
-                HelpType::Link => message = link_help_message(config).await,
-                HelpType::TextExpansion => message = text_expansion_help_message(config).await,
-                HelpType::UnitConversion => message = unit_conversion_help_message(config).await,
+                HelpType::Command => message = action_command_help_message(),
+                HelpType::Commandless => message = action_commandless_help_message(),
+                HelpType::GroupPing => message = group_ping_help_message(config),
+                HelpType::GithubSearch => message = github_search_help_message(config),
+                HelpType::Link => message = link_help_message(config),
+                HelpType::TextExpansion => message = text_expansion_help_message(config),
+                HelpType::UnitConversion => message = unit_conversion_help_message(config),
                 HelpType::UnknownCommand => (),
             },
             None => {
                 trace!("Printing help message for program");
-                message = generic_help_message().await;
+                message = generic_help_message();
             }
         };
         if !message.is_empty() {
@@ -101,7 +101,7 @@ pub(super) async fn help_handler(
     }
 }
 
-async fn generic_help_message() -> String {
+fn generic_help_message() -> String {
     format!("Matrix Bot v{}
 Repository: {}
 
@@ -126,7 +126,7 @@ ACTIONS:
     )
 }
 
-async fn action_command_help_message() -> String {
+fn action_command_help_message() -> String {
     "Command Action
 
 Command actions are defined as message that have no formatting (like no italics, no inline code, not a reply, etc) that start with a !. These can only perform one action per message.
@@ -136,7 +136,7 @@ EXAMPLES:
 \t!convert 22mi".to_string()
 }
 
-async fn action_commandless_help_message() -> String {
+fn action_commandless_help_message() -> String {
     "Commandless Action
 
 Commandles actions can happen in any plain text message but certain text formatting will be ignored. Currently ignored formatting is inline code, code blocks, and the text in a reply (but not the reply itself)
@@ -149,19 +149,17 @@ EXAMPLES:
 ".to_string()
 }
 
-async fn group_ping_help_message(config: &MatrixListenerConfig) -> String {
-    let mut groups = Vec::new();
-    for group in config.group_pings.keys() {
-        groups.push(group);
-    }
+fn group_ping_help_message(config: &MatrixListenerConfig) -> String {
+    let mut groups: Vec<&String> = config.group_pings.keys().collect();
     groups.sort();
     let mut available_groups = String::new();
-    for group in groups {
+    for group in &groups[..(groups.len() - 1)] {
         available_groups.push_str(group);
-        available_groups.push('|');
+        available_groups.push_str(" | ");
     }
-    available_groups.pop();
-    let available_groups = available_groups.replace('|', " | ");
+
+    available_groups.push_str(groups[groups.len() - 1]);
+
     format!("Group Ping
 
 This action is only available as commandless. It will trigger on anything that matches \"%group\" where \"group\" is the group you want to ping.
@@ -177,19 +175,17 @@ AVAILABLE GROUPS:
     )
 }
 
-async fn github_search_help_message(config: &MatrixListenerConfig) -> String {
-    let mut repos = Vec::new();
-    for repo in config.repos.keys() {
-        repos.push(repo);
-    }
+fn github_search_help_message(config: &MatrixListenerConfig) -> String {
+    let mut repos: Vec<&String> = config.repos.keys().collect();
     repos.sort();
     let mut available_repos = String::new();
-    for repo in repos {
+    for repo in &repos[..(repos.len() - 1)] {
         available_repos.push_str(repo);
-        available_repos.push('|');
+        available_repos.push_str(" | ");
     }
-    available_repos.pop();
-    let available_repos = available_repos.replace('|', " | ");
+
+    available_repos.push_str(repos[repos.len() - 1]);
+
     format!("Github Search
 
 This action is only available as commandless. It will trigger on anything that matches \"jf#1234\" where \"jf\" is the repo you want to search and \"1234\" is the issue or PR you want to link.
@@ -204,31 +200,27 @@ AVAILABLE REPOS:
 {}", available_repos)
 }
 
-async fn link_help_message(config: &MatrixListenerConfig) -> String {
-    let mut keywords = Vec::new();
-    for keyword in &config.linkers {
-        keywords.push(keyword);
-    }
+fn link_help_message(config: &MatrixListenerConfig) -> String {
+    let mut keywords: Vec<&String> = config.linkers.iter().collect();
     keywords.sort();
     let mut available_keywords = String::new();
-    for keyword in keywords {
+    for keyword in &keywords[..(keywords.len() - 1)] {
         available_keywords.push_str(keyword);
-        available_keywords.push('|');
+        available_keywords.push_str(" | ");
     }
-    available_keywords.pop();
-    let available_keywords = available_keywords.replace('|', " | ");
-    let mut links = Vec::new();
-    for link in config.links.keys() {
-        links.push(link);
-    }
+
+    available_keywords.push_str(keywords[keywords.len() - 1]);
+
+    let mut links: Vec<&String> = config.links.keys().collect();
     links.sort();
     let mut available_links = String::new();
-    for link in links {
+    for link in &links[..(links.len() - 1)] {
         available_links.push_str(link);
-        available_links.push('|');
+        available_links.push_str(" | ");
     }
-    available_links.pop();
-    let available_links = available_links.replace('|', " | ");
+
+    available_links.push_str(links[links.len() - 1]);
+
     format!("Link
 
 This action is only available as commandless. It will trigger on anything that matches \"link@hwa\" where \"link\" is a configured keyword and \"hwa\" is a linkable item.
@@ -247,19 +239,17 @@ AVAILABLE LINKS:
     ", available_keywords, available_links)
 }
 
-async fn text_expansion_help_message(config: &MatrixListenerConfig) -> String {
-    let mut keywords = Vec::new();
-    for keyword in config.text_expansions.keys() {
-        keywords.push(keyword);
-    }
+fn text_expansion_help_message(config: &MatrixListenerConfig) -> String {
+    let mut keywords: Vec<&String> = config.text_expansions.keys().collect();
     keywords.sort();
     let mut available_keywords = String::new();
-    for keyword in keywords {
+    for keyword in &keywords[..(keywords.len() - 1)] {
         available_keywords.push_str(keyword);
-        available_keywords.push('|');
+        available_keywords.push_str(" | ");
     }
-    available_keywords.pop();
-    let available_keywords = available_keywords.replace('|', " | ");
+
+    available_keywords.push_str(keywords[keywords.len() - 1]);
+
     format!("Text Expansion
 
 This action is only available as commandless. It will trigger on anything that matches \"$text\" where \"text\" is a configured keyword.
@@ -275,19 +265,17 @@ AVAILABLE KEYWORDS:
     ", available_keywords)
 }
 
-async fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
-    let mut units = Vec::new();
-    for unit in &config.unit_conversion_exclusion {
-        units.push(unit);
-    }
+fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
+    let mut units: Vec<&String> = config.unit_conversion_exclusion.iter().collect();
     units.sort();
     let mut space_excluded_units = String::new();
-    for unit in units {
+    for unit in &units[..(units.len() - 1)] {
         space_excluded_units.push_str(unit);
-        space_excluded_units.push('|');
+        space_excluded_units.push_str(" | ");
     }
-    space_excluded_units.pop();
-    let space_excluded_units = space_excluded_units.replace('|', " | ");
+
+    space_excluded_units.push_str(units[units.len() - 1]);
+
     format!("Unit Conversion
 
 This action is available as both a command and commanless. It will convert common converstation units Imperial <-> Metric to help ease international chat. There can be a space between the quantity and unit except for the units excluded by configuration (listed below).

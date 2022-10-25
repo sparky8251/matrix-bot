@@ -19,10 +19,9 @@ pub(super) async fn unit_conversion_handler(
     send: &mut Sender<MatrixMessage>,
 ) {
     if relates_to.is_none() && text.formatted.is_none() {
-        let mut conversions = Vec::new();
-        for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
-            conversions.push((cap[1].to_string(), cap[2].to_string()));
-        }
+        let conversions: Vec<(String, String)> = UNIT_CONVERSION.captures_iter(&text.body.to_lowercase())
+            .map(|cap| (cap[1].to_string(), cap[2].to_string()))
+            .collect();
         let result = match convert_unit(conversions) {
             Some(v) => v,
             None => {

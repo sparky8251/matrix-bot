@@ -62,7 +62,7 @@ impl MatrixListener {
             let response = match client.send_request(req).await {
                 Ok(v) => Some(v),
                 Err(e) => {
-                    debug!("Line 65: {:?}", e);
+                    debug!("Line {}: {:?}", line!(), e);
                     None
                 }
             };
