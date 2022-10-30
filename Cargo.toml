@@ -1,6 +1,6 @@
 [package]
 name = "matrix-bot"
-version = "2.0.0-beta.19"
+version = "2.0.0-beta.20"
 authors = ["sparky8251 <sparky@possumlodge.me>"]
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/sparky8251/matrix-bot/"
@@ -26,6 +26,7 @@ anyhow = "1"
 #hex-literal = "0.3"
 #hex = "0.4"
 
+# Dep below for unimplemented swap of ron cache backend with sqlite.
 #[dependencies.rusqlite]
 #version = "0.28"
 #features = ["bundled"]

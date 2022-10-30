@@ -163,6 +163,18 @@ mod capture {
             .unwrap();
         let captured_username = UserId::parse(&captured_username[0]).unwrap();
 
-        assert_eq!(actual_username, captured_username)
+        assert_eq!(actual_username, captured_username);
+
+        let input_string =
+            "!ban <a href=\"https://matrix.to/#/@danoneil:matrix.org\">danoneil</a> Spam";
+        let actual_username = UserId::parse("@danoneil:matrix.org").unwrap();
+
+        let captured_username = FORMATTED_USERNAME
+            .captures_iter(input_string)
+            .nth(0)
+            .unwrap();
+        let captured_username = UserId::parse(&captured_username[0]).unwrap();
+
+        assert_eq!(actual_username, captured_username);
     }
 }

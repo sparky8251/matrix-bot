@@ -21,38 +21,50 @@ pub(super) async fn ban_handler(
         return;
     }
 
+    trace!("Body text is: {:?}", text.body);
     let user: OwnedUserId = match text.body.split(' ').nth(1) {
-        Some(v) => match UserId::parse(v) {
-            Ok(u) => u,
-            Err(_) => {
-                error!("User was invalid format, unable to continue to ban handler");
-                return;
-            }
-        },
-        None => {
-            debug!("Ban command doesnt appear to include user, attempting formatted body parsing");
-            match &text.formatted {
-                Some(t) => {
-                    let username = match FORMATTED_USERNAME.captures_iter(&t.body).nth(0) {
-                        Some(l) => match UserId::parse(&l[0]) {
-                            Ok(u) => u,
-                            Err(_) => {
-                                error!("User was invalid format, unable to continue ban handler");
-                                return;
-                            }
-                        },
+        Some(v) => {
+            trace!("Body split text: {:?}", v);
+            trace!("Attempting parse of plain body text");
+            match UserId::parse(v) {
+                Ok(u) => u,
+                Err(_) => {
+                    debug!("Ban command doesnt appear to include user, attempting formatted body parsing");
+                    trace!("Formatted body text is: {:?}", text.formatted);
+                    match &text.formatted {
+                        Some(t) => {
+                            let username = match FORMATTED_USERNAME.captures_iter(&t.body).nth(0) {
+                                Some(l) => {
+                                    trace!(
+                                        "Captured username from formatted body pre-parsing: {:?}",
+                                        l
+                                    );
+                                    match UserId::parse(&l[0]) {
+                                        Ok(u) => u,
+                                        Err(_) => {
+                                            error!("User was invalid format, unable to continue ban handler");
+                                            return;
+                                        }
+                                    }
+                                }
+                                None => {
+                                    warn!("Unable to find HTTPS line in formatted body for user ban. Unable to continue.");
+                                    return;
+                                }
+                            };
+                            username
+                        }
                         None => {
-                            warn!("Unable to fine HTTPS line in formatted body for user ban. Unable to continue.");
+                            warn!("No formatted body present, unable to attempt parse of user for ban. Unable to continue.");
                             return;
                         }
-                    };
-                    username
-                }
-                None => {
-                    warn!("No formatted body present, unable to attempt parse of user for ban. Unable to continue.");
-                    return;
+                    }
                 }
             }
+        }
+        None => {
+            error!("somehow no body or formatted body was presented?");
+            return;
         }
     };
 
