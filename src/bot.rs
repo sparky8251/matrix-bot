@@ -2,8 +2,8 @@ use crate::config::{Config, SessionStorage};
 use crate::matrix::listener::MatrixListener;
 use crate::matrix::responder::MatrixResponder;
 use crate::webhook::listener::WebhookListener;
-use tokio::sync::mpsc;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::mpsc;
 use tracing::{error, info, trace};
 
 pub async fn init() -> anyhow::Result<()> {
@@ -64,8 +64,19 @@ pub async fn init() -> anyhow::Result<()> {
     webhook_listener_task.await??;
     matrix_responder_task.await?;
 
-    signal(SignalKind::terminate()).recv().await;
-    trace!("Received SIGTERM on main thread");
+    let mut terminate = signal(SignalKind::terminate())?;
+    let mut hangup = signal(SignalKind::hangup())?;
 
+    loop {
+        tokio::select! {
+            _ = terminate.recv() => {
+                trace!("Received SIGTERM on main thread");
+                break;
+            },
+            _ = hangup.recv() => {
+                trace!("Received SIGHUP on main thread");
+            }
+        };
+    }
     Ok(())
 }
