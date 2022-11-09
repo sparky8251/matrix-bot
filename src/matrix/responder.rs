@@ -29,16 +29,14 @@ impl MatrixResponder {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient, mut shutdown_rx: watch::Receiver<bool>) {
         loop {
-            if let Ok(v) = shutdown_rx.has_changed() {
-                if v == true {
-                    if *shutdown_rx.borrow_and_update() == true {
-                        trace!("Received shutdown on matrix responder thread");
-                        break;
-                    }
-                }
-            }
-            match self.recv.recv().await {
-                Some(v) => match v.message {
+            tokio::select! {
+                _ = shutdown_rx.changed() => {
+                    trace!("Received shutdown on matrix responder thread");
+                    break;
+                },
+                m = self.recv.recv() => {
+                    match m {
+                        Some(v) => match v.message {
                     MatrixMessageType::Notice(m) => {
                         if let Err(e) = send_notice(&client, v.room_id, &mut self.storage, m).await
                         {
@@ -100,6 +98,8 @@ impl MatrixResponder {
                 None => {
                     info!("Matrix channel closed and empty. Exiting thread.");
                     break;
+                }
+                    }
                 }
             }
         }

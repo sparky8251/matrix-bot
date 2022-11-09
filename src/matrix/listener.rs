@@ -50,14 +50,6 @@ impl MatrixListener {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient, mut shutdown_rx: Receiver<bool>) {
         loop {
-            if let Ok(v) = shutdown_rx.has_changed() {
-                if v == true {
-                    if *shutdown_rx.borrow_and_update() == true {
-                        trace!("Received shutdown on matrix listener thread");
-                        break;
-                    }
-                }
-            }
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
             req.since = match &self.storage.last_sync {
@@ -68,102 +60,110 @@ impl MatrixListener {
             req.set_presence = &PresenceState::Unavailable;
             req.timeout = Some(Duration::new(30, 0));
 
-            let response = match client.send_request(req).await {
-                Ok(v) => Some(v),
-                Err(e) => {
-                    debug!("Line 65: {:?}", e);
-                    None
-                }
-            };
-
-            match response {
-                Some(v) => {
-                    self.storage.last_sync = Some(v.next_batch.clone());
-                    if let Err(e) = self.storage.save_storage() {
-                        error!(
-                            "Unable to save matrix_listener.ron during normal operation. {}",
-                            e
-                        )
+            tokio::select! {
+                _ = shutdown_rx.changed() => {
+                    trace!("Received shutdown on matrix listener thread");
+                break;
+                },
+                response = client.send_request(req) => {
+                    let response = match response {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            debug!("Line 65: {:?}", e);
+                            None
+                        }
                     };
-                    for (room_id, joined_room) in &v.rooms.join {
-                        for raw_event in &joined_room.timeline.events {
-                            let event = raw_event.deserialize();
-                            match event {
-                                Ok(AnySyncTimelineEvent::MessageLike(
-                                    AnySyncMessageLikeEvent::RoomMessage(
-                                        SyncRoomMessageEvent::Original(
-                                            OriginalSyncRoomMessageEvent {
-                                                content:
-                                                    RoomMessageEventContent {
-                                                        msgtype: MessageType::Text(t),
-                                                        relates_to,
+
+                    match response {
+                        Some(v) => {
+                            self.storage.last_sync = Some(v.next_batch.clone());
+                            if let Err(e) = self.storage.save_storage() {
+                                error!(
+                                    "Unable to save matrix_listener.ron during normal operation. {}",
+                                    e
+                                )
+                            };
+                            for (room_id, joined_room) in &v.rooms.join {
+                                for raw_event in &joined_room.timeline.events {
+                                    let event = raw_event.deserialize();
+                                    match event {
+                                        Ok(AnySyncTimelineEvent::MessageLike(
+                                            AnySyncMessageLikeEvent::RoomMessage(
+                                                SyncRoomMessageEvent::Original(
+                                                    OriginalSyncRoomMessageEvent {
+                                                        content:
+                                                            RoomMessageEventContent {
+                                                                msgtype: MessageType::Text(t),
+                                                                relates_to,
+                                                                ..
+                                                            },
+                                                        sender,
                                                         ..
                                                     },
-                                                sender,
-                                                ..
-                                            },
-                                        ),
-                                    ),
-                                )) => {
-                                    if matches!(relates_to, Some(Relation::Replacement(_))) {
-                                        debug!("Message is an edit, skipping handling");
-                                        continue;
+                                                ),
+                                            ),
+                                        )) => {
+                                            if matches!(relates_to, Some(Relation::Replacement(_))) {
+                                                debug!("Message is an edit, skipping handling");
+                                                continue;
+                                            }
+                                            if let Err(e) = handle_text_event(
+                                                &t,
+                                                relates_to.as_ref(),
+                                                &sender,
+                                                room_id,
+                                                &mut self.storage,
+                                                &self.config,
+                                                &self.api_client,
+                                                &mut self.send,
+                                            )
+                                            .await
+                                            {
+                                                error!("{}", e);
+                                            };
+                                        }
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            debug!("{:?}", e);
+                                            trace!("Content: {:?}", raw_event.json())
+                                        }
                                     }
-                                    if let Err(e) = handle_text_event(
-                                        &t,
-                                        relates_to.as_ref(),
-                                        &sender,
-                                        room_id,
-                                        &mut self.storage,
-                                        &self.config,
-                                        &self.api_client,
-                                        &mut self.send,
-                                    )
-                                    .await
-                                    {
-                                        error!("{}", e);
-                                    };
                                 }
-                                Ok(_) => {}
-                                Err(e) => {
-                                    debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json())
+                            }
+                            for (room_id, invited_room) in &v.rooms.invite {
+                                trace!("Invited room data: {:?}", invited_room);
+                                for raw_event in &invited_room.invite_state.events {
+                                    let event = raw_event.deserialize();
+                                    match event {
+                                        Ok(AnyStrippedStateEvent::RoomMember(s)) => {
+                                            trace!("Invited by {}", s.sender);
+                                            if let Err(e) = handle_invite_event(
+                                                &s.sender,
+                                                room_id,
+                                                &self.config,
+                                                &mut self.send,
+                                            )
+                                            .await
+                                            {
+                                                error!("{}", e);
+                                            };
+                                            trace!("Handled invite event")
+                                        }
+                                        Ok(_) => {
+                                            // FIXME: Reject invite if there is no known sender
+                                            error!("No known inviter. Will not join room. If you see this, report it.");
+                                        }
+                                        Err(e) => {
+                                            debug!("{:?}", e);
+                                            trace!("Content: {:?}", raw_event.json())
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                    for (room_id, invited_room) in &v.rooms.invite {
-                        trace!("Invited room data: {:?}", invited_room);
-                        for raw_event in &invited_room.invite_state.events {
-                            let event = raw_event.deserialize();
-                            match event {
-                                Ok(AnyStrippedStateEvent::RoomMember(s)) => {
-                                    trace!("Invited by {}", s.sender);
-                                    if let Err(e) = handle_invite_event(
-                                        &s.sender,
-                                        room_id,
-                                        &self.config,
-                                        &mut self.send,
-                                    )
-                                    .await
-                                    {
-                                        error!("{}", e);
-                                    };
-                                    trace!("Handled invite event")
-                                }
-                                Ok(_) => {
-                                    // FIXME: Reject invite if there is no known sender
-                                    error!("No known inviter. Will not join room. If you see this, report it.");
-                                }
-                                Err(e) => {
-                                    debug!("{:?}", e);
-                                    trace!("Content: {:?}", raw_event.json())
-                                }
-                            }
-                        }
+                        None => debug!("Response deserialization failed. Doing nothing this loop."),
                     }
                 }
-                None => debug!("Response deserialization failed. Doing nothing this loop."),
             }
         }
         trace!("Matrix listener shutdown complete")

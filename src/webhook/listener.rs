@@ -5,7 +5,7 @@ use axum::{extract::Extension, routing::post, Router};
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver;
-use tracing::{trace, error};
+use tracing::{error, trace};
 
 pub struct WebhookListener {
     pub send: Sender<MatrixMessage>,
