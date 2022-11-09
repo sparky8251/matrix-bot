@@ -8,27 +8,31 @@ use crate::matrix_handlers::responders::{
     send_notice, send_plain_text,
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
-use tokio::sync::mpsc::Receiver;
-use tracing::{error, info};
+use tokio::sync::{mpsc, watch};
+use tracing::{error, info, trace};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixResponder {
     /// Storage data.
     pub storage: ResponderStorage,
-    recv: Receiver<MatrixMessage>,
+    recv: mpsc::Receiver<MatrixMessage>,
 }
 
 impl MatrixResponder {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(recv: Receiver<MatrixMessage>) -> anyhow::Result<Self> {
+    pub fn new(recv: mpsc::Receiver<MatrixMessage>) -> anyhow::Result<Self> {
         let storage = ResponderStorage::load_storage()?;
         Ok(Self { storage, recv })
     }
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: MatrixClient) {
+    pub async fn start(&mut self, client: MatrixClient, shutdown_rx: watch::Receiver<bool>) {
         loop {
+            if *shutdown_rx.borrow() {
+                trace!("Received shutdown on matrix responder thread");
+                break;
+            }
             match self.recv.recv().await {
                 Some(v) => match v.message {
                     MatrixMessageType::Notice(m) => {
@@ -95,5 +99,6 @@ impl MatrixResponder {
                 }
             }
         }
+        trace!("Matrix responder shutdown complete")
     }
 }

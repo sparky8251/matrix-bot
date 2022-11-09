@@ -18,6 +18,7 @@ use ruma::{
 };
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::watch::Receiver;
 use tracing::{debug, error, trace};
 
 /// Struct representing all required data for a functioning bot instance.
@@ -47,8 +48,12 @@ impl MatrixListener {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: MatrixClient) {
+    pub async fn start(&mut self, client: MatrixClient, shutdown_rx: Receiver<bool>) {
         loop {
+            if *shutdown_rx.borrow() {
+                trace!("Received shutdown on matrix listenener thread");
+                break;
+            }
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
             req.since = match &self.storage.last_sync {
@@ -157,5 +162,6 @@ impl MatrixListener {
                 None => debug!("Response deserialization failed. Doing nothing this loop."),
             }
         }
+        trace!("Matrix listener shutdown complete")
     }
 }

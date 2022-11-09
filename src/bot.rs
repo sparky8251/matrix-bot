@@ -3,7 +3,7 @@ use crate::matrix::listener::MatrixListener;
 use crate::matrix::responder::MatrixResponder;
 use crate::webhook::listener::WebhookListener;
 use tokio::signal::unix::{signal, SignalKind};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tracing::{error, info, trace};
 
 pub async fn init() -> anyhow::Result<()> {
@@ -40,29 +40,31 @@ pub async fn init() -> anyhow::Result<()> {
     let mut matrix_responder = MatrixResponder::new(matrix_rx)?;
     let webhook_listener = WebhookListener::new(&config, webhook_tx);
 
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let matrix_listener_shutdown_rx = shutdown_rx.clone();
+    let matrix_responder_shutdown_rx = shutdown_rx.clone();
+    let webhook_listener_shutdown_rx = shutdown_rx.clone();
+
     // Spawn threads from thread structures, save their cached data when they exit
     let matrix_listener_task = tokio::spawn(async move {
-        matrix_listener.start(matrix_listener_client).await;
+        matrix_listener
+            .start(matrix_listener_client, matrix_listener_shutdown_rx)
+            .await;
         if let Err(e) = matrix_listener.storage.save_storage() {
             error!("Unable to save matrix_listener.ron on shutdown. {}", e)
         };
     });
     let webhook_listener_task = tokio::spawn(async move {
-        webhook_listener.start().await?;
-        Ok::<_, anyhow::Error>(())
+        webhook_listener.start(webhook_listener_shutdown_rx).await;
     });
     let matrix_responder_task = tokio::spawn(async move {
-        matrix_responder.start(matrix_responder_client).await;
+        matrix_responder
+            .start(matrix_responder_client, matrix_responder_shutdown_rx)
+            .await;
         if let Err(e) = matrix_responder.storage.save_storage() {
             error!("Unable to save matrix_responder.ron on shutdown. {}", e)
         };
     });
-
-    // TODO: collect errors instead of expect, and initiate clean shutdown of remaining threads on crash of a thread
-    // Join threads to main thread
-    matrix_listener_task.await?;
-    webhook_listener_task.await??;
-    matrix_responder_task.await?;
 
     let mut terminate = signal(SignalKind::terminate())?;
     let mut hangup = signal(SignalKind::hangup())?;
@@ -71,6 +73,7 @@ pub async fn init() -> anyhow::Result<()> {
         tokio::select! {
             _ = terminate.recv() => {
                 trace!("Received SIGTERM on main thread");
+                shutdown_tx.send(true)?;
                 break;
             },
             _ = hangup.recv() => {
@@ -78,5 +81,12 @@ pub async fn init() -> anyhow::Result<()> {
             }
         };
     }
+
+    // TODO: collect errors instead of expect, and initiate clean shutdown of remaining threads on crash of a thread
+    // Join threads to main thread
+    matrix_listener_task.await?;
+    webhook_listener_task.await?;
+    matrix_responder_task.await?;
+
     Ok(())
 }
