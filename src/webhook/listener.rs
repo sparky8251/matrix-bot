@@ -38,12 +38,12 @@ impl WebhookListener {
                 r = server => {
                 if let Err(_) = r {
                     error!("Unable to start webhook listener");
-                    std::process::exit(1)
+                    return;
                 }
             },
             _ = shutdown_rx.changed() => {
                 trace!("Received shutdown on webhook listener thread, exiting thread with code 0");
-                std::process::exit(0)
+                return;
             }
         }
     }
