@@ -29,8 +29,8 @@ impl MatrixResponder {
     /// Will login then loop forever while waiting on new sync data from the homeserver.
     pub async fn start(&mut self, client: MatrixClient, mut shutdown_rx: watch::Receiver<bool>) {
         loop {
-            if Ok(v) = shutdown_rx.has_changed() {
-                if v = true {
+            if let Ok(v) = shutdown_rx.has_changed() {
+                if v == true {
                     if *shutdown_rx.borrow_and_update() == true {
                         trace!("Received shutdown on matrix responder thread");
                         break;
