@@ -3,6 +3,7 @@ use crate::matrix::listener::MatrixListener;
 use crate::matrix::responder::MatrixResponder;
 use crate::webhook::listener::WebhookListener;
 use tokio::sync::mpsc;
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info, trace};
 
 pub async fn init() -> anyhow::Result<()> {
@@ -62,5 +63,9 @@ pub async fn init() -> anyhow::Result<()> {
     matrix_listener_task.await?;
     webhook_listener_task.await??;
     matrix_responder_task.await?;
+
+    signal(SignalKind::terminate()).recv().await;
+    trace!("Received SIGTERM on main thread");
+
     Ok(())
 }
