@@ -27,11 +27,15 @@ impl MatrixResponder {
 
     /// Used to start main program loop for the bot.
     /// Will login then loop forever while waiting on new sync data from the homeserver.
-    pub async fn start(&mut self, client: MatrixClient, shutdown_rx: watch::Receiver<bool>) {
+    pub async fn start(&mut self, client: MatrixClient, mut shutdown_rx: watch::Receiver<bool>) {
         loop {
-            if *shutdown_rx.borrow() {
-                trace!("Received shutdown on matrix responder thread");
-                break;
+            if Ok(v) = shutdown_rx.has_changed() {
+                if v = true {
+                    if *shutdown_rx.borrow_and_update() == true {
+                        trace!("Received shutdown on matrix responder thread");
+                        break;
+                    }
+                }
             }
             match self.recv.recv().await {
                 Some(v) => match v.message {
