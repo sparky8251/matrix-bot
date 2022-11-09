@@ -9,7 +9,7 @@ use crate::matrix_handlers::responders::{
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use tokio::sync::mpsc::Receiver;
-use tracing::info;
+use tracing::{error, info};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixResponder {
@@ -32,10 +32,13 @@ impl MatrixResponder {
             match self.recv.recv().await {
                 Some(v) => match v.message {
                     MatrixMessageType::Notice(m) => {
-                        send_notice(&client, v.room_id, &mut self.storage, m).await
+                        if let Err(e) = send_notice(&client, v.room_id, &mut self.storage, m).await
+                        {
+                            error!("{}", e);
+                        }
                     }
                     MatrixMessageType::FormattedText(m) => {
-                        send_formatted_text(
+                        if let Err(e) = send_formatted_text(
                             v.room_id,
                             &mut self.storage,
                             m.plain_text,
@@ -43,20 +46,31 @@ impl MatrixResponder {
                             &client,
                         )
                         .await
+                        {
+                            error!("{}", e);
+                        }
                     }
                     MatrixMessageType::Text(m) => {
-                        send_plain_text(v.room_id, &mut self.storage, m, &client).await
+                        if let Err(e) =
+                            send_plain_text(v.room_id, &mut self.storage, m, &client).await
+                        {
+                            error!("{}", e);
+                        }
                     }
                     MatrixMessageType::Invite(m) => match m.kind {
                         MatrixInviteType::Accept => {
-                            accept_invite(&m.sender, v.room_id, &client).await
+                            if let Err(e) = accept_invite(&m.sender, v.room_id, &client).await {
+                                error!("{}", e);
+                            }
                         }
                         MatrixInviteType::Reject => {
-                            reject_invite(&m.sender, v.room_id, &client).await
+                            if let Err(e) = reject_invite(&m.sender, v.room_id, &client).await {
+                                error!("{}", e);
+                            }
                         }
                     },
                     MatrixMessageType::FormattedNotice(m) => {
-                        send_formatted_notice(
+                        if let Err(e) = send_formatted_notice(
                             v.room_id,
                             &mut self.storage,
                             m.plain_text,
@@ -64,9 +78,15 @@ impl MatrixResponder {
                             &client,
                         )
                         .await
+                        {
+                            error!("{}", e);
+                        }
                     }
                     MatrixMessageType::Ban(m) => {
-                        send_ban_message(&m.user, m.reason, m.rooms, &client).await
+                        if let Err(e) = send_ban_message(&m.user, m.reason, m.rooms, &client).await
+                        {
+                            error!("{}", e);
+                        }
                     }
                 },
                 None => {

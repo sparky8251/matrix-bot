@@ -1,24 +1,25 @@
 use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixBanMessage, MatrixMessage, MatrixMessageType};
 use crate::regex::FORMATTED_USERNAME;
+use anyhow::bail;
 use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, trace, warn};
 
 pub(super) async fn ban_handler(
     text: &TextMessageEventContent,
     config: &MatrixListenerConfig,
     sender: &UserId,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     if config.ban_rooms.is_empty() {
         trace!("No rooms specified, ban feature is disabled. Skipping...");
-        return;
+        return Ok(());
     }
 
     if !config.admins.contains(sender) {
         debug!("Unauthorized user for banning. Skipping...");
-        return;
+        return Ok(());
     }
 
     trace!("Body text is: {:?}", text.body);
@@ -33,7 +34,7 @@ pub(super) async fn ban_handler(
                     trace!("Formatted body text is: {:?}", text.formatted);
                     match &text.formatted {
                         Some(t) => {
-                            let username = match FORMATTED_USERNAME.captures_iter(&t.body).nth(0) {
+                            let username = match FORMATTED_USERNAME.captures_iter(&t.body).next() {
                                 Some(l) => {
                                     trace!(
                                         "Captured username from formatted body pre-parsing: {:?}",
@@ -42,29 +43,26 @@ pub(super) async fn ban_handler(
                                     match UserId::parse(&l[0]) {
                                         Ok(u) => u,
                                         Err(_) => {
-                                            error!("User was invalid format, unable to continue ban handler");
-                                            return;
+                                            bail!("User was invalid format, unable to continue ban handler");
                                         }
                                     }
                                 }
                                 None => {
-                                    warn!("Unable to find HTTPS line in formatted body for user ban. Unable to continue.");
-                                    return;
+                                    bail!("Unable to find HTTPS line in formatted body for user ban. Unable to continue.");
                                 }
                             };
                             username
                         }
                         None => {
                             warn!("No formatted body present, unable to attempt parse of user for ban. Unable to continue.");
-                            return;
+                            return Ok(());
                         }
                     }
                 }
             }
         }
         None => {
-            error!("somehow no body or formatted body was presented?");
-            return;
+            bail!("somehow no body or formatted body was presented?");
         }
     };
 
@@ -97,6 +95,7 @@ pub(super) async fn ban_handler(
         .await
         .is_err()
     {
-        error!("Channel closed, unable to send mesage.")
+        bail!("Channel closed, unable to send mesage.");
     }
+    Ok(())
 }

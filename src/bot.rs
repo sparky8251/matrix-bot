@@ -47,8 +47,8 @@ pub async fn init() -> anyhow::Result<()> {
         };
     });
     let webhook_listener_task = tokio::spawn(async move {
-        let _ = webhook_listener.start().await?;
-        Result::<_, anyhow::Error>::Ok(())
+        webhook_listener.start().await?;
+        Ok::<_, anyhow::Error>(())
     });
     let matrix_responder_task = tokio::spawn(async move {
         matrix_responder.start(matrix_responder_client).await;
@@ -59,15 +59,8 @@ pub async fn init() -> anyhow::Result<()> {
 
     // TODO: collect errors instead of expect, and initiate clean shutdown of remaining threads on crash of a thread
     // Join threads to main thread
-    matrix_listener_task
-        .await
-        .expect("The matrix listener task has panicked!");
-    #[allow(unused_must_use)]
-    webhook_listener_task
-        .await
-        .expect("The webhook listener task has panicked!");
-    matrix_responder_task
-        .await
-        .expect("The matrix responder task has panicked!");
+    matrix_listener_task.await?;
+    webhook_listener_task.await??;
+    matrix_responder_task.await?;
     Ok(())
 }

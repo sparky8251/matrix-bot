@@ -159,7 +159,7 @@ mod capture {
 
         let captured_username = FORMATTED_USERNAME
             .captures_iter(input_string)
-            .nth(0)
+            .next()
             .unwrap();
         let captured_username = UserId::parse(&captured_username[0]).unwrap();
 
@@ -171,7 +171,7 @@ mod capture {
 
         let captured_username = FORMATTED_USERNAME
             .captures_iter(input_string)
-            .nth(0)
+            .next()
             .unwrap();
         let captured_username = UserId::parse(&captured_username[0]).unwrap();
 

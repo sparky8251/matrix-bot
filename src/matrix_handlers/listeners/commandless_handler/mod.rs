@@ -11,6 +11,7 @@ use crate::config::{ListenerStorage, MatrixListenerConfig};
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};
+use anyhow::anyhow;
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
@@ -22,7 +23,7 @@ use spellcheck::spellcheck;
 use std::time::SystemTime;
 use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
@@ -36,7 +37,7 @@ pub(super) async fn commandless_handler(
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     if sender == config.mx_uname {
         // do nothing if message is from self
         trace!("Message is from self, doing nothing");
@@ -58,7 +59,7 @@ pub(super) async fn commandless_handler(
                     && !config.linkers.is_empty()
                 {
                     debug!("Entering commandless url linking path");
-                    link_url(text, config, &mut notice_response);
+                    link_url(text, config, &mut notice_response)?;
                 }
                 if GROUP_PING.is_match(&text.body) {
                     debug!("Entering commandless group ping path");
@@ -81,7 +82,7 @@ pub(super) async fn commandless_handler(
                         .await
                         .is_err()
                 {
-                    error!("Channel closed. Unable to send message.");
+                    return Err(anyhow!("Channel closed. Unable to send message."))?;
                 }
 
                 if text_response.is_some() {
@@ -97,7 +98,7 @@ pub(super) async fn commandless_handler(
                         .await
                         .is_err()
                     {
-                        error!("Channel closed. Unable to send message.");
+                        return Err(anyhow!("Channel closed. Unable to send message."))?;
                     }
                 }
                 if config.enable_corrections
@@ -120,14 +121,15 @@ pub(super) async fn commandless_handler(
                                     .last_correction_time
                                     .insert(room_id.to_owned(), SystemTime::now());
                             }
-                            Err(_) => error!("Channel closed. Unable to send message."),
+                            Err(_) => Err(anyhow!("Channel closed. Unable to send message."))?,
                         };
                     }
                 }
             }
             Err(e) => {
-                error!("{}", e);
+                Err(anyhow!("{}", e))?;
             }
         }
     }
+    Ok(())
 }

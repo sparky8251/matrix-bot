@@ -3,16 +3,17 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::{clean_text, MatrixNoticeResponse};
 use crate::regex::LINK_URL;
+use anyhow::anyhow;
 use reqwest::Url;
 use ruma::events::room::message::TextMessageEventContent;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 /// Finds and links URLs requested and builds response text
 pub fn link_url(
     text: &TextMessageEventContent,
     config: &MatrixListenerConfig,
     notice_response: &mut MatrixNoticeResponse,
-) {
+) -> anyhow::Result<()> {
     let mut links: Vec<String> = Vec::new();
     match &text.formatted {
         Some(v) => {
@@ -21,11 +22,8 @@ pub fn link_url(
                 for cap in LINK_URL.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
                     if config.linkers.contains(&cap[1].to_lowercase()) {
-                        match config.links.get(&cap[2].to_string()) {
-                            Some(v) => {
-                                links.push(v.to_string())
-                            }
-                            None => error!("Somehow lost link between matching it and inserting it into reply list!")
+                        if let Some(v) = config.links.get(&cap[2].to_string()) {
+                            links.push(v.to_string())
                         }
                     } else {
                         debug!("No link found for {}", cap[2].to_string())
@@ -33,18 +31,15 @@ pub fn link_url(
                 }
             } else {
                 debug!("There are no remaining matches after cleaning tags. Doing nothing.");
-                return;
+                return Ok(());
             }
         }
         None => {
             for cap in LINK_URL.captures_iter(&text.body.to_lowercase()) {
                 trace!("{:?}", cap);
                 if config.linkers.contains(&cap[1].to_lowercase()) {
-                    match config.links.get(&cap[2].to_string()) {
-                        Some(v) => {
-                            links.push(v.to_string())
-                        }
-                        None => error!("Somehow lost link between matching it and inserting it into reply list!")
+                    if let Some(v) = config.links.get(&cap[2].to_string()) {
+                        links.push(v.to_string())
                     }
                 } else {
                     debug!("No link found for {}", cap[2].to_string())
@@ -60,12 +55,16 @@ pub fn link_url(
         for result in links {
             match Url::parse(&result) {
                 Ok(v) => results.push(v),
-                Err(e) => error!(
-                    "Unable to parse result {:?} to Url due to error {:?}",
-                    result, e
-                ),
+                Err(e) => {
+                    return Err(anyhow!(
+                        "Unable to parse result {:?} to Url due to error {:?}",
+                        result,
+                        e
+                    ))
+                }
             }
         }
         notice_response.set_links(results);
     }
+    Ok(())
 }

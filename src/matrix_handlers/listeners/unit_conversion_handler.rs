@@ -4,12 +4,13 @@ use crate::helpers::convert_unit;
 use crate::helpers::MatrixNoticeResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::UNIT_CONVERSION;
+use anyhow::bail;
 use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId,
 };
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error};
+use tracing::debug;
 
 /// Command based unit conversion handler that will parse, generate a response body, and send it
 pub(super) async fn unit_conversion_handler(
@@ -17,7 +18,7 @@ pub(super) async fn unit_conversion_handler(
     relates_to: Option<&Relation>,
     room_id: &RoomId,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     if relates_to.is_none() && text.formatted.is_none() {
         let mut conversions = Vec::new();
         for cap in UNIT_CONVERSION.captures_iter(&text.body.to_lowercase()) {
@@ -27,7 +28,7 @@ pub(super) async fn unit_conversion_handler(
             Some(v) => v,
             None => {
                 debug!("No convertable units found. No reply will be constructed.");
-                return;
+                return Ok(());
             }
         };
         let mut response = MatrixNoticeResponse::default();
@@ -40,7 +41,8 @@ pub(super) async fn unit_conversion_handler(
             .await
             .is_err()
         {
-            error!("Channel closed. Unable to send message.");
+            bail!("Channel closed. Unable to send message.");
         }
     }
+    Ok(())
 }

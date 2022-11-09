@@ -14,12 +14,13 @@ use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
 use crate::config::{ListenerStorage, MatrixListenerConfig};
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
+use anyhow::bail;
 use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId, UserId,
 };
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 /// Dispatches incoming text events to a number of different handlers depending on various conditions
 #[allow(clippy::too_many_arguments)]
@@ -32,25 +33,26 @@ pub async fn handle_text_event(
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     if !&text.body.starts_with('!') {
         debug!("Entering no command path...");
         commandless_handler(
             text, relates_to, sender, room_id, storage, config, api_client, send,
         )
-        .await
+        .await?
     } else if text.body.to_lowercase().starts_with("!convert ") {
         debug!("Entering unit conversion path...");
-        unit_conversion_handler(text, relates_to, room_id, send).await
+        unit_conversion_handler(text, relates_to, room_id, send).await?
     } else if text.body.to_lowercase().starts_with("!help") {
         debug!("Entering help path...");
-        help_handler(text, room_id, config, send).await
+        help_handler(text, room_id, config, send).await?
     } else if text.body.to_lowercase().starts_with("!ban") {
         debug!("Entering help path...");
-        ban_handler(text, config, sender, send).await;
+        ban_handler(text, config, sender, send).await?;
     } else {
         debug!("Doing nothing...");
     }
+    Ok(())
 }
 
 /// Accepts or rejects invites to rooms from matrix users
@@ -59,7 +61,7 @@ pub async fn handle_invite_event(
     room_id: &RoomId,
     config: &MatrixListenerConfig,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     trace!("Invited by {} to room {} ", &sender, &room_id);
     if config.admins.contains(sender) {
         let message = MatrixInviteMessage {
@@ -74,7 +76,7 @@ pub async fn handle_invite_event(
             .await
             .is_err()
         {
-            error!("Channel closed. Unable to send message.");
+            bail!("Channel closed. Unable to send message.");
         }
     } else {
         let message = MatrixInviteMessage {
@@ -89,7 +91,8 @@ pub async fn handle_invite_event(
             .await
             .is_err()
         {
-            error!("Channel closed. Unable to send message.");
+            bail!("Channel closed. Unable to send message.");
         }
     }
+    Ok(())
 }

@@ -1,10 +1,11 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::MatrixFormattedNoticeResponse;
 use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
+use anyhow::bail;
 use ruma::{events::room::message::TextMessageEventContent, RoomId};
 use std::convert::From;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 #[derive(Debug)]
 enum HelpType {
@@ -38,7 +39,7 @@ pub(super) async fn help_handler(
     room_id: &RoomId,
     config: &MatrixListenerConfig,
     send: &mut Sender<MatrixMessage>,
-) {
+) -> anyhow::Result<()> {
     if config.help_rooms.is_empty() || config.help_rooms.contains(room_id) {
         trace!("Room is allowed, building help message");
         let mut message = String::new();
@@ -67,7 +68,7 @@ pub(super) async fn help_handler(
                 .await
                 .is_err()
             {
-                error!("Channel closed. Unable to send message.");
+                bail!("Channel closed. Unable to send message.");
             }
         } else {
             debug!("Unknown action");
@@ -90,7 +91,7 @@ pub(super) async fn help_handler(
                 .await
                 .is_err()
             {
-                error!("Channel closed. Unable to send message.");
+                bail!("Channel closed. Unable to send message.");
             }
         }
     } else {
@@ -99,6 +100,7 @@ pub(super) async fn help_handler(
             room_id
         );
     }
+    Ok(())
 }
 
 async fn generic_help_message() -> String {

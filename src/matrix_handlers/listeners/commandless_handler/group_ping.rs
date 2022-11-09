@@ -5,7 +5,7 @@ use crate::helpers::{clean_text, MatrixFormattedTextResponse};
 use crate::regex::GROUP_PING;
 use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use std::collections::HashSet;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 /// Finds requested users to ping and builds response text
 pub fn group_ping(
@@ -50,13 +50,10 @@ fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSe
                 users.insert(user.clone());
             }
         } else {
-            match config.group_pings.get(&cap[1]) {
-                Some(v) => {
-                    for user in v {
-                        users.insert(user.clone());
-                    }
+            if let Some(v) = config.group_pings.get(&cap[1]) {
+                for user in v {
+                    users.insert(user.clone());
                 }
-                None => error!("Somehow lost group between regex match and insertion!"),
             }
         }
     }

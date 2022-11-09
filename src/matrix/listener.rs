@@ -100,7 +100,7 @@ impl MatrixListener {
                                         debug!("Message is an edit, skipping handling");
                                         continue;
                                     }
-                                    handle_text_event(
+                                    if let Err(e) = handle_text_event(
                                         &t,
                                         relates_to.as_ref(),
                                         &sender,
@@ -110,7 +110,10 @@ impl MatrixListener {
                                         &self.api_client,
                                         &mut self.send,
                                     )
-                                    .await;
+                                    .await
+                                    {
+                                        error!("{}", e);
+                                    };
                                 }
                                 Ok(_) => {}
                                 Err(e) => {
@@ -127,13 +130,16 @@ impl MatrixListener {
                             match event {
                                 Ok(AnyStrippedStateEvent::RoomMember(s)) => {
                                     trace!("Invited by {}", s.sender);
-                                    handle_invite_event(
+                                    if let Err(e) = handle_invite_event(
                                         &s.sender,
                                         room_id,
                                         &self.config,
                                         &mut self.send,
                                     )
-                                    .await;
+                                    .await
+                                    {
+                                        error!("{}", e);
+                                    };
                                     trace!("Handled invite event")
                                 }
                                 Ok(_) => {
