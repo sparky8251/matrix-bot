@@ -4,8 +4,7 @@
 use super::MatrixClient;
 use crate::config::ResponderStorage;
 use crate::matrix_handlers::responders::{
-    accept_invite, reject_invite, send_ban_message, send_formatted_notice, send_formatted_text,
-    send_notice, send_plain_text,
+    accept_invite, reject_invite, send_ban_message, send_message,
 };
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use tokio::sync::{mpsc, watch};
@@ -35,74 +34,51 @@ impl MatrixResponder {
                     break;
                 },
                 m = self.recv.recv() => {
-                    match m {
-                        Some(v) => match v.message {
-                    MatrixMessageType::Notice(m) => {
-                        if let Err(e) = send_notice(&client, v.room_id, &mut self.storage, m).await
-                        {
-                            error!("{}", e);
-                        }
-                    }
-                    MatrixMessageType::FormattedText(m) => {
-                        if let Err(e) = send_formatted_text(
-                            v.room_id,
-                            &mut self.storage,
-                            m.plain_text,
-                            m.formatted_text,
-                            &client,
-                        )
-                        .await
-                        {
-                            error!("{}", e);
-                        }
-                    }
-                    MatrixMessageType::Text(m) => {
-                        if let Err(e) =
-                            send_plain_text(v.room_id, &mut self.storage, m, &client).await
-                        {
-                            error!("{}", e);
-                        }
-                    }
-                    MatrixMessageType::Invite(m) => match m.kind {
-                        MatrixInviteType::Accept => {
-                            if let Err(e) = accept_invite(&m.sender, v.room_id, &client).await {
-                                error!("{}", e);
-                            }
-                        }
-                        MatrixInviteType::Reject => {
-                            if let Err(e) = reject_invite(&m.sender, v.room_id, &client).await {
-                                error!("{}", e);
-                            }
-                        }
-                    },
-                    MatrixMessageType::FormattedNotice(m) => {
-                        if let Err(e) = send_formatted_notice(
-                            v.room_id,
-                            &mut self.storage,
-                            m.plain_text,
-                            m.formatted_text,
-                            &client,
-                        )
-                        .await
-                        {
-                            error!("{}", e);
-                        }
-                    }
-                    MatrixMessageType::Ban(m) => {
-                        if let Err(e) = send_ban_message(&m.user, m.reason, m.rooms, &client).await
-                        {
-                            error!("{}", e);
-                        }
-                    }
-                },
-                None => {
-                    info!("Matrix channel closed and empty. Exiting thread.");
-                    break;
-                }
+                    if let Err(e) = self.send_message_handler(m, &client).await {
+                        error!("{}", e);
                     }
                 }
             }
         }
         trace!("Matrix responder shutdown complete")
+    }
+
+    async fn send_message_handler(
+        &mut self,
+        message: Option<MatrixMessage>,
+        client: &MatrixClient,
+    ) -> anyhow::Result<()> {
+        match message {
+            Some(v) => match v.message {
+                MatrixMessageType::Response(m) => {
+                    if let Err(e) =
+                        send_message(&client, v.room_id.unwrap(), &mut self.storage, m).await
+                    {
+                        error!("{}", e);
+                    }
+                }
+                MatrixMessageType::Invite(m) => match m.kind {
+                    MatrixInviteType::Accept => {
+                        if let Err(e) = accept_invite(&m.sender, v.room_id, &client).await {
+                            error!("{}", e);
+                        }
+                    }
+                    MatrixInviteType::Reject => {
+                        if let Err(e) = reject_invite(&m.sender, v.room_id, &client).await {
+                            error!("{}", e);
+                        }
+                    }
+                },
+                MatrixMessageType::Ban(m) => {
+                    if let Err(e) = send_ban_message(&m.user, m.reason, m.rooms, &client).await {
+                        error!("{}", e);
+                    }
+                }
+            },
+            None => {
+                info!("Matrix channel closed and empty. Exiting thread.");
+            }
+        }
+        Ok(())
     }
 }

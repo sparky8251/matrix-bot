@@ -1,12 +1,12 @@
 use crate::helpers::MatrixFormattedTextResponse;
-use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
+use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::webhook::listener::WebhookListener;
 use axum::{
     extract::{Extension, FromRequest, RequestParts},
     http::StatusCode,
     Json,
 };
-use ruma::{OwnedRoomId, OwnedUserId};
+use ruma::{events::room::message::RoomMessageEventContent, OwnedRoomId, OwnedUserId};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -19,23 +19,26 @@ pub async fn message(
     if req_token.0.eq(&state.config.token) {
         let matrix_message = MatrixMessage {
             room_id: Some(message.room_id.clone()),
-            message: MatrixMessageType::Notice(message.message.clone()),
+            message: MatrixMessageType::Response(RoomMessageEventContent::notice_plain(
+                message.message.clone(),
+            )),
         };
-        if state.send.clone().send(matrix_message).await.is_err() {
+        if let Err(_) = state.send.clone().send(matrix_message).await {
             return StatusCode::INTERNAL_SERVER_ERROR;
         };
         if let Some(pings) = &message.ping {
             let mut response = MatrixFormattedTextResponse::default();
             let pings: HashSet<OwnedUserId> = pings.iter().cloned().collect();
             response.set_users(pings);
+            let formatted_text = response.format_text().unwrap();
             let matrix_message = MatrixMessage {
                 room_id: Some(message.room_id.clone()),
-                message: MatrixMessageType::FormattedText(MatrixFormattedMessage {
-                    plain_text: response.to_string(),
-                    formatted_text: response.format_text(),
-                }),
+                message: MatrixMessageType::Response(RoomMessageEventContent::text_html(
+                    response.to_string(),
+                    formatted_text,
+                )),
             };
-            if state.send.clone().send(matrix_message).await.is_err() {
+            if let Err(_) = state.send.clone().send(matrix_message).await {
                 return StatusCode::INTERNAL_SERVER_ERROR;
             };
         };

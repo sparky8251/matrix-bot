@@ -1,8 +1,11 @@
 use crate::config::MatrixListenerConfig;
 use crate::helpers::MatrixFormattedNoticeResponse;
-use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
+use crate::messages::{MatrixMessage, MatrixMessageType};
 use anyhow::bail;
-use ruma::{events::room::message::TextMessageEventContent, RoomId};
+use ruma::{
+    events::room::message::{RoomMessageEventContent, TextMessageEventContent},
+    RoomId,
+};
 use std::convert::From;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace};
@@ -63,7 +66,9 @@ pub(super) async fn help_handler(
             if send
                 .send(MatrixMessage {
                     room_id: Some(room_id.to_owned()),
-                    message: MatrixMessageType::Notice(message),
+                    message: MatrixMessageType::Response(RoomMessageEventContent::notice_plain(
+                        message,
+                    )),
                 })
                 .await
                 .is_err()
@@ -79,14 +84,14 @@ pub(super) async fn help_handler(
                 text.body.split(' ').nth(1).unwrap_or("")
             ));
             response.add_errrors(errors);
-            let formatted_text = response.format_text();
+            let formatted_text = response.format_text().unwrap();
             if send
                 .send(MatrixMessage {
                     room_id: Some(room_id.to_owned()),
-                    message: MatrixMessageType::FormattedNotice(MatrixFormattedMessage {
-                        plain_text: response.to_string(),
+                    message: MatrixMessageType::Response(RoomMessageEventContent::notice_html(
+                        response.to_string(),
                         formatted_text,
-                    }),
+                    )),
                 })
                 .await
                 .is_err()

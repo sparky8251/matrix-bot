@@ -63,7 +63,7 @@ impl MatrixListener {
             tokio::select! {
                 _ = shutdown_rx.changed() => {
                     trace!("Received shutdown on matrix listener thread");
-                break;
+                    break;
                 },
                 response = client.send_request(req) => {
                     let response = match response {

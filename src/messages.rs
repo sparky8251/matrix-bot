@@ -1,4 +1,4 @@
-use ruma::{OwnedRoomId, OwnedUserId};
+use ruma::{events::room::message::RoomMessageEventContent, OwnedRoomId, OwnedUserId};
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -11,10 +11,7 @@ pub struct MatrixMessage {
 #[derive(Debug)]
 pub enum MatrixMessageType {
     Invite(MatrixInviteMessage),
-    Text(String),
-    Notice(String),
-    FormattedText(MatrixFormattedMessage),
-    FormattedNotice(MatrixFormattedMessage),
+    Response(RoomMessageEventContent),
     Ban(MatrixBanMessage),
 }
 
@@ -22,12 +19,6 @@ pub enum MatrixMessageType {
 pub enum MatrixInviteType {
     Accept,
     Reject,
-}
-
-#[derive(Debug)]
-pub struct MatrixFormattedMessage {
-    pub plain_text: String,
-    pub formatted_text: Option<String>,
 }
 
 #[derive(Debug)]

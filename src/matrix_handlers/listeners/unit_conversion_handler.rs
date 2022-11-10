@@ -5,6 +5,7 @@ use crate::helpers::MatrixNoticeResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::UNIT_CONVERSION;
 use anyhow::bail;
+use ruma::events::room::message::RoomMessageEventContent;
 use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId,
@@ -36,7 +37,9 @@ pub(super) async fn unit_conversion_handler(
         if send
             .send(MatrixMessage {
                 room_id: Some(room_id.to_owned()),
-                message: MatrixMessageType::Notice(response.to_string()),
+                message: MatrixMessageType::Response(RoomMessageEventContent::notice_plain(
+                    response.to_string(),
+                )),
             })
             .await
             .is_err()

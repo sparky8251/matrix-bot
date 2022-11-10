@@ -9,14 +9,14 @@ mod unit_conversion;
 
 use crate::config::{ListenerStorage, MatrixListenerConfig};
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
-use crate::messages::{MatrixFormattedMessage, MatrixMessage, MatrixMessageType};
+use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};
 use anyhow::anyhow;
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
 use ruma::{
-    events::room::message::{Relation, TextMessageEventContent},
+    events::room::message::{Relation, RoomMessageEventContent, TextMessageEventContent},
     RoomId, UserId,
 };
 use spellcheck::spellcheck;
@@ -77,7 +77,9 @@ pub(super) async fn commandless_handler(
                     && send
                         .send(MatrixMessage {
                             room_id: Some(room_id.to_owned()),
-                            message: MatrixMessageType::Notice(notice_response.to_string()),
+                            message: MatrixMessageType::Response(
+                                RoomMessageEventContent::notice_plain(notice_response.to_string()),
+                            ),
                         })
                         .await
                         .is_err()
@@ -86,14 +88,16 @@ pub(super) async fn commandless_handler(
                 }
 
                 if text_response.is_some() {
-                    let message = MatrixFormattedMessage {
-                        plain_text: text_response.to_string(),
-                        formatted_text: text_response.format_text(),
-                    };
+                    let formatted_text = text_response.format_text().unwrap();
                     if send
                         .send(MatrixMessage {
                             room_id: Some(room_id.to_owned()),
-                            message: MatrixMessageType::FormattedText(message),
+                            message: MatrixMessageType::Response(
+                                RoomMessageEventContent::text_html(
+                                    text_response.to_string(),
+                                    formatted_text,
+                                ),
+                            ),
                         })
                         .await
                         .is_err()
@@ -112,7 +116,9 @@ pub(super) async fn commandless_handler(
                         match send
                             .send(MatrixMessage {
                                 room_id: Some(room_id.to_owned()),
-                                message: MatrixMessageType::Text(v),
+                                message: MatrixMessageType::Response(
+                                    RoomMessageEventContent::text_plain(v),
+                                ),
                             })
                             .await
                         {
