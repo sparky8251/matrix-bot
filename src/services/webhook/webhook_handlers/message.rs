@@ -1,6 +1,6 @@
 use crate::helpers::MatrixFormattedTextResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
-use crate::webhook::listener::WebhookListener;
+use crate::services::webhook::listener::WebhookListener;
 use axum::{
     extract::{Extension, FromRequest, RequestParts},
     http::StatusCode,

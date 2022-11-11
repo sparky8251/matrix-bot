@@ -1,7 +1,7 @@
 //! Handler for the unit conversion command
 
+use crate::helpers::bot_response::MatrixNoticeResponse;
 use crate::helpers::convert_unit;
-use crate::helpers::MatrixNoticeResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::UNIT_CONVERSION;
 use anyhow::bail;
@@ -14,7 +14,7 @@ use tokio::sync::mpsc::Sender;
 use tracing::debug;
 
 /// Command based unit conversion handler that will parse, generate a response body, and send it
-pub(super) async fn unit_conversion_handler(
+pub async fn unit_conversion_handler(
     text: &TextMessageEventContent,
     relates_to: Option<&Relation>,
     room_id: &RoomId,

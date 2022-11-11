@@ -1,5 +1,5 @@
 use crate::config::ResponderStorage;
-use crate::matrix::MatrixClient;
+use crate::services::matrix::MatrixClient;
 use anyhow::Context;
 use ruma::{
     api::client::{

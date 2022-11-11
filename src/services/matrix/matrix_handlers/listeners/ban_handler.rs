@@ -6,7 +6,7 @@ use ruma::{events::room::message::TextMessageEventContent, OwnedUserId, UserId};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace, warn};
 
-pub(super) async fn ban_handler(
+pub async fn ban_handler(
     text: &TextMessageEventContent,
     config: &MatrixListenerConfig,
     sender: &UserId,

@@ -3,10 +3,10 @@
 
 use super::MatrixClient;
 use crate::config::ResponderStorage;
-use crate::matrix_handlers::responders::{
+use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
+use crate::services::matrix::matrix_handlers::responders::{
     accept_invite, reject_invite, send_ban_message, send_message,
 };
-use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use tokio::sync::{mpsc, watch};
 use tracing::{error, info, trace};
 

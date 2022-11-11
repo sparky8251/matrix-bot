@@ -3,8 +3,8 @@
 
 use super::MatrixClient;
 use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
-use crate::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use crate::messages::MatrixMessage;
+use crate::services::matrix::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use ruma::{
     api::client::sync::sync_events,
     events::{

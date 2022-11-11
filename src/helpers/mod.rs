@@ -1,6 +1,6 @@
 //! Exports various helper functions and types
 
-mod bot_response;
+pub mod bot_response;
 mod check_format;
 mod clean_text;
 mod convert_unit;

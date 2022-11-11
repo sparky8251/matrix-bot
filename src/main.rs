@@ -68,13 +68,10 @@ mod config;
 mod events;
 mod helpers;
 mod logging;
-mod matrix;
-mod matrix_handlers;
 mod messages;
 mod queries;
 mod regex;
-mod webhook;
-mod webhook_handlers;
+mod services;
 
 #[tokio::main]
 #[allow(clippy::missing_docs_in_private_items)]

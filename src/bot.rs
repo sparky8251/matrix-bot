@@ -1,7 +1,7 @@
 use crate::config::{Config, SessionStorage};
-use crate::matrix::listener::MatrixListener;
-use crate::matrix::responder::MatrixResponder;
-use crate::webhook::listener::WebhookListener;
+use crate::services::matrix::listener::MatrixListener;
+use crate::services::matrix::responder::MatrixResponder;
+use crate::services::webhook::listener::WebhookListener;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch};
 use tracing::{error, info, trace};

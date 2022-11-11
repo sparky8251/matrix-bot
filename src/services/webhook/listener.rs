@@ -1,6 +1,6 @@
 use crate::config::{Config, WebhookListenerConfig};
 use crate::messages::MatrixMessage;
-use crate::webhook_handlers::message_fn;
+use crate::services::webhook::webhook_handlers::message_fn;
 use axum::{extract::Extension, routing::post, Router};
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;

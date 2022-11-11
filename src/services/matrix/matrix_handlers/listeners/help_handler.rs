@@ -1,5 +1,5 @@
 use crate::config::MatrixListenerConfig;
-use crate::helpers::MatrixFormattedNoticeResponse;
+use crate::helpers::bot_response::MatrixFormattedNoticeResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use anyhow::bail;
 use ruma::{
@@ -37,7 +37,7 @@ impl From<&str> for HelpType {
     }
 }
 
-pub(super) async fn help_handler(
+pub async fn help_handler(
     text: &TextMessageEventContent,
     room_id: &RoomId,
     config: &MatrixListenerConfig,
