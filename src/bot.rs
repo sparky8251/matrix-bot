@@ -49,7 +49,7 @@ pub async fn init() -> anyhow::Result<()> {
         "access_token",
         IVec::from(login_response.access_token.as_bytes()),
     );
-    session_storage.flush_async().await?;
+    session_storage.flush()?;
     info!("Successfully logged in as {}", config.mx_uname);
 
     // Clone required clients/servers and channels

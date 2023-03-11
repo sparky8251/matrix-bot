@@ -133,6 +133,7 @@ pub async fn commandless_handler(
                                         .to_be_bytes()
                                         .to_vec(),
                                 );
+                                storage.flush()?;
                             }
                             Err(_) => Err(anyhow!("Channel closed. Unable to send message."))?,
                         };
