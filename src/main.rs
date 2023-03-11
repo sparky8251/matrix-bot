@@ -65,7 +65,6 @@
 
 mod bot;
 mod config;
-mod database;
 mod events;
 mod helpers;
 mod logging;

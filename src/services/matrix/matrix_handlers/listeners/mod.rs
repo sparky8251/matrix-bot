@@ -13,13 +13,13 @@ use self::commandless_handler::commandless_handler;
 use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
 use crate::config::MatrixListenerConfig;
-use crate::database::ListenerStorage;
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
 use anyhow::bail;
 use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId, UserId,
 };
+use sled::Tree;
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace};
 
@@ -30,7 +30,7 @@ pub async fn handle_text_event(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut ListenerStorage,
+    storage: &mut Tree,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,

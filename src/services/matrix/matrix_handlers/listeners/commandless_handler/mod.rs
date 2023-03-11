@@ -8,7 +8,6 @@ mod text_expansion;
 mod unit_conversion;
 
 use crate::config::MatrixListenerConfig;
-use crate::database::ListenerStorage;
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};
@@ -20,11 +19,13 @@ use ruma::{
     events::room::message::{Relation, RoomMessageEventContent, TextMessageEventContent},
     RoomId, UserId,
 };
+use sled::Tree;
 use spellcheck::spellcheck;
+use std::convert::TryInto;
 use std::time::SystemTime;
 use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, trace};
+use tracing::{debug, trace, error};
 use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
@@ -34,7 +35,7 @@ pub async fn commandless_handler(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut ListenerStorage,
+    storage: &mut Tree,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
@@ -108,7 +109,7 @@ pub async fn commandless_handler(
                 }
                 if config.enable_corrections
                     && relates_to.is_none()
-                    && storage.correction_time_cooldown(room_id)
+                    && correction_time_cooldown(&storage, room_id)
                     && !config.correction_exclusion.contains(room_id)
                     && !notice_response.is_some()
                     && !text_response.is_some()
@@ -124,9 +125,14 @@ pub async fn commandless_handler(
                             .await
                         {
                             Ok(_) => {
-                                storage
-                                    .last_correction_time
-                                    .insert(room_id.to_owned(), SystemTime::now());
+                                let _ = storage.insert(
+                                    "last_correction_time_".to_owned() + &room_id.to_string(),
+                                    SystemTime::now()
+                                        .duration_since(SystemTime::UNIX_EPOCH)?
+                                        .as_secs()
+                                        .to_be_bytes()
+                                        .to_vec(),
+                                );
                             }
                             Err(_) => Err(anyhow!("Channel closed. Unable to send message."))?,
                         };
@@ -139,4 +145,30 @@ pub async fn commandless_handler(
         }
     }
     Ok(())
+}
+
+fn correction_time_cooldown(storage: &Tree, room_id: &RoomId) -> bool {
+    match storage.get("last_correction_time_".to_owned() + &room_id.to_string()) {
+        Ok(t) => {
+            match t {
+                Some(v) => {
+                    let bytes: [u8; 8] = v.to_vec().try_into().unwrap();
+                    let old_time = u64::from_be_bytes(bytes);
+                    let new_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+
+                    if new_time < old_time + 300 {
+                        true
+                    } else {
+                        false
+                    }
+                },
+                None => true // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
+            }
+            
+        },
+        Err(e) => {
+            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {}", e);
+            false // Will only be Err in truly extreme situations. Log + return false to prevent correction and thus potential spam.
+        }
+    }
 }

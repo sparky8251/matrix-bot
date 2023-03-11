@@ -8,7 +8,7 @@ use std::env;
 use std::path::PathBuf;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info, trace};
+use tracing::{info, trace};
 
 pub async fn init() -> anyhow::Result<()> {
     // Load config data
@@ -25,7 +25,7 @@ pub async fn init() -> anyhow::Result<()> {
     ))?;
 
     let session_storage = db.open_tree("session_storage")?;
-    let _listener_storage = db.open_tree("listener_storage")?;
+    let listener_storage = db.open_tree("listener_storage")?;
 
     let access_token = session_storage
         .get("access_token")?
@@ -58,7 +58,7 @@ pub async fn init() -> anyhow::Result<()> {
     let webhook_tx = matrix_tx.clone();
 
     // Create thread structures
-    let mut matrix_listener = MatrixListener::new(&config, matrix_tx)?;
+    let mut matrix_listener = MatrixListener::new(&config, matrix_tx, listener_storage.clone())?;
     let mut matrix_responder = MatrixResponder::new(matrix_rx)?;
     let webhook_listener = WebhookListener::new(&config, webhook_tx);
 
@@ -72,9 +72,7 @@ pub async fn init() -> anyhow::Result<()> {
         matrix_listener
             .start(matrix_listener_client, matrix_listener_shutdown_rx)
             .await;
-        if let Err(e) = matrix_listener.storage.save_storage() {
-            error!("Unable to save matrix_listener.ron on shutdown. {}", e)
-        };
+        listener_storage.flush().unwrap();
     });
     let webhook_listener_task = tokio::spawn(async move {
         webhook_listener.start(webhook_listener_shutdown_rx).await;

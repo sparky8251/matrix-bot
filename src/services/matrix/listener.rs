@@ -3,7 +3,6 @@
 
 use super::MatrixClient;
 use crate::config::{Config, MatrixListenerConfig};
-use crate::database::ListenerStorage;
 use crate::messages::MatrixMessage;
 use crate::services::matrix::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use ruma::{
@@ -17,6 +16,7 @@ use ruma::{
     },
     presence::PresenceState,
 };
+use sled::Tree;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver;
@@ -24,26 +24,29 @@ use tracing::{debug, error, trace};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixListener {
-    /// Storage data.
-    pub storage: ListenerStorage,
     /// Configuration data.
     pub config: MatrixListenerConfig,
     /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
     send: Sender<MatrixMessage>,
+    /// Storage data.
+    pub storage: Tree,
 }
 
 impl MatrixListener {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
-    pub fn new(config: &Config, send: Sender<MatrixMessage>) -> anyhow::Result<Self> {
-        let storage = ListenerStorage::load_storage()?;
+    pub fn new(
+        config: &Config,
+        send: Sender<MatrixMessage>,
+        storage: Tree,
+    ) -> anyhow::Result<Self> {
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
         Ok(Self {
-            storage,
             config,
             api_client,
             send,
+            storage,
         })
     }
 
@@ -53,10 +56,12 @@ impl MatrixListener {
         loop {
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
-            req.since = match &self.storage.last_sync {
-                Some(v) => Some(v.as_str()),
-                None => None,
-            };
+            let last_sync = self
+                .storage
+                .get("last_sync")
+                .unwrap()
+                .map(|s| String::from_utf8(s.to_vec()).unwrap());
+            req.since = last_sync.as_deref();
             req.full_state = false;
             req.set_presence = &PresenceState::Unavailable;
             req.timeout = Some(Duration::new(30, 0));
@@ -77,13 +82,8 @@ impl MatrixListener {
 
                     match response {
                         Some(v) => {
-                            self.storage.last_sync = Some(v.next_batch.clone());
-                            if let Err(e) = self.storage.save_storage() {
-                                error!(
-                                    "Unable to save matrix_listener.ron during normal operation. {}",
-                                    e
-                                )
-                            };
+                            let _ = self.storage.insert("last_sync", v.next_batch.as_bytes());
+                            self.storage.flush().unwrap();
                             for (room_id, joined_room) in &v.rooms.join {
                                 for raw_event in &joined_room.timeline.events {
                                     let event = raw_event.deserialize();

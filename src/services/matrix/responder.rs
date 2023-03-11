@@ -47,9 +47,7 @@ impl MatrixResponder {
         match message {
             Some(v) => match v.message {
                 MatrixMessageType::Response(m) => {
-                    if let Err(e) =
-                        send_message(&client, v.room_id.unwrap(), m).await
-                    {
+                    if let Err(e) = send_message(&client, v.room_id.unwrap(), m).await {
                         error!("{}", e);
                     }
                 }

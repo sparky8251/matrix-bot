@@ -6,8 +6,7 @@ use ruma::{
         message::send_message_event,
     },
     events::room::message::RoomMessageEventContent,
-    OwnedRoomId, UserId,
-    TransactionId
+    OwnedRoomId, TransactionId, UserId,
 };
 use std::collections::HashSet;
 use tracing::{debug, error, info};
