@@ -1,4 +1,3 @@
-use crate::config::ResponderStorage;
 use crate::services::matrix::MatrixClient;
 use anyhow::Context;
 use ruma::{
@@ -8,6 +7,7 @@ use ruma::{
     },
     events::room::message::RoomMessageEventContent,
     OwnedRoomId, UserId,
+    TransactionId
 };
 use std::collections::HashSet;
 use tracing::{debug, error, info};
@@ -15,11 +15,10 @@ use tracing::{debug, error, info};
 pub async fn send_message(
     client: &MatrixClient,
     room_id: OwnedRoomId,
-    storage: &mut ResponderStorage,
     content: RoomMessageEventContent,
 ) -> anyhow::Result<()> {
-    let next_txn_id = storage.next_txn_id();
-    let req = send_message_event::v3::Request::new(&room_id, &next_txn_id, &content)
+    let txn_id = TransactionId::new();
+    let req = send_message_event::v3::Request::new(&room_id, &txn_id, &content)
         .context("m.room.message serialization must work")?;
     client
         .send_request(req)

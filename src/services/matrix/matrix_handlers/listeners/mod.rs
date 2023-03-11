@@ -12,7 +12,8 @@ use self::ban_handler::ban_handler;
 use self::commandless_handler::commandless_handler;
 use self::help_handler::help_handler;
 use self::unit_conversion_handler::unit_conversion_handler;
-use crate::config::{ListenerStorage, MatrixListenerConfig};
+use crate::config::MatrixListenerConfig;
+use crate::database::ListenerStorage;
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
 use anyhow::bail;
 use ruma::{

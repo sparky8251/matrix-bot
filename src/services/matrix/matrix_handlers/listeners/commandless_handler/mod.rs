@@ -7,7 +7,8 @@ mod spellcheck;
 mod text_expansion;
 mod unit_conversion;
 
-use crate::config::{ListenerStorage, MatrixListenerConfig};
+use crate::config::MatrixListenerConfig;
+use crate::database::ListenerStorage;
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};

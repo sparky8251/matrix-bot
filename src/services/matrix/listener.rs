@@ -2,7 +2,8 @@
 //! plus main loop initialization.
 
 use super::MatrixClient;
-use crate::config::{Config, ListenerStorage, MatrixListenerConfig};
+use crate::config::{Config, MatrixListenerConfig};
+use crate::database::ListenerStorage;
 use crate::messages::MatrixMessage;
 use crate::services::matrix::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
 use ruma::{

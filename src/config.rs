@@ -9,16 +9,15 @@
 use anyhow::{anyhow, Context};
 use axum::http::Uri;
 use reqwest::header::HeaderValue;
-use ruma::{OwnedRoomId, OwnedTransactionId, OwnedUserId, RoomId, UserId};
-use serde::{Deserialize, Serialize};
+use ruma::{OwnedRoomId, OwnedUserId, UserId};
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt::{Display, Formatter};
-use std::fs::{File, OpenOptions};
-use std::io::{ErrorKind, Read, Write};
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
-use tracing::{info, trace};
+use tracing::info;
 
 /// Constant representing the crate name.
 pub const NAME: &str = env!("CARGO_PKG_NAME");
@@ -192,28 +191,6 @@ struct RawGithubAuthentication {
     access_token: String,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
-pub struct SessionStorage {
-    /// Matrix access token.
-    pub access_token: Option<String>,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-/// Struct that contains persistent matrix listener data the bot modifies during runtime
-pub struct ListenerStorage {
-    /// Last sync token.
-    pub last_sync: Option<String>,
-    /// Hashmap that contains a room id key and a system time of the last correction.
-    pub last_correction_time: HashMap<OwnedRoomId, SystemTime>,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-/// Struct that contains persistent matrix responder data the bot modifies during runtime
-pub struct ResponderStorage {
-    /// Transaction id for last sent message.
-    pub last_txn_id: u64,
-}
-
 #[derive(Clone, Debug)]
 /// Enum you match on to determine if you are doing a case sensitive or insensitive checking
 pub enum SpellCheckKind {
@@ -343,214 +320,6 @@ impl Config {
             group_ping_users,
             webhook_token,
         })
-    }
-}
-
-impl SessionStorage {
-    /// Load of bot storage. Used only for startup.
-    ///
-    /// If the file doesnt exist, creates and writes a default storage file.
-    ///
-    /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> anyhow::Result<Self> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
-        };
-        let mut file = match File::open(path) {
-            Ok(v) => v,
-            Err(e) => match e.kind() {
-                ErrorKind::NotFound => {
-                    let ron = Self::default();
-                    trace!("The next save is a default save");
-                    Self::save_storage(&ron).context("Unable to save default session.ron")?;
-                    return Ok(ron);
-                }
-                ErrorKind::PermissionDenied => {
-                    return Err(anyhow!("Permission denied when opening file session.ron"));
-                }
-                _ => {
-                    return Err(anyhow!("Unable to open file session.ron"));
-                }
-            },
-        };
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .context("Unable to read session.ron")?;
-        let ron = ron::from_str(&contents).context("Unable to load session.ron")?;
-        Ok(ron)
-    }
-    /// Saves all bot associated storage data.
-    ///
-    /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) -> anyhow::Result<()> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "session.ron".to_string()].iter().collect::<PathBuf>(),
-            Err(_) => ["session.ron"].iter().collect::<PathBuf>(),
-        };
-        let ron = ron::to_string(self)
-            .context("Unable to format session.ron save data as RON. This should never occur!")?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-            .context("Unable to open session.ron during saving")?;
-        file.write_all(ron.as_bytes())
-            .context("Unable to write session data")?;
-        trace!("Saved Session!");
-        Ok(())
-    }
-}
-
-impl ListenerStorage {
-    /// Load of bot storage. Used only for startup.
-    ///
-    /// If the file doesnt exist, creates and writes a default storage file.
-    ///
-    /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> anyhow::Result<Self> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "matrix_listener.ron".to_string()]
-                .iter()
-                .collect::<PathBuf>(),
-            Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
-        };
-        let mut file = match File::open(path) {
-            Ok(v) => v,
-            Err(e) => match e.kind() {
-                ErrorKind::NotFound => {
-                    let ron = Self::default();
-                    trace!("The next save is a default save");
-                    Self::save_storage(&ron)
-                        .context("Unable to save default matrix_listener.ron")?;
-                    return Ok(ron);
-                }
-                ErrorKind::PermissionDenied => {
-                    return Err(anyhow!(
-                        "Permission denied when opening file matrix_listener.ron"
-                    ));
-                }
-                _ => {
-                    return Err(anyhow!("Unable to open matrix_listener.ron"));
-                }
-            },
-        };
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .context("Unable to read file contents of matrix_listener.ron")?;
-        let ron = ron::from_str(&contents)
-            .context("Unable to load matrix_listener.ron due to invald RON")?;
-        Ok(ron)
-    }
-
-    /// Saves all bot associated storage data.
-    ///
-    /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) -> anyhow::Result<()> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "matrix_listener.ron".to_string()]
-                .iter()
-                .collect::<PathBuf>(),
-            Err(_) => ["matrix_listener.ron"].iter().collect::<PathBuf>(),
-        };
-        let ron = ron::to_string(self).context(
-            "Unable to format matrix_listener.ron save data as RON. This should never occur!",
-        )?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-            .context("Unable to open matrix_listener.ron during save")?;
-        file.write_all(ron.as_bytes())
-            .context("Unable to write matrix_listener.ron while saving")?;
-        trace!("Saved Session!");
-        Ok(())
-    }
-    /// Checks that the correction time cooldown for a specific room has passed.
-    ///
-    /// Returns true if there has never been a correction done in the room before.
-    pub fn correction_time_cooldown(&self, room_id: &RoomId) -> bool {
-        match self.last_correction_time.get(room_id) {
-            Some(t) => match t.elapsed() {
-                Ok(d) => d >= Duration::new(300, 0),
-                Err(_) => false,
-            },
-            None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
-        }
-    }
-}
-
-impl ResponderStorage {
-    /// Load of bot storage. Used only for startup.
-    ///
-    /// If the file doesnt exist, creates and writes a default storage file.
-    ///
-    /// If file exists, attempts load and will exit program if it fails.
-    pub fn load_storage() -> anyhow::Result<Self> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "matrix_responder.ron".to_string()]
-                .iter()
-                .collect::<PathBuf>(),
-            Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
-        };
-        let mut file = match File::open(path) {
-            Ok(v) => v,
-            Err(e) => match e.kind() {
-                ErrorKind::NotFound => {
-                    let ron = Self::default();
-                    trace!("The next save is a default save");
-                    Self::save_storage(&ron)
-                        .context("Unable to save default matrix_responder.ron")?;
-                    return Ok(ron);
-                }
-                ErrorKind::PermissionDenied => {
-                    return Err(anyhow!(
-                        "Permission denied when opening file matrix_responder.ron"
-                    ));
-                }
-                _ => {
-                    return Err(anyhow!("Unable to open matrix_responder file"));
-                }
-            },
-        };
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .context("Unable to read matrix_responder.ron during load")?;
-        let ron = ron::from_str(&contents)
-            .context("Unable to load matrix_responder.ron due to invalid RON")?;
-        Ok(ron)
-    }
-
-    /// Saves all bot associated storage data.
-    ///
-    /// One of the few functions that can terminate the program if it doesnt go well.
-    pub fn save_storage(&self) -> anyhow::Result<()> {
-        let path = match env::var("MATRIX_BOT_DATA_DIR") {
-            Ok(v) => [v, "matrix_responder.ron".to_string()]
-                .iter()
-                .collect::<PathBuf>(),
-            Err(_) => ["matrix_responder.ron"].iter().collect::<PathBuf>(),
-        };
-        let ron = ron::to_string(self)
-            .context("Unable to format matrix_responder data as RON. This should never happen!")?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-            .context("Unable to open matrix_responder.ron file")?;
-        file.write_all(ron.as_bytes())
-            .context("Unable to write matrix_listener.ron data")?;
-        trace!("Saved Session!");
-        Ok(())
-    }
-
-    // FIXME: This needs to be an idempotent/unique ID per txn to be spec compliant
-    /// Sets the last_txn_id to a new value then returns it
-    ///
-    /// Must be saved after it is used successfully or you can cause homeserver issues
-    pub fn next_txn_id(&mut self) -> OwnedTransactionId {
-        self.last_txn_id += 1;
-        self.last_txn_id.to_string().into()
     }
 }
 

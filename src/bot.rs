@@ -1,7 +1,11 @@
-use crate::config::{Config, SessionStorage};
+use crate::config::Config;
 use crate::services::matrix::listener::MatrixListener;
 use crate::services::matrix::responder::MatrixResponder;
 use crate::services::webhook::listener::WebhookListener;
+use anyhow::Context;
+use sled::IVec;
+use std::env;
+use std::path::PathBuf;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch};
 use tracing::{error, info, trace};
@@ -10,24 +14,42 @@ pub async fn init() -> anyhow::Result<()> {
     // Load config data
     let config = Config::load_config()?;
 
+    let path = match env::var("MATRIX_BOT_DATA_DIR") {
+        Ok(v) => [v, "database.sled".to_string()].iter().collect::<PathBuf>(),
+        Err(_) => ["database.sled"].iter().collect::<PathBuf>(),
+    };
+
+    let db = sled::open(&path).context(format!(
+        "Unable to open database at {}",
+        path.to_string_lossy()
+    ))?;
+
+    let session_storage = db.open_tree("session_storage")?;
+    let _listener_storage = db.open_tree("listener_storage")?;
+
+    let access_token = session_storage
+        .get("access_token")?
+        .map(|b| String::from_utf8(b.to_vec()).unwrap()); // TODO: Try and make this cleaner error wise?
+
     // Matrix initalization and login
-    let mut session_storage = SessionStorage::load_storage()?;
     let matrix_listener_client = ruma::client::Client::builder()
         .homeserver_url(config.mx_url.to_string())
-        .access_token(session_storage.access_token)
+        .access_token(access_token)
         .build()
         .await?;
 
+    // Set access token as part of log_in if not set prior
     let login_response = &matrix_listener_client
         .log_in(config.mx_uname.localpart(), &config.mx_pass, None, None)
         .await?;
 
     // Save returned session
     trace!("Session retrived, saving session data...");
-    session_storage.access_token = Some(login_response.access_token.clone());
-    if let Err(e) = session_storage.save_storage() {
-        error!("{}", e);
-    };
+    let _ = session_storage.insert(
+        "access_token",
+        IVec::from(login_response.access_token.as_bytes()),
+    );
+    session_storage.flush_async().await?;
     info!("Successfully logged in as {}", config.mx_uname);
 
     // Clone required clients/servers and channels
@@ -61,9 +83,6 @@ pub async fn init() -> anyhow::Result<()> {
         matrix_responder
             .start(matrix_responder_client, matrix_responder_shutdown_rx)
             .await;
-        if let Err(e) = matrix_responder.storage.save_storage() {
-            error!("Unable to save matrix_responder.ron on shutdown. {}", e)
-        };
     });
 
     let mut terminate = signal(SignalKind::terminate())?;

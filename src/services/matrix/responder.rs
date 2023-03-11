@@ -2,7 +2,6 @@
 //! plus main loop initialization.
 
 use super::MatrixClient;
-use crate::config::ResponderStorage;
 use crate::messages::{MatrixInviteType, MatrixMessage, MatrixMessageType};
 use crate::services::matrix::matrix_handlers::responders::{
     accept_invite, reject_invite, send_ban_message, send_message,
@@ -12,16 +11,13 @@ use tracing::{error, info, trace};
 
 /// Struct representing all required data for a functioning bot instance.
 pub struct MatrixResponder {
-    /// Storage data.
-    pub storage: ResponderStorage,
     recv: mpsc::Receiver<MatrixMessage>,
 }
 
 impl MatrixResponder {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new(recv: mpsc::Receiver<MatrixMessage>) -> anyhow::Result<Self> {
-        let storage = ResponderStorage::load_storage()?;
-        Ok(Self { storage, recv })
+        Ok(Self { recv })
     }
 
     /// Used to start main program loop for the bot.
@@ -52,7 +48,7 @@ impl MatrixResponder {
             Some(v) => match v.message {
                 MatrixMessageType::Response(m) => {
                     if let Err(e) =
-                        send_message(&client, v.room_id.unwrap(), &mut self.storage, m).await
+                        send_message(&client, v.room_id.unwrap(), m).await
                     {
                         error!("{}", e);
                     }
