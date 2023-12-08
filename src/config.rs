@@ -287,10 +287,7 @@ impl Config {
 
         let user_agent =
             HeaderValue::from_str(&(NAME.to_string() + "/" + VERSION)).with_context(|| {
-                format!(
-                    "Unable to create valid user agent from {} and {}",
-                    NAME, VERSION
-                )
+                format!("Unable to create valid user agent from {NAME} and {VERSION}")
             })?;
 
         let (group_pings, group_ping_users) = load_group_ping_settings(&toml)?;
@@ -342,21 +339,21 @@ impl From<&str> for SensitiveSpelling {
 impl Display for SpellCheckKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            SpellCheckKind::SpellCheckInsensitive(v) => write!(f, "{}", v),
-            SpellCheckKind::SpellCheckSensitive(v) => write!(f, "{}", v),
+            SpellCheckKind::SpellCheckInsensitive(v) => v.fmt(f),
+            SpellCheckKind::SpellCheckSensitive(v) => v.fmt(f),
         }
     }
 }
 
 impl Display for InsensitiveSpelling {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.spelling)
+        self.spelling.fmt(f)
     }
 }
 
 impl Display for SensitiveSpelling {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.spelling)
+        self.spelling.fmt(f)
     }
 }
 
@@ -583,8 +580,7 @@ fn load_group_ping_settings(
                             // If list of users are not found, print error to console and move on
                             None => {
                                 return Err(anyhow!(format!(
-                                    "Group alias %{} has no corresponding group. Ignoring...",
-                                    alias
+                                    "Group alias %{alias} has no corresponding group. Ignoring...",
                                 )))
                             }
                         }

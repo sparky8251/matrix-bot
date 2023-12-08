@@ -25,7 +25,7 @@ use std::convert::TryInto;
 use std::time::SystemTime;
 use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, trace, error};
+use tracing::{debug, error, trace};
 use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
@@ -109,7 +109,7 @@ pub async fn commandless_handler(
                 }
                 if config.enable_corrections
                     && relates_to.is_none()
-                    && correction_time_cooldown(&storage, room_id)
+                    && correction_time_cooldown(storage, room_id)
                     && !config.correction_exclusion.contains(room_id)
                     && !notice_response.is_some()
                     && !text_response.is_some()
@@ -126,7 +126,7 @@ pub async fn commandless_handler(
                         {
                             Ok(_) => {
                                 let _ = storage.insert(
-                                    "last_correction_time_".to_owned() + &room_id.to_string(),
+                                    format!("last_correction_time_{room_id}"),
                                     SystemTime::now()
                                         .duration_since(SystemTime::UNIX_EPOCH)?
                                         .as_secs()
@@ -141,7 +141,7 @@ pub async fn commandless_handler(
                 }
             }
             Err(e) => {
-                Err(anyhow!("{}", e))?;
+                Err(anyhow!("{e}"))?;
             }
         }
     }
@@ -149,26 +149,24 @@ pub async fn commandless_handler(
 }
 
 fn correction_time_cooldown(storage: &Tree, room_id: &RoomId) -> bool {
-    match storage.get("last_correction_time_".to_owned() + &room_id.to_string()) {
+    match storage.get(format!("last_correction_time_{room_id}")) {
         Ok(t) => {
             match t {
                 Some(v) => {
                     let bytes: [u8; 8] = v.to_vec().try_into().unwrap();
                     let old_time = u64::from_be_bytes(bytes);
-                    let new_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+                    let new_time = SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs();
 
-                    if new_time < old_time + 300 {
-                        true
-                    } else {
-                        false
-                    }
-                },
-                None => true // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
+                    new_time < old_time + 300
+                }
+                None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
             }
-            
-        },
+        }
         Err(e) => {
-            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {}", e);
+            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {e}");
             false // Will only be Err in truly extreme situations. Log + return false to prevent correction and thus potential spam.
         }
     }

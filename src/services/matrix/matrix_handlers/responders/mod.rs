@@ -33,7 +33,7 @@ pub async fn send_ban_message(
     client: &MatrixClient,
 ) -> anyhow::Result<()> {
     for room_id in rooms {
-        debug!("Banning user {} in room {}...", user, room_id);
+        debug!("Banning user {user} in room {room_id}...");
         let mut req = ban_user::v3::Request::new(&room_id, user);
         req.reason = reason.as_deref();
         if let Err(e) = client.send_request(req).await {
@@ -49,13 +49,13 @@ pub async fn accept_invite(
     client: &MatrixClient,
 ) -> anyhow::Result<()> {
     let room_id = room_id.context("Accept invite message was not provided with room_id")?;
-    info!("Authorized user {} invited me to room {}", sender, room_id);
+    info!("Authorized user {sender} invited me to room {room_id}");
     client
         .send_request(join_room_by_id::v3::Request::new(&room_id))
         .await
         .context("Unable to join room")?;
 
-    info!("Successfully joined room {}", room_id);
+    info!("Successfully joined room {room_id}");
     Ok(())
 }
 
@@ -71,6 +71,6 @@ pub async fn reject_invite(
         .await
         .context("Unable to reject invite")?;
 
-    info!("Rejected invite from unathorized user {}", sender);
+    info!("Rejected invite from unathorized user {sender}");
     Ok(())
 }

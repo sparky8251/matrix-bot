@@ -35,15 +35,13 @@ impl WebhookListener {
         .serve(app.into_make_service());
 
         tokio::select! {
-                r = server => {
+            r = server => {
                 if let Err(_) = r {
                     error!("Unable to start webhook listener");
-                    return;
                 }
             },
             _ = shutdown_rx.changed() => {
                 trace!("Received shutdown on webhook listener thread, exiting thread with code 0");
-                return;
             }
         }
     }

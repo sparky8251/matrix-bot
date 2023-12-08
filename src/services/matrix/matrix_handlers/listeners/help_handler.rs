@@ -101,8 +101,7 @@ pub async fn help_handler(
         }
     } else {
         trace!(
-            "Rooms are limited and room {} is not in the allowed list of help command rooms",
-            room_id
+            "Rooms are limited and room {room_id} is not in the allowed list of help command rooms",
         );
     }
     Ok(())
@@ -180,8 +179,8 @@ USAGE:
 \t%server
 
 AVAILABLE GROUPS:
-{}", available_groups
-    )
+{available_groups}
+")
 }
 
 async fn github_search_help_message(config: &MatrixListenerConfig) -> String {
@@ -208,7 +207,8 @@ USAGE:
 \tjf#1234
 
 AVAILABLE REPOS:
-{}", available_repos)
+{available_repos}
+")
 }
 
 async fn link_help_message(config: &MatrixListenerConfig) -> String {
@@ -247,11 +247,11 @@ USAGE:
 \tlink@hwa
 
 AVAILABLE KEYWORDS:
-{}
+{available_keywords}
 
 AVAILABLE LINKS:
-{}
-    ", available_keywords, available_links)
+{available_links}
+")
 }
 
 async fn text_expansion_help_message(config: &MatrixListenerConfig) -> String {
@@ -278,8 +278,8 @@ USAGE:
 \t$kodi
 
 AVAILABLE KEYWORDS:
-{}
-    ", available_keywords)
+{available_keywords}
+")
 }
 
 async fn unit_conversion_help_message(config: &MatrixListenerConfig) -> String {
@@ -318,6 +318,6 @@ SPEED:
 km/h | kmh | kph | kmph | mph
 
 SPACE EXCLUDED UNITS:
-{}
-    ", space_excluded_units)
+{space_excluded_units}
+")
 }

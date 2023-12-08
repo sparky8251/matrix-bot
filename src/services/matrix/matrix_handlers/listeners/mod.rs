@@ -63,7 +63,7 @@ pub async fn handle_invite_event(
     config: &MatrixListenerConfig,
     send: &mut Sender<MatrixMessage>,
 ) -> anyhow::Result<()> {
-    trace!("Invited by {} to room {} ", &sender, &room_id);
+    trace!("Invited by {sender} to room {room_id}");
     if config.admins.contains(sender) {
         let message = MatrixInviteMessage {
             kind: MatrixInviteType::Accept,
