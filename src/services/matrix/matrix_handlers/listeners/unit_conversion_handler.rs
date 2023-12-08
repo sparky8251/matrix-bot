@@ -5,9 +5,11 @@ use crate::helpers::convert_unit;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::UNIT_CONVERSION;
 use anyhow::bail;
-use ruma::events::room::message::RoomMessageEventContent;
 use ruma::{
-    events::room::message::{Relation, TextMessageEventContent},
+    events::room::message::{
+        Relation, RoomMessageEventContent, RoomMessageEventContentWithoutRelation,
+        TextMessageEventContent,
+    },
     RoomId,
 };
 use tokio::sync::mpsc::Sender;
@@ -16,7 +18,7 @@ use tracing::debug;
 /// Command based unit conversion handler that will parse, generate a response body, and send it
 pub async fn unit_conversion_handler(
     text: &TextMessageEventContent,
-    relates_to: Option<&Relation>,
+    relates_to: Option<&Relation<RoomMessageEventContentWithoutRelation>>,
     room_id: &RoomId,
     send: &mut Sender<MatrixMessage>,
 ) -> anyhow::Result<()> {

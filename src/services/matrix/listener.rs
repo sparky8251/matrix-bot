@@ -56,14 +56,13 @@ impl MatrixListener {
         loop {
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
-            let last_sync = self
+            req.since = self
                 .storage
                 .get("last_sync")
                 .unwrap()
                 .map(|s| String::from_utf8(s.to_vec()).unwrap());
-            req.since = last_sync.as_deref();
             req.full_state = false;
-            req.set_presence = &PresenceState::Unavailable;
+            req.set_presence = PresenceState::Unavailable;
             req.timeout = Some(Duration::new(30, 0));
 
             tokio::select! {
