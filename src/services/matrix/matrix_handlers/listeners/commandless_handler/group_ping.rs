@@ -49,11 +49,9 @@ fn determine_users(config: &MatrixListenerConfig, text: &str, users: &mut HashSe
             for user in config.group_pings.values().flatten() {
                 users.insert(user.clone());
             }
-        } else {
-            if let Some(v) = config.group_pings.get(&cap[1]) {
-                for user in v {
-                    users.insert(user.clone());
-                }
+        } else if let Some(v) = config.group_pings.get(&cap[1]) {
+            for user in v {
+                users.insert(user.clone());
             }
         }
     }
