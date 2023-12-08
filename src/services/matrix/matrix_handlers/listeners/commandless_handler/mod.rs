@@ -109,7 +109,7 @@ pub async fn commandless_handler(
                 }
                 if config.enable_corrections
                     && relates_to.is_none()
-                    && correction_time_cooldown(&storage, room_id)
+                    && correction_time_cooldown(storage, room_id)
                     && !config.correction_exclusion.contains(room_id)
                     && !notice_response.is_some()
                     && !text_response.is_some()
