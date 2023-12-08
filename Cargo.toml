@@ -31,8 +31,8 @@ version = "0.11"
 features = ["json"]
 
 [dependencies.ruma]
-version = "0.7"
-features = ["client-api-c", "client-ext-client-api", "client-reqwest", "unstable-msc2676", "rand"]
+version = "0.9"
+features = ["client-api-c", "client-ext-client-api", "client-reqwest", "rand"]
 
 [dependencies.serde]
 version = "1"

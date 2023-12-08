@@ -17,7 +17,7 @@ pub async fn send_message(
     content: RoomMessageEventContent,
 ) -> anyhow::Result<()> {
     let txn_id = TransactionId::new();
-    let req = send_message_event::v3::Request::new(&room_id, &txn_id, &content)
+    let req = send_message_event::v3::Request::new(room_id, txn_id, &content)
         .context("m.room.message serialization must work")?;
     client
         .send_request(req)
@@ -34,8 +34,8 @@ pub async fn send_ban_message(
 ) -> anyhow::Result<()> {
     for room_id in rooms {
         debug!("Banning user {} in room {}...", user, room_id);
-        let mut req = ban_user::v3::Request::new(&room_id, user);
-        req.reason = reason.as_deref();
+        let mut req = ban_user::v3::Request::new(room_id, user.to_owned());
+        req.reason = reason.clone();
         if let Err(e) = client.send_request(req).await {
             error!("{:?}", e);
         };
@@ -51,7 +51,7 @@ pub async fn accept_invite(
     let room_id = room_id.context("Accept invite message was not provided with room_id")?;
     info!("Authorized user {} invited me to room {}", sender, room_id);
     client
-        .send_request(join_room_by_id::v3::Request::new(&room_id))
+        .send_request(join_room_by_id::v3::Request::new(room_id.clone()))
         .await
         .context("Unable to join room")?;
 
@@ -67,7 +67,7 @@ pub async fn reject_invite(
 ) -> anyhow::Result<()> {
     let room_id = room_id.context("Reject invite message was not provided with room_id")?;
     client
-        .send_request(leave_room::v3::Request::new(&room_id))
+        .send_request(leave_room::v3::Request::new(room_id))
         .await
         .context("Unable to reject invite")?;
 

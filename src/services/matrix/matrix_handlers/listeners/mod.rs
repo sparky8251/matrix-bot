@@ -16,7 +16,9 @@ use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
 use anyhow::bail;
 use ruma::{
-    events::room::message::{Relation, TextMessageEventContent},
+    events::room::message::{
+        Relation, RoomMessageEventContentWithoutRelation, TextMessageEventContent,
+    },
     RoomId, UserId,
 };
 use sled::Tree;
@@ -27,7 +29,7 @@ use tracing::{debug, trace};
 #[allow(clippy::too_many_arguments)]
 pub async fn handle_text_event(
     text: &TextMessageEventContent,
-    relates_to: Option<&Relation>,
+    relates_to: Option<&Relation<RoomMessageEventContentWithoutRelation>>,
     sender: &UserId,
     room_id: &RoomId,
     storage: &mut Tree,
