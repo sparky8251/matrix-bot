@@ -2,8 +2,8 @@ use crate::helpers::MatrixFormattedTextResponse;
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::services::webhook::listener::WebhookListener;
 use axum::{
-    extract::{Extension, FromRequest, RequestParts},
-    http::StatusCode,
+    extract::{Extension, FromRequestParts},
+    http::{request::Parts as RequestParts, StatusCode},
     Json,
 };
 use ruma::{events::room::message::RoomMessageEventContent, OwnedRoomId, OwnedUserId};
@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 pub async fn message(
     req_token: MessageToken,
-    Json(message): Json<Message>,
     Extension(state): Extension<Arc<WebhookListener>>,
+    Json(message): Json<Message>,
 ) -> StatusCode {
     if req_token.0.eq(&state.config.token) {
         let matrix_message = MatrixMessage {
@@ -59,12 +59,15 @@ pub struct Message {
 pub struct MessageToken(String);
 
 #[axum::async_trait]
-impl<B: std::marker::Send> FromRequest<B> for MessageToken {
+impl<S> FromRequestParts<S> for MessageToken {
     type Rejection = StatusCode;
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        if req.headers().contains_key("X-Webhook-Token") {
-            let token = req.headers().get("X-Webhook-Token").unwrap();
+    async fn from_request_parts(
+        req: &mut RequestParts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        if req.headers.contains_key("X-Webhook-Token") {
+            let token = req.headers.get("X-Webhook-Token").unwrap();
             match token.to_str() {
                 Ok(v) => Ok(MessageToken(v.to_owned())),
                 Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
