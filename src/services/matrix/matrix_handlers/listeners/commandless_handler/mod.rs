@@ -126,7 +126,7 @@ pub async fn commandless_handler(
                         {
                             Ok(_) => {
                                 let _ = storage.insert(
-                                    "last_correction_time_".to_owned() + &room_id.to_string(),
+                                    format!("last_correction_time_{room_id}"),
                                     SystemTime::now()
                                         .duration_since(SystemTime::UNIX_EPOCH)?
                                         .as_secs()
@@ -149,7 +149,7 @@ pub async fn commandless_handler(
 }
 
 fn correction_time_cooldown(storage: &Tree, room_id: &RoomId) -> bool {
-    match storage.get("last_correction_time_".to_owned() + &room_id.to_string()) {
+    match storage.get(format!("last_correction_time_{room_id}")) {
         Ok(t) => {
             match t {
                 Some(v) => {
