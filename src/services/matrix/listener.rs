@@ -120,12 +120,12 @@ impl MatrixListener {
                                             )
                                             .await
                                             {
-                                                error!("{}", e);
+                                                error!("{e}");
                                             };
                                         }
                                         Ok(_) => {}
                                         Err(e) => {
-                                            debug!("{:?}", e);
+                                            debug!("{e:?}");
                                             trace!("Content: {:?}", raw_event.json())
                                         }
                                     }
@@ -146,7 +146,7 @@ impl MatrixListener {
                                             )
                                             .await
                                             {
-                                                error!("{}", e);
+                                                error!("{e}");
                                             };
                                             trace!("Handled invite event")
                                         }

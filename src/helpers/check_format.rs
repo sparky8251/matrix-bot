@@ -17,8 +17,9 @@ pub enum CheckFormatError {
 impl fmt::Display for CheckFormatError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            CheckFormatError::FormatNotSupported(e) =>
-                write!(f, "Message parsed properly, but format {} is not supported so no conversion is taking place.", e),
+            CheckFormatError::FormatNotSupported(e) => {
+                write!(f, "Message parsed properly, but format {e} is not supported so no conversion is taking place.")
+            }
         }
     }
 }

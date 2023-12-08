@@ -19,10 +19,7 @@ pub async fn init() -> anyhow::Result<()> {
         Err(_) => ["database.sled"].iter().collect::<PathBuf>(),
     };
 
-    let db = sled::open(&path).context(format!(
-        "Unable to open database at {}",
-        path.to_string_lossy()
-    ))?;
+    let db = sled::open(&path).context(format!("Unable to open database at {}", path.display()))?;
 
     let session_storage = db.open_tree("session_storage")?;
     let listener_storage = db.open_tree("listener_storage")?;

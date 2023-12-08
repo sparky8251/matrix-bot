@@ -31,7 +31,7 @@ impl MatrixResponder {
                 },
                 m = self.recv.recv() => {
                     if let Err(e) = self.send_message_handler(m, &client).await {
-                        error!("{}", e);
+                        error!("{e}");
                     }
                 }
             }
@@ -48,24 +48,24 @@ impl MatrixResponder {
             Some(v) => match v.message {
                 MatrixMessageType::Response(m) => {
                     if let Err(e) = send_message(client, v.room_id.unwrap(), m).await {
-                        error!("{}", e);
+                        error!("{e}");
                     }
                 }
                 MatrixMessageType::Invite(m) => match m.kind {
                     MatrixInviteType::Accept => {
                         if let Err(e) = accept_invite(&m.sender, v.room_id, client).await {
-                            error!("{}", e);
+                            error!("{e}");
                         }
                     }
                     MatrixInviteType::Reject => {
                         if let Err(e) = reject_invite(&m.sender, v.room_id, client).await {
-                            error!("{}", e);
+                            error!("{e}");
                         }
                     }
                 },
                 MatrixMessageType::Ban(m) => {
                     if let Err(e) = send_ban_message(&m.user, m.reason, m.rooms, client).await {
-                        error!("{}", e);
+                        error!("{e}");
                     }
                 }
             },

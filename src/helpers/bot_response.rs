@@ -146,7 +146,7 @@ impl fmt::Display for MatrixNoticeResponse {
             }
         }
         let response = response.trim();
-        write!(f, "{}", response)
+        f.write_str(response)
     }
 }
 
@@ -160,7 +160,7 @@ impl fmt::Display for MatrixFormattedTextResponse {
             }
         }
         let response = response.trim();
-        write!(f, "{}", response)
+        f.write_str(response)
     }
 }
 
@@ -174,6 +174,6 @@ impl fmt::Display for MatrixFormattedNoticeResponse {
             }
         }
         let response = response.trim();
-        write!(f, "{}", response)
+        f.write_str(response)
     }
 }

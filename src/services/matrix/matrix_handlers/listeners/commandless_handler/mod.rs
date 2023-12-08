@@ -141,7 +141,7 @@ pub async fn commandless_handler(
                 }
             }
             Err(e) => {
-                Err(anyhow!("{}", e))?;
+                Err(anyhow!("{e}"))?;
             }
         }
     }
@@ -166,7 +166,7 @@ fn correction_time_cooldown(storage: &Tree, room_id: &RoomId) -> bool {
             }
         }
         Err(e) => {
-            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {}", e);
+            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {e}");
             false // Will only be Err in truly extreme situations. Log + return false to prevent correction and thus potential spam.
         }
     }
