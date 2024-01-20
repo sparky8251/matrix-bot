@@ -16,7 +16,7 @@ pub async fn message(
     Json(message): Json<Message>,
     Extension(state): Extension<Arc<WebhookListener>>,
 ) -> StatusCode {
-    if req_token.0.eq(&state.config.token) {
+    if *req_token.0 == *state.config.token {
         let matrix_message = MatrixMessage {
             room_id: Some(message.room_id.clone()),
             message: MatrixMessageType::Response(RoomMessageEventContent::notice_plain(

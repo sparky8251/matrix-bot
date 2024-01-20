@@ -34,23 +34,23 @@ pub struct MatrixListenerConfig {
     /// Matrix bot account username.
     pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
-    pub mx_pass: String,
+    pub mx_pass: Box<str>,
     /// Github access token as string.
-    pub gh_access_token: String,
+    pub gh_access_token: Box<str>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     pub enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
     pub enable_corrections: bool,
     /// List of units to exclude from conversions if there is a space between the quantity and unit.
-    pub unit_conversion_exclusion: HashSet<String>,
+    pub unit_conversion_exclusion: HashSet<Box<str>>,
     /// List of all incorrect spellings to match against
     pub incorrect_spellings: Vec<SpellCheckKind>,
     /// Text used in spellcheck correction feature.
-    pub correction_text: String,
+    pub correction_text: Box<str>,
     /// List of all rooms to be excluded from spellcheck correction feature.
     pub correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
-    pub linkers: HashSet<String>,
+    pub linkers: HashSet<Box<str>>,
     /// List of matrix users that can invite the bot to rooms.
     pub admins: HashSet<OwnedUserId>,
     /// List of rooms in which help function can be used.
@@ -58,21 +58,21 @@ pub struct MatrixListenerConfig {
     /// List of rooms in which ban function will apply.
     pub ban_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
-    pub repos: HashMap<String, String>,
+    pub repos: HashMap<Box<str>, Box<str>>,
     /// Hashmap containing searched key and matching URL for linking.
-    pub links: HashMap<String, Uri>,
+    pub links: HashMap<Box<str>, Uri>,
     /// List of all text expansions.
-    pub text_expansions: HashMap<String, String>,
+    pub text_expansions: HashMap<Box<str>, Box<str>>,
     /// UserAgent used by reqwest
     pub user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    pub group_pings: HashMap<String, HashSet<OwnedUserId>>,
+    pub group_pings: HashMap<Box<str>, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
     pub group_ping_users: HashSet<OwnedUserId>,
 }
 
 pub struct WebhookListenerConfig {
-    pub token: String,
+    pub token: Box<str>,
 }
 
 #[derive(Debug)]
@@ -85,23 +85,23 @@ pub struct Config {
     /// Matrix bot account username.
     pub mx_uname: OwnedUserId,
     /// Matrix bot account password.
-    pub mx_pass: String,
+    pub mx_pass: Box<str>,
     /// Github access token as string.
-    gh_access_token: String,
+    gh_access_token: Box<str>,
     /// Bool used to determine if unit conversions will be supported from plain text messages.
     enable_unit_conversions: bool,
     /// Bool used to determine if the corrections feature is enabled or not.
     enable_corrections: bool,
     /// List of units to exclude from conversions if there is a space between the quantity and unit.
-    unit_conversion_exclusion: HashSet<String>,
+    unit_conversion_exclusion: HashSet<Box<str>>,
     /// List of all incorrect spellings to match against
     incorrect_spellings: Vec<SpellCheckKind>,
     /// Text used in spellcheck correction feature.
-    correction_text: String,
+    correction_text: Box<str>,
     /// List of all rooms to be excluded from spellcheck correction feature.
     correction_exclusion: HashSet<OwnedRoomId>,
     /// List of all words that can be used to link URLs.
-    linkers: HashSet<String>,
+    linkers: HashSet<Box<str>>,
     /// List of matrix users that can invite the bot to rooms.
     admins: HashSet<OwnedUserId>,
     /// List of matrix rooms that the help function can be used in
@@ -109,18 +109,18 @@ pub struct Config {
     /// List of matrix rooms in which bans will be applied
     ban_rooms: HashSet<OwnedRoomId>,
     /// Hashmap containing short name for a repo as a key and the org/repo as a value.
-    repos: HashMap<String, String>,
+    repos: HashMap<Box<str>, Box<str>>,
     /// Hashmap containing searched key and matching URL for linking.
-    links: HashMap<String, Uri>,
+    links: HashMap<Box<str>, Uri>,
     /// List of all text expansions.
-    text_expansions: HashMap<String, String>,
+    text_expansions: HashMap<Box<str>, Box<str>>,
     /// UserAgent used by reqwest
     user_agent: HeaderValue,
     /// Hashmap containing group ping name as key and list of user IDs as the value.
-    group_pings: HashMap<String, HashSet<OwnedUserId>>,
+    group_pings: HashMap<Box<str>, HashSet<OwnedUserId>>,
     /// Hashset containing list of users that can initiate group pings
     group_ping_users: HashSet<OwnedUserId>,
-    pub webhook_token: String,
+    pub webhook_token: Box<str>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -280,7 +280,10 @@ impl Config {
                 .parse()
                 .context("Invalid homeserevr URL")?,
             toml.matrix_authentication.username.clone(),
-            toml.matrix_authentication.password.clone(),
+            toml.matrix_authentication
+                .password
+                .to_owned()
+                .into_boxed_str(),
             toml.general.enable_corrections,
             toml.general.enable_unit_conversions,
         );
@@ -294,7 +297,7 @@ impl Config {
             })?;
 
         let (group_pings, group_ping_users) = load_group_ping_settings(&toml)?;
-        let webhook_token = toml.general.webhook_token;
+        let webhook_token = toml.general.webhook_token.into_boxed_str();
 
         // Return value
         Ok(Config {
@@ -360,24 +363,29 @@ impl Display for SensitiveSpelling {
     }
 }
 
-fn load_github_settings(toml: &RawConfig) -> anyhow::Result<(HashMap<String, String>, String)> {
+fn load_github_settings(
+    toml: &RawConfig,
+) -> anyhow::Result<(HashMap<Box<str>, Box<str>>, Box<str>)> {
     match &toml.searchable_repos {
         Some(r) => match &toml.github_authentication {
-            Some(g) => Ok((r.clone(), g.access_token.clone())),
+            Some(g) => {
+                let r = r.iter().map(|(k,v)| (k.into_boxed_str(), v.into_boxed_str())).collect();
+                Ok((r, g.access_token.to_owned().into_boxed_str()))
+            },
             None => {
                 Err(anyhow!(format!("Searchable repos configured, but no github access token found. Unable to continue...")))
             }
         },
         None => {
             info!("No searchable repos found. Disabling feature...");
-            Ok((HashMap::new(), String::new()))
+            Ok((HashMap::new(), String::new().into_boxed_str()))
         }
     }
 }
 
 fn load_linker_settings(
     toml: &RawConfig,
-) -> anyhow::Result<(HashSet<String>, HashMap<String, Uri>)> {
+) -> anyhow::Result<(HashSet<Box<str>>, HashMap<Box<str>, Uri>)> {
     match &toml.linkable_urls {
         Some(d) => match &toml.general.link_matchers {
             Some(m) => {
@@ -386,13 +394,13 @@ fn load_linker_settings(
                         .iter()
                         .map(|(k, v)| {
                             (
-                                k.clone(),
+                                k.into_boxed_str(),
                                 v.parse().expect("Invalid URL in linker settings"),
                             )
                         })
                         .collect();
-
-                    Ok((m.clone(), d))
+                    let m: HashSet<Box<str>> = m.iter().map(|v| v.into_boxed_str()).collect();
+                    Ok((m, d))
                 } else {
                     Err(anyhow!(format!(
                         "Link matchers exist, but none are set. Exiting..."
@@ -411,9 +419,12 @@ fn load_linker_settings(
     }
 }
 
-fn load_text_expansions(toml: &RawConfig) -> HashMap<String, String> {
+fn load_text_expansions(toml: &RawConfig) -> HashMap<Box<str>, Box<str>> {
     match &toml.text_expansion {
-        Some(d) => d.clone(),
+        Some(d) => d
+            .iter()
+            .map(|(k, v)| (k.into_boxed_str(), v.into_boxed_str()))
+            .collect(),
         None => {
             info!("No text expansions found. Disabling Feature...");
             HashMap::new()
@@ -421,12 +432,12 @@ fn load_text_expansions(toml: &RawConfig) -> HashMap<String, String> {
     }
 }
 
-fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
+fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<Box<str>> {
     match &toml.general.unit_conversion_exclusion {
         Some(v) => {
             let mut hash_set = HashSet::new();
             for set in v {
-                hash_set.insert(" ".to_owned() + set);
+                hash_set.insert((" ".to_owned() + set).into_boxed_str());
             }
             hash_set
         }
@@ -439,7 +450,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<String> {
 
 fn load_spell_correct_settings(
     toml: &RawConfig,
-) -> anyhow::Result<(Vec<SpellCheckKind>, String, HashSet<OwnedRoomId>)> {
+) -> anyhow::Result<(Vec<SpellCheckKind>, Box<str>, HashSet<OwnedRoomId>)> {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -467,7 +478,7 @@ fn load_spell_correct_settings(
                                     spelling: spelling.clone(),
                                 }));
                             }
-                            Ok((spk, c.to_string(), e))
+                            Ok((spk, c.to_string().into_boxed_str(), e))
                         }
                         None => {
                             let mut spk = Vec::new();
@@ -484,7 +495,7 @@ fn load_spell_correct_settings(
                                 }));
                             }
                             info!("No list found. No rooms will be excluded from corrections");
-                            Ok((spk, c.to_string(), HashSet::new()))
+                            Ok((spk, c.to_string().into_boxed_str(), HashSet::new()))
                         }
                     },
                     None => {
@@ -501,7 +512,7 @@ fn load_spell_correct_settings(
         }
     } else {
         info!("Disabling corrections feature");
-        Ok((Vec::new(), String::new(), HashSet::new()))
+        Ok((Vec::new(), String::new().into_boxed_str(), HashSet::new()))
     }
 }
 
@@ -536,7 +547,10 @@ fn load_ban_room_settings(toml: &RawConfig) -> HashSet<OwnedRoomId> {
 
 fn load_group_ping_settings(
     toml: &RawConfig,
-) -> anyhow::Result<(HashMap<String, HashSet<OwnedUserId>>, HashSet<OwnedUserId>)> {
+) -> anyhow::Result<(
+    HashMap<Box<str>, HashSet<OwnedUserId>>,
+    HashSet<OwnedUserId>,
+)> {
     match &toml.group_pings {
         Some(v) => {
             let mut group_ping_users = HashSet::new();
@@ -557,7 +571,7 @@ fn load_group_ping_settings(
                 }
             }
 
-            let mut expanded_groups: HashMap<String, HashSet<OwnedUserId>> = HashMap::new();
+            let mut expanded_groups: HashMap<Box<str>, HashSet<OwnedUserId>> = HashMap::new();
             for (group, users) in v {
                 let mut expanded_users: HashSet<OwnedUserId> = HashSet::new();
 
@@ -597,7 +611,7 @@ fn load_group_ping_settings(
                     }
                 }
 
-                expanded_groups.insert(group.to_string(), expanded_users);
+                expanded_groups.insert(group.into_boxed_str(), expanded_users);
             }
 
             Ok((expanded_groups, group_ping_users))

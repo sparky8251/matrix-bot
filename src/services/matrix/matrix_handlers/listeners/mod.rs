@@ -19,7 +19,7 @@ use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId, UserId,
 };
-use sled::Tree;
+use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace};
 
@@ -30,7 +30,7 @@ pub async fn handle_text_event(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut Tree,
+    storage: &mut Pool<Sqlite>,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,

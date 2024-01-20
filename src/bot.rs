@@ -3,8 +3,11 @@ use crate::services::matrix::listener::MatrixListener;
 use crate::services::matrix::responder::MatrixResponder;
 use crate::services::webhook::listener::WebhookListener;
 use anyhow::Context;
-use sled::IVec;
+use sqlx::sqlite::{SqlitePool, SqliteRow};
+use sqlx::Row;
+use std::convert::TryInto;
 use std::env;
+use std::fmt::Debug;
 use std::path::PathBuf;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch};
@@ -15,21 +18,50 @@ pub async fn init() -> anyhow::Result<()> {
     let config = Config::load_config()?;
 
     let path = match env::var("MATRIX_BOT_DATA_DIR") {
-        Ok(v) => [v, "database.sled".to_string()].iter().collect::<PathBuf>(),
-        Err(_) => ["database.sled"].iter().collect::<PathBuf>(),
+        Ok(v) => [v, "database.sqlite3".to_string()]
+            .iter()
+            .collect::<PathBuf>(),
+        Err(_) => ["database.sqlite3"].iter().collect::<PathBuf>(),
     };
 
-    let db = sled::open(&path).context(format!(
+    let pool = SqlitePool::connect(
+        &path
+            .into_os_string()
+            .into_string()
+            .expect("Unable to convert DB path to UTF-8 String"),
+    )
+    .await
+    .context(format!(
         "Unable to open database at {}",
         path.to_string_lossy()
     ))?;
 
-    let session_storage = db.open_tree("session_storage")?;
-    let listener_storage = db.open_tree("listener_storage")?;
+    let session_storage = pool.clone();
+    let listener_storage = pool.clone();
 
-    let access_token = session_storage
-        .get("access_token")?
-        .map(|b| String::from_utf8(b.to_vec()).unwrap()); // TODO: Try and make this cleaner error wise?
+    let conn = session_storage
+        .acquire()
+        .await
+        .context(format!("Unable to acquire DB connection"))?;
+
+    let access_token = sqlx::query("SELECT access_token FROM access_tokens ORDER BY id")
+        .fetch_one(&session_storage)
+        .await
+        .map_or_else(
+            |_| None,
+            |r| Some(format!("{}", &r.column(0).try_into().unwrap())),
+        );
+    // .map(|row: SqliteRow| {
+    //     if row.is_empty() {
+    //         None
+    //     } else {
+    //         Some("accesstoken") // TODO: Convert row to proper access token
+    //     }
+    // });
+
+    // let access_token = session_storage
+    //     .get("access_token")?
+    //     .map(|b| String::from_utf8(b.to_vec()).unwrap()); // TODO: Try and make this cleaner error wise?
 
     // Matrix initalization and login
     let matrix_listener_client = ruma::client::Client::builder()
@@ -44,12 +76,12 @@ pub async fn init() -> anyhow::Result<()> {
         .await?;
 
     // Save returned session
-    trace!("Session retrived, saving session data...");
-    let _ = session_storage.insert(
-        "access_token",
-        IVec::from(login_response.access_token.as_bytes()),
-    );
-    session_storage.flush()?;
+    trace!("Session retrieved, saving session data...");
+    let _ = sqlx::query("INSERT INTO access_tokens ( access_token ) VALUES ( ? )")
+        .bind(&login_response.access_token)
+        .execute(&mut *conn)
+        .await?;
+    conn.close().await?;
     info!("Successfully logged in as {}", config.mx_uname);
 
     // Clone required clients/servers and channels
@@ -72,7 +104,7 @@ pub async fn init() -> anyhow::Result<()> {
         matrix_listener
             .start(matrix_listener_client, matrix_listener_shutdown_rx)
             .await;
-        listener_storage.flush().unwrap();
+        listener_storage.close().await;
     });
     let webhook_listener_task = tokio::spawn(async move {
         webhook_listener.start(webhook_listener_shutdown_rx).await;

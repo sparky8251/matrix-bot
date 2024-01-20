@@ -21,8 +21,11 @@ pub fn link_url(
             if LINK_URL.is_match(&clean_text) {
                 for cap in LINK_URL.captures_iter(&clean_text.to_lowercase()) {
                     trace!("{:?}", cap);
-                    if config.linkers.contains(&cap[1].to_lowercase()) {
-                        if let Some(v) = config.links.get(&cap[2].to_string()) {
+                    if config
+                        .linkers
+                        .contains(&cap[1].to_lowercase().into_boxed_str())
+                    {
+                        if let Some(v) = config.links.get(&cap[2].to_string().into_boxed_str()) {
                             links.push(v.to_string())
                         }
                     } else {
@@ -37,8 +40,11 @@ pub fn link_url(
         None => {
             for cap in LINK_URL.captures_iter(&text.body.to_lowercase()) {
                 trace!("{:?}", cap);
-                if config.linkers.contains(&cap[1].to_lowercase()) {
-                    if let Some(v) = config.links.get(&cap[2].to_string()) {
+                if config
+                    .linkers
+                    .contains(&cap[1].to_lowercase().into_boxed_str())
+                {
+                    if let Some(v) = config.links.get(&cap[2].to_string().into_boxed_str()) {
                         links.push(v.to_string())
                     }
                 } else {

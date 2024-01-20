@@ -16,7 +16,7 @@ use ruma::{
     },
     presence::PresenceState,
 };
-use sled::Tree;
+use sqlx::{Pool, Sqlite};
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver;
@@ -30,7 +30,7 @@ pub struct MatrixListener {
     pub api_client: reqwest::Client,
     send: Sender<MatrixMessage>,
     /// Storage data.
-    pub storage: Tree,
+    pub storage: Pool<Sqlite>,
 }
 
 impl MatrixListener {
@@ -38,7 +38,7 @@ impl MatrixListener {
     pub fn new(
         config: &Config,
         send: Sender<MatrixMessage>,
-        storage: Tree,
+        storage: Pool<Sqlite>,
     ) -> anyhow::Result<Self> {
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();

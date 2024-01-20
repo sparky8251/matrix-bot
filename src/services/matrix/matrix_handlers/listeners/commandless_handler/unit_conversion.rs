@@ -60,7 +60,7 @@ fn process_capture(
 fn capture_not_excluded(capture: &regex::Captures, config: &MatrixListenerConfig) -> bool {
     for exclusion in &config.unit_conversion_exclusion {
         trace!("Exclusion this loop: {:?}", exclusion);
-        if capture[0].contains(exclusion) {
+        if capture[0].contains(&exclusion.to_string()) {
             return false;
         }
     }

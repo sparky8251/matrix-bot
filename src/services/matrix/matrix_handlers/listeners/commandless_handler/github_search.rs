@@ -41,7 +41,7 @@ pub async fn github_search(
     let mut searches = Vec::new();
     for (repo, number) in repos_to_search {
         match number.parse::<i64>() {
-            Ok(n) => match config.repos.get(&repo.to_lowercase()) {
+            Ok(n) => match config.repos.get(&repo.to_lowercase().into_boxed_str()) {
                 Some(r) => {
                     let index = match r.find('/') {
                         Some(v) => v,
