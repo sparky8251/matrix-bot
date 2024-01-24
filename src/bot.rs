@@ -8,7 +8,6 @@ use anyhow::Context;
 use native_db::DatabaseBuilder;
 use std::env;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, watch};
 use tracing::{info, trace};
@@ -30,16 +29,13 @@ pub async fn init() -> anyhow::Result<()> {
         .define::<AccessToken>()
         .context("Unable to load access token database model")?;
     //open db
-    let db = Arc::new(Mutex::new(builder.create(&path).with_context(|| {
-        format!("Unable to create/open db {}", &path.display())
-    })?));
-
-    let listener_storage = db.clone();
+    let db = builder
+        .create(&path)
+        .with_context(|| format!("Unable to create/open db {}", &path.display()))?;
 
     // fetch access_token
 
-    let guard = db.lock().unwrap();
-    let r = guard
+    let r = db
         .r_transaction()
         .context("Unable to get read transaction from db")?;
     let access_token = match r
@@ -52,7 +48,6 @@ pub async fn init() -> anyhow::Result<()> {
     };
     // drop the guard and rw transaction before await points to avoid deadlocks
     std::mem::drop(r);
-    std::mem::drop(guard);
 
     // Matrix initalization and login
     let matrix_listener_client = ruma::client::Client::builder()
@@ -67,8 +62,7 @@ pub async fn init() -> anyhow::Result<()> {
         .await?;
 
     // Save returned session
-    let guard = db.lock().unwrap();
-    let rw = guard
+    let rw = db
         .rw_transaction()
         .context("Unable to get read transaction from db")?;
     trace!("Session retrieved, saving session data...");
@@ -86,7 +80,6 @@ pub async fn init() -> anyhow::Result<()> {
     // since we dont technically return from this function, explicitly drop the guard to free it for future use
     rw.commit()
         .context("Unable to commit access_token transaction")?;
-    std::mem::drop(guard);
     info!("Successfully logged in as {}", config.mx_uname);
 
     // Clone required clients/servers and channels
@@ -95,7 +88,7 @@ pub async fn init() -> anyhow::Result<()> {
     let webhook_tx = matrix_tx.clone();
 
     // Create thread structures
-    let mut matrix_listener = MatrixListener::new(&config, matrix_tx, listener_storage)?;
+    let mut matrix_listener = MatrixListener::new(&config, matrix_tx, &db)?;
     let mut matrix_responder = MatrixResponder::new(matrix_rx)?;
     let webhook_listener = WebhookListener::new(&config, webhook_tx);
 

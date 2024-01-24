@@ -19,7 +19,7 @@ use ruma::{
     },
     presence::PresenceState,
 };
-use std::sync::{Arc, Mutex};
+
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver;
@@ -33,16 +33,16 @@ pub struct MatrixListener<'a> {
     pub api_client: reqwest::Client,
     send: Sender<MatrixMessage>,
     /// Storage data.
-    pub storage: Arc<Mutex<Database<'a>>>,
+    pub storage: &'a Database<'a>,
 }
 
-impl MatrixListener<'_> {
+impl<'a> MatrixListener<'a> {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new(
         config: &Config,
         send: Sender<MatrixMessage>,
-        storage: Arc<Mutex<Database>>,
-    ) -> anyhow::Result<Self> {
+        storage: &Database<'a>,
+    ) -> anyhow::Result<MatrixListener<'a>> {
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
         Ok(Self {
@@ -60,8 +60,7 @@ impl MatrixListener<'_> {
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
             let last_sync = {
-                let guard = self.storage.lock().unwrap();
-                let r = guard.r_transaction().unwrap();
+                let r = self.storage.r_transaction().unwrap();
                 r.get()
                     .primary::<LastSync>(1u8)
                     .unwrap()
@@ -88,9 +87,8 @@ impl MatrixListener<'_> {
 
                     match response {
                         Some(v) => {
-                            {
-                                let guard = self.storage.lock().unwrap();
-                                let rw = guard.rw_transaction().unwrap();
+
+                                let rw = self.storage.rw_transaction().unwrap();
                                 match insert_or_update(&rw, LastSync {id: 1, last_sync: last_sync.map_or(String::new(), |v| v)}, LastSync {id: 1, last_sync: v.next_batch}) {
                                     Ok(_) => (),
                                     Err(e) => error!("Unable to write updated last_sync time to db! Error is {}", e)
@@ -99,7 +97,7 @@ impl MatrixListener<'_> {
                                 if let Err(e) = rw.commit() {
                                     error!("Unable to commit last_sync write to database! Error is {}", e)
                                 };
-                            }
+
                             for (room_id, joined_room) in &v.rooms.join {
                                 for raw_event in &joined_room.timeline.events {
                                     let event = raw_event.deserialize();

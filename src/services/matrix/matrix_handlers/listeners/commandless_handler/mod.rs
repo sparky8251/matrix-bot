@@ -22,7 +22,6 @@ use ruma::{
     RoomId, UserId,
 };
 use spellcheck::spellcheck;
-use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
@@ -36,7 +35,7 @@ pub async fn commandless_handler(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut Arc<Mutex<Database<'_>>>,
+    storage: &Database<'_>,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
@@ -126,8 +125,7 @@ pub async fn commandless_handler(
                             .await
                         {
                             Ok(_) => {
-                                let guard = storage.lock().unwrap();
-                                let rw = guard.rw_transaction().unwrap();
+                                let rw = storage.rw_transaction().unwrap();
                                 rw.insert(CorrectionTimeCooldown {
                                     room_id: room_id.to_string(),
                                     last_correction_time: SystemTime::now()
@@ -151,9 +149,8 @@ pub async fn commandless_handler(
     Ok(())
 }
 
-fn correction_time_cooldown(storage: &Arc<Mutex<Database>>, room_id: &RoomId) -> bool {
-    let guard = storage.lock().unwrap();
-    let rw = guard.rw_transaction().unwrap();
+fn correction_time_cooldown(storage: &Database, room_id: &RoomId) -> bool {
+    let rw = storage.rw_transaction().unwrap();
     match rw
         .get()
         .primary::<CorrectionTimeCooldown>(room_id.to_string())

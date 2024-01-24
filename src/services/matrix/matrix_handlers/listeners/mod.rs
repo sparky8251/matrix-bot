@@ -20,7 +20,6 @@ use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId, UserId,
 };
-use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace};
 
@@ -31,7 +30,7 @@ pub async fn handle_text_event(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut Arc<Mutex<Database<'_>>>,
+    storage: &Database<'_>,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
