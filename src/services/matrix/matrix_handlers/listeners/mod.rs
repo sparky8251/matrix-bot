@@ -15,11 +15,12 @@ use self::unit_conversion_handler::unit_conversion_handler;
 use crate::config::MatrixListenerConfig;
 use crate::messages::{MatrixInviteMessage, MatrixInviteType, MatrixMessage, MatrixMessageType};
 use anyhow::bail;
+use native_db::Database;
 use ruma::{
     events::room::message::{Relation, TextMessageEventContent},
     RoomId, UserId,
 };
-use sqlx::{Pool, Sqlite};
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
 use tracing::{debug, trace};
 
@@ -30,7 +31,7 @@ pub async fn handle_text_event(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut Pool<Sqlite>,
+    storage: &mut Arc<Mutex<Database<'_>>>,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,

@@ -18,14 +18,17 @@ tracing = "0.1"
 uom = "0.35"
 serde_json = "1"
 anyhow = "1"
-#sled = "0.34"
-#sea-orm-migration = "0.11"
+native_model = "0.4.11"
 
 # Deps below are for unimplemented secured github webhook listener.
 #hmac = "0.12"
 #sha2 = "0.10"
 #hex-literal = "0.3"
 #hex = "0.4"
+
+[dependencies.native_db]
+version = "0.5"
+features = ["tokio"]
 
 [dependencies.reqwest]
 version = "0.11"
@@ -35,18 +38,9 @@ features = ["json"]
 version = "0.7"
 features = ["client-api-c", "client-ext-client-api", "client-reqwest", "unstable-msc2676", "rand"]
 
-#[dependencies.sea-orm]
-#version = "0.11"
-#features = ["sqlx-sqlite", "runtime-tokio", "runtime-tokio-rustls"]
-
 [dependencies.serde]
 version = "1"
 features = ["derive"]
-
-[dependencies.sqlx]
-version = "0.7.2"
-default-features = false
-features = ["sqlite", "runtime-tokio-native-tls"]
 
 [dependencies.tokio]
 version = "1"

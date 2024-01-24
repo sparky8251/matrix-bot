@@ -8,6 +8,7 @@ mod text_expansion;
 mod unit_conversion;
 
 use crate::config::MatrixListenerConfig;
+use crate::database::models::CorrectionTimeCooldown;
 use crate::helpers::{check_format, MatrixFormattedTextResponse, MatrixNoticeResponse};
 use crate::messages::{MatrixMessage, MatrixMessageType};
 use crate::regex::{GITHUB_SEARCH, GROUP_PING, LINK_URL, TEXT_EXPANSION, UNIT_CONVERSION};
@@ -15,17 +16,17 @@ use anyhow::anyhow;
 use github_search::github_search;
 use group_ping::group_ping;
 use link_url::link_url;
+use native_db::Database;
 use ruma::{
     events::room::message::{Relation, RoomMessageEventContent, TextMessageEventContent},
     RoomId, UserId,
 };
 use spellcheck::spellcheck;
-use sqlx::{Pool, Sqlite};
-use std::convert::TryInto;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use text_expansion::text_expansion;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 use unit_conversion::unit_conversion;
 
 /// Handler for all text based non-command events
@@ -35,7 +36,7 @@ pub async fn commandless_handler(
     relates_to: Option<&Relation>,
     sender: &UserId,
     room_id: &RoomId,
-    storage: &mut Pool<Sqlite>,
+    storage: &mut Arc<Mutex<Database<'_>>>,
     config: &MatrixListenerConfig,
     api_client: &reqwest::Client,
     send: &mut Sender<MatrixMessage>,
@@ -125,15 +126,17 @@ pub async fn commandless_handler(
                             .await
                         {
                             Ok(_) => {
-                                let _ = storage.insert(
-                                    "last_correction_time_".to_owned() + &room_id.to_string(),
-                                    SystemTime::now()
-                                        .duration_since(SystemTime::UNIX_EPOCH)?
-                                        .as_secs()
-                                        .to_be_bytes()
-                                        .to_vec(),
-                                );
-                                storage.flush()?;
+                                let guard = storage.lock().unwrap();
+                                let rw = guard.rw_transaction().unwrap();
+                                rw.insert(CorrectionTimeCooldown {
+                                    room_id: room_id.to_string(),
+                                    last_correction_time: SystemTime::now()
+                                        .duration_since(SystemTime::UNIX_EPOCH)
+                                        .unwrap()
+                                        .as_secs(),
+                                })
+                                .unwrap();
+                                rw.commit().unwrap();
                             }
                             Err(_) => Err(anyhow!("Channel closed. Unable to send message."))?,
                         };
@@ -148,30 +151,25 @@ pub async fn commandless_handler(
     Ok(())
 }
 
-fn correction_time_cooldown(storage: &Pool<Sqlite>, room_id: &RoomId) -> bool {
-    match storage.get("last_correction_time_".to_owned() + &room_id.to_string()) {
-        Ok(t) => {
-            match t {
-                Some(v) => {
-                    let bytes: [u8; 8] = v.to_vec().try_into().unwrap();
-                    let old_time = u64::from_be_bytes(bytes);
-                    let new_time = SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs();
-
-                    if new_time < old_time + 300 {
-                        true
-                    } else {
-                        false
-                    }
-                }
-                None => true, // Will only be None if this client has not yet corrected anyone in specified room, so return true to allow correction
+fn correction_time_cooldown(storage: &Arc<Mutex<Database>>, room_id: &RoomId) -> bool {
+    let guard = storage.lock().unwrap();
+    let rw = guard.rw_transaction().unwrap();
+    match rw
+        .get()
+        .primary::<CorrectionTimeCooldown>(room_id.to_string())
+        .unwrap()
+    {
+        None => true,
+        Some(v) => {
+            let now = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            if now < v.last_correction_time + 300 {
+                true
+            } else {
+                false
             }
-        }
-        Err(e) => {
-            error!("Somehow unable to retrieve correction time cooldown key from database. Error is {}", e);
-            false // Will only be Err in truly extreme situations. Log + return false to prevent correction and thus potential spam.
         }
     }
 }

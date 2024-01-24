@@ -369,7 +369,7 @@ fn load_github_settings(
     match &toml.searchable_repos {
         Some(r) => match &toml.github_authentication {
             Some(g) => {
-                let r = r.iter().map(|(k,v)| (k.into_boxed_str(), v.into_boxed_str())).collect();
+                let r = r.iter().map(|(k,v)| (k.clone().into_boxed_str(), v.clone().into_boxed_str())).collect();
                 Ok((r, g.access_token.to_owned().into_boxed_str()))
             },
             None => {
@@ -394,12 +394,13 @@ fn load_linker_settings(
                         .iter()
                         .map(|(k, v)| {
                             (
-                                k.into_boxed_str(),
+                                k.clone().into_boxed_str(),
                                 v.parse().expect("Invalid URL in linker settings"),
                             )
                         })
                         .collect();
-                    let m: HashSet<Box<str>> = m.iter().map(|v| v.into_boxed_str()).collect();
+                    let m: HashSet<Box<str>> =
+                        m.iter().map(|v| v.clone().into_boxed_str()).collect();
                     Ok((m, d))
                 } else {
                     Err(anyhow!(format!(
@@ -423,7 +424,7 @@ fn load_text_expansions(toml: &RawConfig) -> HashMap<Box<str>, Box<str>> {
     match &toml.text_expansion {
         Some(d) => d
             .iter()
-            .map(|(k, v)| (k.into_boxed_str(), v.into_boxed_str()))
+            .map(|(k, v)| (k.clone().into_boxed_str(), v.clone().into_boxed_str()))
             .collect(),
         None => {
             info!("No text expansions found. Disabling Feature...");
@@ -611,7 +612,7 @@ fn load_group_ping_settings(
                     }
                 }
 
-                expanded_groups.insert(group.into_boxed_str(), expanded_users);
+                expanded_groups.insert(group.clone().into_boxed_str(), expanded_users);
             }
 
             Ok((expanded_groups, group_ping_users))

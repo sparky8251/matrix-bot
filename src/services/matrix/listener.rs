@@ -3,8 +3,11 @@
 
 use super::MatrixClient;
 use crate::config::{Config, MatrixListenerConfig};
+use crate::database::insert_or_update;
+use crate::database::models::LastSync;
 use crate::messages::MatrixMessage;
 use crate::services::matrix::matrix_handlers::listeners::{handle_invite_event, handle_text_event};
+use native_db::Database;
 use ruma::{
     api::client::sync::sync_events,
     events::{
@@ -16,29 +19,29 @@ use ruma::{
     },
     presence::PresenceState,
 };
-use sqlx::{Pool, Sqlite};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver;
 use tracing::{debug, error, trace};
 
 /// Struct representing all required data for a functioning bot instance.
-pub struct MatrixListener {
+pub struct MatrixListener<'a> {
     /// Configuration data.
     pub config: MatrixListenerConfig,
     /// Reqwest client used for external API calls.
     pub api_client: reqwest::Client,
     send: Sender<MatrixMessage>,
     /// Storage data.
-    pub storage: Pool<Sqlite>,
+    pub storage: Arc<Mutex<Database<'a>>>,
 }
 
-impl MatrixListener {
+impl MatrixListener<'_> {
     /// Loads storage data, config data, and then creates a reqwest client and then returns a Bot instance.
     pub fn new(
         config: &Config,
         send: Sender<MatrixMessage>,
-        storage: Pool<Sqlite>,
+        storage: Arc<Mutex<Database>>,
     ) -> anyhow::Result<Self> {
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
@@ -56,11 +59,16 @@ impl MatrixListener {
         loop {
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
-            let last_sync = self
-                .storage
-                .get("last_sync")
+            let guard = self.storage.lock().unwrap();
+            let r = guard.r_transaction().unwrap();
+            let last_sync = r
+                .get()
+                .primary::<LastSync>(1u8)
                 .unwrap()
-                .map(|s| String::from_utf8(s.to_vec()).unwrap());
+                .map_or_else(|| None, |v| Some(v.last_sync));
+            // drop the guard and rw transaction before await points to avoid deadlocks
+            std::mem::drop(r);
+            std::mem::drop(guard);
             req.since = last_sync.as_deref();
             req.full_state = false;
             req.set_presence = &PresenceState::Unavailable;
@@ -75,15 +83,24 @@ impl MatrixListener {
                     let response = match response {
                         Ok(v) => Some(v),
                         Err(e) => {
-                            debug!("Line 65: {:?}", e);
+                            debug!("{:?}", e);
                             None
                         }
                     };
 
                     match response {
                         Some(v) => {
-                            let _ = self.storage.insert("last_sync", v.next_batch.as_bytes());
-                            self.storage.flush().unwrap();
+                            let guard = self.storage.lock().unwrap();
+                            let rw = guard.rw_transaction().unwrap();
+                            match insert_or_update(&rw, LastSync {id: 1, last_sync: last_sync.map_or(String::new(), |v| v)}, LastSync {id: 1, last_sync: v.next_batch}) {
+                                Ok(_) => (),
+                                Err(e) => error!("Unable to write updated last_sync time to db! Error is {}", e)
+                            }
+                            // drop the guard and rw transaction before await points to avoid deadlocks
+                            if let Err(e) = rw.commit() {
+                                error!("Unable to commit last_sync write to database! Error is {}", e)
+                            };
+                            std::mem::drop(guard);
                             for (room_id, joined_room) in &v.rooms.join {
                                 for raw_event in &joined_room.timeline.events {
                                     let event = raw_event.deserialize();
