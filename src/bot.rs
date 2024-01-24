@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::database::insert_or_update;
-use crate::database::models::AccessToken;
+use crate::database::models::{AccessToken, CorrectionTimeCooldown, LastSync};
 use crate::services::matrix::listener::MatrixListener;
 use crate::services::matrix::responder::MatrixResponder;
 use crate::services::webhook::listener::WebhookListener;
@@ -28,6 +28,12 @@ pub async fn init() -> anyhow::Result<()> {
     builder
         .define::<AccessToken>()
         .context("Unable to load access token database model")?;
+    builder
+        .define::<LastSync>()
+        .context("Unable to load last sync database model")?;
+    builder
+        .define::<CorrectionTimeCooldown>()
+        .context("Unable to load correction time cooldown database model")?;
     //open db
     let db = builder
         .create(&path)
