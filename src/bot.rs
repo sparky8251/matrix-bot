@@ -5,7 +5,7 @@ use crate::services::matrix::listener::MatrixListener;
 use crate::services::matrix::responder::MatrixResponder;
 use crate::services::webhook::listener::WebhookListener;
 use anyhow::Context;
-use native_db::DatabaseBuilder;
+use native_db::{Database, DatabaseBuilder};
 use std::env;
 use std::path::PathBuf;
 use tokio::signal::unix::{signal, SignalKind};
@@ -23,7 +23,7 @@ pub async fn init() -> anyhow::Result<()> {
         Err(_) => ["database.nativedb"].iter().collect::<PathBuf>(),
     };
 
-    let mut builder = DatabaseBuilder::new();
+    let mut builder = Box::new(DatabaseBuilder::new());
     //load models
     builder
         .define::<AccessToken>()
@@ -34,14 +34,17 @@ pub async fn init() -> anyhow::Result<()> {
     builder
         .define::<CorrectionTimeCooldown>()
         .context("Unable to load correction time cooldown database model")?;
+    let static_builder: &'static DatabaseBuilder = Box::leak(builder);
     //open db
-    let db = builder
-        .create(&path)
-        .with_context(|| format!("Unable to create/open db {}", &path.display()))?;
-
+    let db = Box::new(
+        static_builder
+            .create(&path)
+            .with_context(|| format!("Unable to create/open db {}", &path.display()))?,
+    );
+    let static_db: &'static Database = Box::leak(db);
     // fetch access_token
 
-    let r = db
+    let r = static_db
         .r_transaction()
         .context("Unable to get read transaction from db")?;
     let access_token = match r
@@ -68,7 +71,7 @@ pub async fn init() -> anyhow::Result<()> {
         .await?;
 
     // Save returned session
-    let rw = db
+    let rw = static_db
         .rw_transaction()
         .context("Unable to get read transaction from db")?;
     trace!("Session retrieved, saving session data...");
@@ -94,7 +97,7 @@ pub async fn init() -> anyhow::Result<()> {
     let webhook_tx = matrix_tx.clone();
 
     // Create thread structures
-    let mut matrix_listener = MatrixListener::new(&config, matrix_tx, &db)?;
+    let mut matrix_listener = MatrixListener::new(&config, matrix_tx, &static_db)?;
     let mut matrix_responder = MatrixResponder::new(matrix_rx)?;
     let webhook_listener = WebhookListener::new(&config, webhook_tx);
 

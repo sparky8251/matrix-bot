@@ -41,7 +41,7 @@ impl<'a> MatrixListener<'a> {
     pub fn new(
         config: &Config,
         send: Sender<MatrixMessage>,
-        storage: &Database<'a>,
+        storage: &'a Database<'a>,
     ) -> anyhow::Result<MatrixListener<'a>> {
         let config = MatrixListenerConfig::new(config);
         let api_client = reqwest::Client::new();
