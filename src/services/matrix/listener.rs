@@ -59,16 +59,14 @@ impl MatrixListener<'_> {
         loop {
             let mut req = sync_events::v3::Request::new();
             req.filter = None;
-            let guard = self.storage.lock().unwrap();
-            let r = guard.r_transaction().unwrap();
-            let last_sync = r
-                .get()
-                .primary::<LastSync>(1u8)
-                .unwrap()
-                .map_or_else(|| None, |v| Some(v.last_sync));
-            // drop the guard and rw transaction before await points to avoid deadlocks
-            std::mem::drop(r);
-            std::mem::drop(guard);
+            let last_sync = {
+                let guard = self.storage.lock().unwrap();
+                let r = guard.r_transaction().unwrap();
+                r.get()
+                    .primary::<LastSync>(1u8)
+                    .unwrap()
+                    .map_or_else(|| None, |v| Some(v.last_sync))
+            };
             req.since = last_sync.as_deref();
             req.full_state = false;
             req.set_presence = &PresenceState::Unavailable;
@@ -90,17 +88,18 @@ impl MatrixListener<'_> {
 
                     match response {
                         Some(v) => {
-                            let guard = self.storage.lock().unwrap();
-                            let rw = guard.rw_transaction().unwrap();
-                            match insert_or_update(&rw, LastSync {id: 1, last_sync: last_sync.map_or(String::new(), |v| v)}, LastSync {id: 1, last_sync: v.next_batch}) {
-                                Ok(_) => (),
-                                Err(e) => error!("Unable to write updated last_sync time to db! Error is {}", e)
+                            {
+                                let guard = self.storage.lock().unwrap();
+                                let rw = guard.rw_transaction().unwrap();
+                                match insert_or_update(&rw, LastSync {id: 1, last_sync: last_sync.map_or(String::new(), |v| v)}, LastSync {id: 1, last_sync: v.next_batch}) {
+                                    Ok(_) => (),
+                                    Err(e) => error!("Unable to write updated last_sync time to db! Error is {}", e)
+                                }
+                                // drop the guard and rw transaction before await points to avoid deadlocks
+                                if let Err(e) = rw.commit() {
+                                    error!("Unable to commit last_sync write to database! Error is {}", e)
+                                };
                             }
-                            // drop the guard and rw transaction before await points to avoid deadlocks
-                            if let Err(e) = rw.commit() {
-                                error!("Unable to commit last_sync write to database! Error is {}", e)
-                            };
-                            std::mem::drop(guard);
                             for (room_id, joined_room) in &v.rooms.join {
                                 for raw_event in &joined_room.timeline.events {
                                     let event = raw_event.deserialize();
