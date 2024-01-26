@@ -79,7 +79,7 @@ pub async fn init() -> anyhow::Result<()> {
         &rw,
         AccessToken {
             id: 1,
-            access_token: access_token.unwrap(),
+            access_token: access_token.unwrap_or(String::new()),
         },
         AccessToken {
             id: 1,
