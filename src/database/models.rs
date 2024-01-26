@@ -21,7 +21,7 @@ impl Display for AccessToken {
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Clone, Debug)]
-#[native_model(id = 1, version = 1)]
+#[native_model(id = 2, version = 1)]
 #[native_db]
 pub struct LastSync {
     #[primary_key]
@@ -31,7 +31,7 @@ pub struct LastSync {
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Clone, Debug)]
-#[native_model(id = 1, version = 1)]
+#[native_model(id = 3, version = 1)]
 #[native_db]
 pub struct CorrectionTimeCooldown {
     #[primary_key]

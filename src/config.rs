@@ -44,7 +44,7 @@ pub struct MatrixListenerConfig {
     /// List of units to exclude from conversions if there is a space between the quantity and unit.
     pub unit_conversion_exclusion: HashSet<Box<str>>,
     /// List of all incorrect spellings to match against
-    pub incorrect_spellings: Vec<SpellCheckKind>,
+    pub incorrect_spellings: HashSet<SpellCheckKind>,
     /// Text used in spellcheck correction feature.
     pub correction_text: Box<str>,
     /// List of all rooms to be excluded from spellcheck correction feature.
@@ -95,7 +95,7 @@ pub struct Config {
     /// List of units to exclude from conversions if there is a space between the quantity and unit.
     unit_conversion_exclusion: HashSet<Box<str>>,
     /// List of all incorrect spellings to match against
-    incorrect_spellings: Vec<SpellCheckKind>,
+    incorrect_spellings: HashSet<SpellCheckKind>,
     /// Text used in spellcheck correction feature.
     correction_text: Box<str>,
     /// List of all rooms to be excluded from spellcheck correction feature.
@@ -191,7 +191,7 @@ struct RawGithubAuthentication {
     access_token: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 /// Enum you match on to determine if you are doing a case sensitive or insensitive checking
 pub enum SpellCheckKind {
     /// Variant that contains a case insesitive string
@@ -200,14 +200,14 @@ pub enum SpellCheckKind {
     SpellCheckSensitive(SensitiveSpelling),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 /// A struct representing a case insensitive string for comparion purposes.
 pub struct InsensitiveSpelling {
     /// The case insensitive string.
     spelling: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 /// A struct representing a case sensitive string for comparison purposes.
 pub struct SensitiveSpelling {
     /// The case sensitive string.
@@ -451,7 +451,7 @@ fn load_unit_conversion_settings(toml: &RawConfig) -> HashSet<Box<str>> {
 
 fn load_spell_correct_settings(
     toml: &RawConfig,
-) -> anyhow::Result<(Vec<SpellCheckKind>, Box<str>, HashSet<OwnedRoomId>)> {
+) -> anyhow::Result<(HashSet<SpellCheckKind>, Box<str>, HashSet<OwnedRoomId>)> {
     if toml.general.enable_corrections {
         match &toml.general.insensitive_corrections {
             Some(i) => match &toml.general.sensitive_corrections {
@@ -466,32 +466,32 @@ fn load_spell_correct_settings(
                                 );
                                 HashSet::new()
                             };
-                            let mut spk = Vec::new();
+                            let mut spk = HashSet::new();
                             for spelling in i {
-                                spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                spk.insert(SpellCheckKind::SpellCheckInsensitive(
                                     InsensitiveSpelling {
                                         spelling: spelling.clone(),
                                     },
                                 ));
                             }
                             for spelling in s {
-                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
+                                spk.insert(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
                                     spelling: spelling.clone(),
                                 }));
                             }
                             Ok((spk, c.to_string().into_boxed_str(), e))
                         }
                         None => {
-                            let mut spk = Vec::new();
+                            let mut spk = HashSet::new();
                             for spelling in i {
-                                spk.push(SpellCheckKind::SpellCheckInsensitive(
+                                spk.insert(SpellCheckKind::SpellCheckInsensitive(
                                     InsensitiveSpelling {
                                         spelling: spelling.clone(),
                                     },
                                 ));
                             }
                             for spelling in s {
-                                spk.push(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
+                                spk.insert(SpellCheckKind::SpellCheckSensitive(SensitiveSpelling {
                                     spelling: spelling.clone(),
                                 }));
                             }
@@ -513,7 +513,11 @@ fn load_spell_correct_settings(
         }
     } else {
         info!("Disabling corrections feature");
-        Ok((Vec::new(), String::new().into_boxed_str(), HashSet::new()))
+        Ok((
+            HashSet::new(),
+            String::new().into_boxed_str(),
+            HashSet::new(),
+        ))
     }
 }
 
